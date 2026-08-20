@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="description" content="IGNITION Create Ride - Plan a route, set waypoints, schedule date and time, and invite your crew."/>
+<meta property="og:title" content="IGNITION - Create Ride"/>
+<meta property="og:description" content="Plan a route, set waypoints, schedule date and time, and invite your crew."/>
+<meta property="og:type" content="website"/>
+<link rel="icon" type="image/svg+xml" href="{% static 'pages/favicon.svg' %}"/>
+<title>IGNITION - Create Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<script src="{% static 'pages/tailwind-config.js' %}"></script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        
+        .map-bg {
+            background-image: radial-gradient(circle at center, #1e1f23 0%, #121317 100%);
+        }
+
+        /* Custom Input Styles */
+        input[type="text"], input[type="date"], input[type="time"] {
+            background-color: theme('colors.background');
+            border: 1px solid theme('colors.surface-container-high');
+            color: theme('colors.on-surface');
+        }
+        
+        input[type="text"]:focus, input[type="date"]:focus, input[type="time"]:focus {
+            border-color: theme('colors.primary-container');
+            outline: none;
+            box-shadow: none;
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: theme('colors.primary-container');
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: theme('colors.primary-container');
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative overflow-x-hidden map-bg">
+<!-- TopAppBar -->
+<header class="w-full top-0 bg-background border-b border-outline-variant z-50 sticky">
+<div class="flex justify-between items-center px-margin-mobile h-touch-target-min max-w-7xl mx-auto">
+<button onclick="location.href="{% url 'pages:dashboard' %}"" class="text-on-surface-variant hover:bg-surface-container-high active:scale-95 transition-transform p-2 rounded flex items-center justify-center h-10 w-10">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<h1 class="font-display-lg text-display-lg text-primary uppercase tracking-tighter text-2xl md:text-display-lg">IGNITION</h1>
+<div class="w-10 h-10"></div> <!-- Spacer for balance -->
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col md:flex-row relative max-w-7xl mx-auto w-full">
+<!-- Background Map Graphic (Conceptual) -->
+<div class="absolute inset-0 opacity-10 pointer-events-none hidden md:block">
+<div class="w-full h-full bg-cover bg-center" data-alt="A highly detailed, technical topographical map rendering in a dark mode aesthetic. Fine contour lines in muted gray over a deep black background, suggesting rugged terrain suitable for motorcycle touring. The map features subtle, glowing circuit-amber waypoints indicating a potential route. The style is precision-engineered, reminiscent of high-end GPS aviation or automotive navigation systems, avoiding any realistic photographic elements in favor of a vector-style, data-driven visualization." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDf3jx_8-ETDXfhUjiQHlnUSJGlj91e7AshkseBOBEnBwJUhyUpOskICzYoy0MDkPImJlq1MvhJn6WcNwPXJB-C0V5obHTEO8tBE7aMMRtOHamJqz45EaJTIQPHjJ1yBw76P5Sgm8LJuL62hT7v3FQv6GxoshwKHe3a0M1rAN7vJTMXKAaLFghZjxka_1fvHeOlNiRPS-D-scfc0keDGQ2pxhNWjEa4OiINnkOBcaM-WZ3OcH4a2oM')"></div>
+</div>
+<!-- Form Container -->
+<section class="w-full md:w-[600px] bg-surface-dim md:bg-surface-container md:border-r border-outline-variant z-10 flex flex-col h-full md:h-[calc(100vh-48px)] overflow-y-auto">
+<div class="px-margin-mobile py-stack-lg md:px-margin-desktop flex-grow flex flex-col gap-stack-lg">
+<div class="space-y-stack-sm">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Plan Route</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Define the parameters for your upcoming mission.</p>
+</div>
+<form class="flex flex-col gap-stack-lg">
+<!-- Ride Name -->
+<div class="space-y-unit">
+<label class="font-label-technical text-label-technical text-on-surface block uppercase" for="ride-name">Ride Designation</label>
+<div class="relative">
+<input class="w-full h-touch-target-min px-4 font-body-lg text-body-lg rounded transition-colors duration-200" id="ride-name" placeholder="e.g. Sunday Morning Ride" type="text" value="Sunday Morning Ride"/>
+</div>
+</div>
+<!-- Waypoints Container -->
+<div class="bg-surface-container-low border border-surface-container-highest rounded-lg p-stack-md space-y-stack-md relative">
+<!-- Connector Line -->
+<div class="absolute left-[35px] top-[48px] bottom-[48px] w-[2px] bg-surface-container-highest z-0"></div>
+<!-- Starting Point -->
+<div class="space-y-unit relative z-10">
+<label class="font-label-technical text-label-technical text-on-surface block uppercase" for="start-point">Origin</label>
+<div class="flex items-center gap-stack-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border-2 border-primary-container">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+</div>
+<div class="relative flex-grow">
+<input class="w-full h-touch-target-min pl-10 pr-4 font-body-md text-body-md rounded transition-colors duration-200" id="start-point" placeholder="Search location or drop pin..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="my_location">my_location</span>
+</div>
+</div>
+</div>
+<!-- Destination -->
+<div class="space-y-unit relative z-10">
+<label class="font-label-technical text-label-technical text-on-surface block uppercase" for="end-point">Terminus</label>
+<div class="flex items-center gap-stack-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border-2 border-surface-container-highest">
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="flag">flag</span>
+</div>
+<div class="relative flex-grow">
+<input class="w-full h-touch-target-min pl-10 pr-4 font-body-md text-body-md rounded transition-colors duration-200" id="end-point" placeholder="Search destination..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Temporal Parameters -->
+<div class="grid grid-cols-2 gap-stack-md">
+<div class="space-y-unit">
+<label class="font-label-technical text-label-technical text-on-surface block uppercase" for="ride-date">Date</label>
+<div class="relative">
+<input class="w-full h-touch-target-min pl-10 pr-4 font-body-md text-body-md rounded transition-colors duration-200 uppercase" id="ride-date" style="color-scheme: dark;" type="date"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="calendar_today">calendar_today</span>
+</div>
+</div>
+<div class="space-y-unit">
+<label class="font-label-technical text-label-technical text-on-surface block uppercase" for="ride-time">Time (Local)</label>
+<div class="relative">
+<input class="w-full h-touch-target-min pl-10 pr-4 font-body-md text-body-md rounded transition-colors duration-200 uppercase" id="ride-time" style="color-scheme: dark;" type="time"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="schedule">schedule</span>
+</div>
+</div>
+</div>
+<!-- Visibility Toggle -->
+<div class="bg-surface-container-low border border-surface-container-highest rounded-lg p-stack-md flex justify-between items-center mt-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="visibility_off" id="visibility-icon">visibility_off</span>
+<div>
+<p class="font-label-technical text-label-technical text-on-surface uppercase" id="visibility-text">Private Mode</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Invisible to network</p>
+</div>
+</div>
+<!-- Toggle Switch -->
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-background border-4 border-surface-container-high appearance-none cursor-pointer transition-transform duration-200 ease-in-out top-0 bottom-0 m-auto z-10" id="visibility-toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-surface-container-high cursor-pointer transition-colors duration-200 ease-in-out" for="visibility-toggle"></label>
+</div>
+</div>
+</form>
+</div>
+<!-- Sticky Bottom Action Area -->
+<div class="px-margin-mobile py-stack-md md:px-margin-desktop border-t border-surface-container-highest bg-surface-container mt-auto sticky bottom-0">
+<button onclick="validateAndCreate()" class="w-full h-[64px] bg-primary-container text-[#0A0A0B] font-title-md text-title-md uppercase tracking-wider rounded active:scale-[0.98] transition-transform flex items-center justify-center gap-2 hover:bg-surface-tint">
+<span class="material-symbols-outlined" data-icon="rocket_launch">rocket_launch</span>
+                    Create Ride
+                </button>
+</div>
+</section>
+<!-- Map Preview Area (Desktop Only Placeholder) -->
+<section class="hidden md:flex flex-grow relative items-center justify-center overflow-hidden">
+<!-- Placeholder map background representing the unselected state -->
+<div class="text-center space-y-stack-md bg-surface-container-low/80 backdrop-blur-sm p-stack-lg rounded border border-surface-container-highest z-10">
+<span class="material-symbols-outlined text-6xl text-outline" data-icon="map">map</span>
+<p class="font-label-technical text-label-technical text-on-surface-variant uppercase">Awaiting coordinates...</p>
+</div>
+</section>
+</main>
+<script>
+        // Simple interactivity for the visibility toggle
+        document.getElementById('visibility-toggle').addEventListener('change', function(e) {
+            const icon = document.getElementById('visibility-icon');
+            const text = document.getElementById('visibility-text');
+            const desc = text.nextElementSibling;
+            
+            if(e.target.checked) {
+                icon.textContent = 'public';
+                icon.setAttribute('data-icon', 'public');
+                text.textContent = 'Discoverable';
+                desc.textContent = 'Visible to network';
+            } else {
+                icon.textContent = 'visibility_off';
+                icon.setAttribute('data-icon', 'visibility_off');
+                text.textContent = 'Private Mode';
+                desc.textContent = 'Invisible to network';
+            }
+        });
+
+        // Ensure material icons render literal text initially (defensive scripting)
+        document.querySelectorAll('.material-symbols-outlined').forEach(el => {
+            if(el.getAttribute('data-icon')) {
+                el.textContent = el.getAttribute('data-icon');
+            }
+        });
+
+        function validateAndCreate() {
+            const name = document.getElementById('ride-name').value.trim();
+            const start = document.getElementById('start-point').value.trim();
+            const end = document.getElementById('end-point').value.trim();
+            const date = document.getElementById('ride-date').value;
+            const time = document.getElementById('ride-time').value;
+
+            if (!name) { document.getElementById('ride-name').focus(); return; }
+            if (!start) { document.getElementById('start-point').focus(); return; }
+            if (!end) { document.getElementById('end-point').focus(); return; }
+            if (!date) { document.getElementById('ride-date').focus(); return; }
+            if (!time) { document.getElementById('ride-time').focus(); return; }
+
+            location.href = "{% url 'pages:active-ride' %}";
+        }
+    </script>
+</body></html>

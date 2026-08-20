@@ -1,0 +1,197 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="description" content="IGNITION Active Ride - Real-time group ride map with live rider positions, speed, and route tracking."/>
+<meta property="og:title" content="IGNITION - Active Ride"/>
+<meta property="og:description" content="Real-time group ride map with live rider positions, speed, and route tracking."/>
+<meta property="og:type" content="website"/>
+<link rel="icon" type="image/svg+xml" href="{% static 'pages/favicon.svg' %}"/>
+<title>IGNITION - Active Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<script src="{% static 'pages/tailwind-config.js' %}"></script>
+<style>
+        /* Map background simulation */
+        .map-bg {
+            background-color: #0A0A0B;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(44, 44, 46, 0.4) 1px, transparent 1px),
+                radial-gradient(circle at 100% 100%, rgba(44, 44, 46, 0.4) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+        
+        /* Route line simulation */
+        .route-path {
+            stroke: #ffd600;
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            filter: drop-shadow(0 0 4px rgba(255, 214, 0, 0.5));
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 0;
+            animation: drawRoute 3s linear forwards;
+        }
+        
+        @keyframes drawRoute {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Marker pulse effect */
+        .pulse-ring {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md h-screen w-screen overflow-hidden flex flex-col relative antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Map Canvas Area -->
+<main class="flex-1 relative map-bg w-full h-full overflow-hidden" data-location="Mountain Pass Route">
+<!-- Simulated Route SVG -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 400 800">
+<path class="route-path" d="M 50 700 Q 150 600 100 500 T 250 300 Q 350 200 300 100"></path>
+</svg>
+<!-- User Marker (You) -->
+<div class="absolute top-[480px] left-[110px] transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+<div class="relative w-12 h-12 flex items-center justify-center">
+<div class="absolute inset-0 bg-primary-container rounded-full pulse-ring opacity-50"></div>
+<div class="w-10 h-10 bg-primary-container border-2 border-background rounded-full flex items-center justify-center text-on-primary-container font-label-technical font-bold text-sm shadow-[0px_4px_0px_rgba(0,0,0,0.5)]">
+                    RZ
+                </div>
+</div>
+<div class="mt-1 px-2 py-0.5 bg-surface-container-high border border-outline-variant rounded-DEFAULT text-on-surface font-label-sm shadow-[0px_2px_0px_rgba(0,0,0,0.5)]">
+                You
+            </div>
+</div>
+<!-- Rider Marker (Ayaan) -->
+<div class="absolute top-[280px] left-[260px] transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+<div class="w-10 h-10 bg-surface border-2 border-outline rounded-full flex items-center justify-center text-on-surface font-label-technical font-bold text-sm shadow-[0px_4px_0px_rgba(0,0,0,0.5)]">
+                AY
+            </div>
+<div class="mt-1 px-2 py-0.5 bg-surface-container-high border border-outline-variant rounded-DEFAULT text-on-surface font-label-sm shadow-[0px_2px_0px_rgba(0,0,0,0.5)]">
+                120m
+            </div>
+</div>
+<!-- Rider Marker (Danish) -->
+<div class="absolute top-[680px] left-[60px] transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center opacity-80">
+<div class="w-10 h-10 bg-surface border-2 border-outline-variant rounded-full flex items-center justify-center text-on-surface-variant font-label-technical font-bold text-sm shadow-[0px_4px_0px_rgba(0,0,0,0.5)]">
+                DN
+            </div>
+<div class="mt-1 px-2 py-0.5 bg-surface-container-high border border-outline-variant rounded-DEFAULT text-on-surface-variant font-label-sm shadow-[0px_2px_0px_rgba(0,0,0,0.5)]">
+                -80m
+            </div>
+</div>
+<!-- Floating Top Overlay Header -->
+<header class="absolute top-margin-mobile left-margin-mobile right-margin-mobile z-40 bg-surface-container/90 backdrop-blur-md border border-outline-variant rounded-xl p-4 shadow-[0px_4px_0px_rgba(0,0,0,0.5)] flex justify-between items-center">
+<div class="flex flex-col">
+<h1 class="font-title-md text-title-md text-on-surface tracking-tight">Sunday Morning Ride</h1>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span class="font-label-technical text-label-technical text-on-surface-variant">3 RIDERS ACTIVE</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button onclick="location.href="{% url 'pages:ride-summary' %}"" class="w-touch-target-min h-touch-target-min flex items-center justify-center bg-surface-container-high border border-outline-variant rounded-lg active:scale-95 transition-transform" title="End Ride">
+<span class="material-symbols-outlined text-on-surface" style="font-variation-settings: 'FILL' 0;">flag</span>
+</button>
+<button class="w-touch-target-min h-touch-target-min flex items-center justify-center bg-surface-container-high border border-outline-variant rounded-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-surface" style="font-variation-settings: 'FILL' 0;">tune</span>
+</button>
+</div>
+</header>
+<!-- Compass / Recenter Controls -->
+<div class="absolute top-32 right-margin-mobile z-30 flex flex-col gap-2">
+<button class="w-touch-target-min h-touch-target-min bg-surface-container-high border border-outline-variant rounded-lg flex items-center justify-center text-on-surface shadow-[0px_4px_0px_rgba(0,0,0,0.5)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+</button>
+<button class="w-touch-target-min h-touch-target-min bg-surface-container-high border border-outline-variant rounded-lg flex items-center justify-center text-on-surface shadow-[0px_4px_0px_rgba(0,0,0,0.5)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">my_location</span>
+</button>
+</div>
+<!-- Prominent FLAG STOP FAB -->
+<div class="absolute bottom-[100px] right-margin-mobile z-40">
+<button onclick="location.href="{% url 'pages:flag-stop' %}"" class="h-[64px] px-6 bg-error border-2 border-error-container rounded-full flex items-center gap-2 shadow-[0px_6px_0px_rgba(147,0,10,0.8)] active:translate-y-[4px] active:shadow-[0px_2px_0px_rgba(147,0,10,0.8)] transition-all">
+<span class="material-symbols-outlined text-on-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-technical text-label-technical text-on-error font-bold uppercase tracking-wider">FLAG STOP</span>
+</button>
+</div>
+</main>
+<!-- Bottom Expandable Panel: Riders -->
+<div class="absolute bottom-0 left-0 w-full z-50 bg-[#121214] border-t-2 border-outline-variant rounded-t-3xl shadow-[0px_-8px_24px_rgba(0,0,0,0.5)] pb-6 pt-2 px-margin-mobile transform transition-transform duration-300" id="riderPanel">
+<!-- Handle for swiping -->
+<div class="w-full flex justify-center pb-4 pt-2 cursor-pointer" onclick="togglePanel()">
+<div class="w-16 h-1.5 bg-[#2C2C2E] rounded-full"></div>
+</div>
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-title-md text-title-md text-on-surface">Roster</h2>
+<span class="font-label-technical text-label-technical text-primary-fixed">SPEED: 85 KM/H</span>
+</div>
+<!-- Rider List -->
+<div class="flex flex-col gap-2">
+<!-- Rameez (You) -->
+<div class="flex items-center justify-between p-3 bg-surface-container-low border border-primary-container/50 rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-on-primary-container font-label-technical font-bold">RZ</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface">Rameez</div>
+<div class="font-label-technical text-[10px] text-primary-container uppercase">Lead</div>
+</div>
+</div>
+<div class="font-label-technical text-label-technical text-on-surface-variant">You</div>
+</div>
+<!-- Ayaan -->
+<div class="flex items-center justify-between p-3 bg-surface-container-low border border-outline-variant rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface border border-outline rounded-full flex items-center justify-center text-on-surface font-label-technical font-bold">AY</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface">Ayaan</div>
+</div>
+</div>
+<div class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+<span class="font-label-technical text-label-technical">120m</span>
+</div>
+</div>
+<!-- Danish -->
+<div class="flex items-center justify-between p-3 bg-surface-container-low border border-outline-variant rounded-lg opacity-70">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface border border-outline-variant rounded-full flex items-center justify-center text-on-surface-variant font-label-technical font-bold">DN</div>
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Danish</div>
+</div>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+<span class="font-label-technical text-label-technical">80m</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+        let panelExpanded = false;
+        function togglePanel() {
+            const panel = document.getElementById('riderPanel');
+            if (panelExpanded) {
+                // Collapse slightly (just showing header and maybe first item)
+                panel.style.transform = 'translateY(60%)';
+            } else {
+                // Full expand
+                panel.style.transform = 'translateY(0)';
+            }
+            panelExpanded = !panelExpanded;
+        }
+        
+        // Initial state - partially collapsed to show map better, but showing roster header
+        // For this design requirement, keeping it fully visible initially as per description.
+    </script>
+</body></html>

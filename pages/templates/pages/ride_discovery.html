@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="description" content="IGNITION Rider Discovery - Find motorcycle riding companions by name, bike, location, and riding style."/>
+<meta property="og:title" content="IGNITION - Rider Discovery"/>
+<meta property="og:description" content="Find motorcycle riding companions by name, bike, location, and riding style."/>
+<meta property="og:type" content="website"/>
+<link rel="icon" type="image/svg+xml" href="{% static 'pages/favicon.svg' %}"/>
+<title>IGNITION - Rider Discovery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<script src="{% static 'pages/tailwind-config.js' %}"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md flex flex-col md:flex-row antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar (Mobile Anchor) -->
+<header class="md:hidden bg-background w-full top-0 border-b border-outline-variant flex justify-between items-center px-margin-mobile h-touch-target-min z-40 sticky">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high active:scale-95 transition-transform w-touch-target-min h-touch-target-min flex items-center justify-center rounded">
+            menu
+        </button>
+<div class="font-display-lg text-display-lg text-primary uppercase tracking-tighter">
+            IGNITION
+        </div>
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high active:scale-95 transition-transform w-touch-target-min h-touch-target-min flex items-center justify-center rounded">
+            settings
+        </button>
+</header>
+<!-- SideNav for Desktop (Simulated structural requirement) -->
+<aside class="hidden md:flex flex-col w-64 border-r border-outline-variant bg-surface-container h-screen sticky top-0 p-stack-md z-40 shrink-0">
+<div class="font-display-lg text-display-lg text-primary uppercase tracking-tighter mb-stack-lg px-2">
+            IGNITION
+        </div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors" href="{% url 'pages:dashboard' %}">
+<span class="material-symbols-outlined">home</span>
+<span class="font-title-md text-title-md">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container text-on-primary-container font-bold transition-colors" href="{% url 'pages:discovery' %}">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-title-md text-title-md">Explore</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors" href="{% url 'pages:create-ride' %}">
+<span class="material-symbols-outlined">motorcycle</span>
+<span class="font-title-md text-title-md">Rides</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors" href="{% url 'pages:active-ride' %}">
+<span class="material-symbols-outlined">map</span>
+<span class="font-title-md text-title-md">Map</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-title-md text-title-md">Profile</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 pb-[100px] md:pb-0 relative max-w-5xl mx-auto w-full">
+<!-- Header Section -->
+<div class="px-margin-mobile pt-stack-lg md:pt-margin-desktop pb-stack-md">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface mb-stack-sm">Rider Discovery</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Find companions for your next coordinate.</p>
+</div>
+<!-- Search & Filter Controls -->
+<div class="px-margin-mobile flex flex-col gap-stack-md sticky top-[48px] md:top-0 bg-background/95 backdrop-blur z-30 py-stack-md border-b border-outline-variant/50">
+<!-- Search Bar -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="w-full bg-surface-dim border border-outline-variant text-on-surface font-body-md text-body-md rounded h-touch-target-min pl-12 pr-4 focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all placeholder:text-on-surface-variant/50" placeholder="Search riders by name, bike, or location..." type="text"/>
+<button class="absolute inset-y-0 right-0 flex items-center pr-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">mic</span>
+</button>
+</div>
+<!-- Filter Chips (Horizontal Scroll) -->
+<div class="flex overflow-x-auto gap-stack-sm no-scrollbar pb-1 -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0">
+<button class="shrink-0 h-10 px-4 rounded bg-primary-container/15 border border-primary-container text-primary font-label-technical text-label-technical flex items-center gap-2 hover:bg-primary-container/25 transition-colors">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+                    Filters
+                </button>
+<div class="w-px h-6 bg-outline-variant my-auto mx-1 shrink-0"></div>
+<button class="shrink-0 h-10 px-4 rounded bg-surface-container border border-outline-variant text-on-surface hover:border-primary hover:text-primary font-label-technical text-label-technical transition-colors">
+                    Nearby (50km)
+                </button>
+<button class="shrink-0 h-10 px-4 rounded bg-surface-container border border-outline-variant text-on-surface hover:border-primary hover:text-primary font-label-technical text-label-technical transition-colors">
+                    Style: ADV
+                </button>
+<button class="shrink-0 h-10 px-4 rounded bg-surface-container border border-outline-variant text-on-surface hover:border-primary hover:text-primary font-label-technical text-label-technical transition-colors">
+                    Bike: Royal Enfield
+                </button>
+<button class="shrink-0 h-10 px-4 rounded bg-surface-container border border-outline-variant text-on-surface hover:border-primary hover:text-primary font-label-technical text-label-technical transition-colors">
+                    Exp: Veteran
+                </button>
+</div>
+</div>
+<!-- Rider Grid -->
+<div class="px-margin-mobile py-stack-md grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<!-- Rider Card 1 -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col sm:flex-row gap-stack-md hover:border-outline transition-colors group relative overflow-hidden">
+<div class="absolute top-0 right-0 w-16 h-16 bg-primary-container/5 rounded-bl-full pointer-events-none"></div>
+<div class="flex items-center gap-stack-md w-full sm:w-auto">
+<div class="w-16 h-16 rounded border border-outline-variant shrink-0 overflow-hidden relative">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="A rugged, dramatic portrait of a male motorcycle rider with a subtle beard, wearing a worn dark technical riding jacket. High-contrast dark mode lighting with a subtle amber rim light. The background is a blurred, dark industrial garage setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuLho7wa13PGnGYd-Ti-UwdOXTyVFREWBSHeoOXW7dzqa0VBydZAd714usVnhD6KXCaEI1ueIw-Ez1XQHqYChcBvhiYkn1HZbx7Gl1DTMkcZXtcG2zoLiKUuq7Un8olSU0C7DcnI9pxNqtDz-sMz7bjsyGphfmHDfNRRX1tfuKL5TKSFr2DDkGon9zb0U7uUQivUicVyBc9uWG1Fy-nK5hZ4Nhjo1Rd35TnYVpcjpsUetQndIcGgU"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-[#4ade80] rounded-full border-2 border-surface-container"></div>
+</div>
+<div class="flex-1 sm:w-48">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-title-md text-title-md text-on-surface truncate">Ayaan Khan</h3>
+<span class="font-label-technical text-label-technical text-primary shrink-0 sm:hidden">98% Match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[16px] shrink-0 text-outline">motorcycle</span>
+<span class="truncate">Royal Enfield Himalayan</span>
+</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[16px] shrink-0 text-outline">location_on</span> 
+                            Gurgaon (12km)
+                        </p>
+</div>
+</div>
+<div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto sm:ml-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t border-outline-variant sm:border-t-0 border-dashed sm:border-solid">
+<span class="font-label-technical text-label-technical text-primary hidden sm:block mb-2">98% Match</span>
+<button class="bg-primary-container text-on-primary-container font-label-technical text-label-technical uppercase h-10 px-6 rounded hover:bg-primary-fixed transition-colors flex items-center justify-center w-full sm:w-auto active:scale-95">
+                        Invite
+                    </button>
+</div>
+</div>
+<!-- Rider Card 2 -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col sm:flex-row gap-stack-md hover:border-outline transition-colors group relative overflow-hidden">
+<div class="flex items-center gap-stack-md w-full sm:w-auto">
+<div class="w-16 h-16 rounded border border-outline-variant shrink-0 overflow-hidden relative">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Close-up profile shot of a female rider wearing an aerodynamic matte black helmet with the visor up, showing intense, focused eyes. High-contrast dark mode aesthetic, illuminated by sleek, cold white streetlights in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-wy2dn0_WbBBTwR-O4NI5XFLy6lwQhqieNxs_dFpblkjjrY7mB-vpNsL-j4HltICKNegeSyGPY1Yb_E7qo4Ebe8Kp8oHAVWwx2HaL_FGAMMFJz56RLm4I0GOgqUU-UqUyY4rP6GEBHJisWFUqRLumDA_FhdLnXsGQGXU19fD6TBXY3wJIwdvI_qhGm_qIJwDDt8dLoszfjJFQ9nZC5sz6YaJ2-AeJJaAxo8AOryenaZRSMtKWIXk"/>
+</div>
+<div class="flex-1 sm:w-48">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-title-md text-title-md text-on-surface truncate">Sarah Jenkins</h3>
+<span class="font-label-technical text-label-technical text-outline shrink-0 sm:hidden">85% Match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[16px] shrink-0 text-outline">motorcycle</span>
+<span class="truncate">BMW R 1250 GS</span>
+</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[16px] shrink-0 text-outline">location_on</span> 
+                            New Delhi (24km)
+                        </p>
+</div>
+</div>
+<div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto sm:ml-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t border-outline-variant sm:border-t-0 border-dashed sm:border-solid">
+<span class="font-label-technical text-label-technical text-outline hidden sm:block mb-2">85% Match</span>
+<button class="bg-transparent border-2 border-outline-variant text-on-surface font-label-technical text-label-technical uppercase h-10 px-6 rounded hover:border-primary hover:text-primary transition-colors flex items-center justify-center w-full sm:w-auto active:scale-95">
+                        Invite
+                    </button>
+</div>
+</div>
+<!-- Rider Card 3 -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col sm:flex-row gap-stack-md hover:border-outline transition-colors group relative overflow-hidden opacity-75 hover:opacity-100">
+<div class="flex items-center gap-stack-md w-full sm:w-auto">
+<div class="w-16 h-16 rounded border border-outline-variant shrink-0 overflow-hidden relative">
+<div class="w-full h-full bg-surface-bright flex items-center justify-center text-on-surface-variant font-label-technical text-lg">
+                            MV
+                        </div>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-outline rounded-full border-2 border-surface-container"></div>
+</div>
+<div class="flex-1 sm:w-48">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-title-md text-title-md text-on-surface truncate">Marcus V.</h3>
+<span class="font-label-technical text-label-technical text-outline shrink-0 sm:hidden">72% Match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[16px] shrink-0 text-outline">motorcycle</span>
+<span class="truncate">KTM 390 Adventure</span>
+</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1.5 truncate">
+<span class="material-symbols-outlined text-[16px] shrink-0 text-outline">location_on</span> 
+                            Noida (35km)
+                        </p>
+</div>
+</div>
+<div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto sm:ml-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t border-outline-variant sm:border-t-0 border-dashed sm:border-solid">
+<span class="font-label-technical text-label-technical text-outline hidden sm:block mb-2">72% Match</span>
+<button class="bg-transparent border-2 border-outline-variant text-on-surface font-label-technical text-label-technical uppercase h-10 px-6 rounded hover:border-primary hover:text-primary transition-colors flex items-center justify-center w-full sm:w-auto active:scale-95">
+                        Invite
+                    </button>
+</div>
+</div>
+<!-- Empty State / Load More -->
+<div class="bg-surface-dim border border-outline-variant border-dashed rounded-lg p-stack-md flex flex-col items-center justify-center gap-stack-sm min-h-[120px] cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-outline text-[32px]">expand_more</span>
+<span class="font-label-technical text-label-technical text-on-surface-variant uppercase tracking-wider">Load More Navigators</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only shell) -->
+<nav class="md:hidden bg-surface-container-lowest fixed bottom-0 w-full z-50 h-[80px] shadow-[0px_-4px_0px_rgba(0,0,0,0.5)] flex justify-around items-center px-2">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary active:scale-90 transition-all duration-150 w-16 h-16" href="{% url 'pages:dashboard' %}">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<!-- Explore (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 hover:text-primary active:scale-90 transition-all duration-150" href="{% url 'pages:discovery' %}">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-label-sm text-label-sm">Explore</span>
+</a>
+<!-- Rides -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary active:scale-90 transition-all duration-150 w-16 h-16" href="{% url 'pages:create-ride' %}">
+<span class="material-symbols-outlined mb-1">motorcycle</span>
+<span class="font-label-sm text-label-sm">Rides</span>
+</a>
+<!-- Map -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary active:scale-90 transition-all duration-150 w-16 h-16" href="{% url 'pages:active-ride' %}">
+<span class="material-symbols-outlined mb-1">map</span>
+<span class="font-label-sm text-label-sm">Map</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary active:scale-90 transition-all duration-150 w-16 h-16" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-primary-container text-on-primary-container px-6 py-3 rounded-lg font-label-technical text-label-technical uppercase tracking-wider shadow-[0px_4px_0px_rgba(0,0,0,0.5)] animate-[fadeIn_0.2s_ease-out]';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 1500);
+    setTimeout(() => toast.remove(), 1800);
+}
+document.querySelectorAll('button').forEach(btn => {
+    if (btn.textContent.trim() === 'Invite') {
+        btn.addEventListener('click', function() {
+            this.textContent = 'Invited!';
+            this.disabled = true;
+            this.classList.add('opacity-50');
+            showToast('Rider invited to your crew');
+        });
+    }
+});
+</script>
+</body></html>

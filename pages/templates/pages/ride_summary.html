@@ -1,0 +1,121 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="description" content="IGNITION Ride Completed - View your ride summary including duration, distance, riders, and stops."/>
+<meta property="og:title" content="IGNITION - Ride Completed"/>
+<meta property="og:description" content="View your ride summary including duration, distance, riders, and stops."/>
+<meta property="og:type" content="website"/>
+<link rel="icon" type="image/svg+xml" href="{% static 'pages/favicon.svg' %}"/>
+<title>IGNITION - Ride Completed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Hanken+Grotesk:wght@600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="{% static 'pages/tailwind-config.js' %}"></script>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md text-body-md overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Transactional Screen: Navigation Suppressed -->
+<!-- Header -->
+<header class="w-full top-0 flex justify-center items-center px-margin-mobile h-[72px] bg-background border-b border-outline-variant shrink-0 z-10 sticky">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface md:font-headline-lg md:text-headline-lg">Ride Completed</h1>
+</header>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col p-margin-mobile gap-stack-lg max-w-4xl mx-auto w-full pb-[120px]">
+<!-- Map Overview Area (Simulated) -->
+<section class="relative w-full h-[300px] md:h-[400px] rounded-lg overflow-hidden border border-outline-variant bg-surface-container-low">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A highly detailed, technical satellite map view of a winding mountainous motorcycle route. The map is rendered in a dark mode aesthetic with deep blacks, muted grays, and precise grid lines. A bold, glowing amber line traces the path of the ride, contrasting sharply against the dark terrain. The image conveys a sense of rugged, premium automotive navigation." data-location="Los Angeles" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBcjIkVz32yXFor22DtiGyz5Ctfb6jtI8xZpM8rcE7m2YZwMm-9-SiJNHgPrQwH0YN0U3i637QeBRMEZDAltZqQ5A4mVAeGmGqvWSxyxy69GK7mZUTznwuS2arEQs_DEzvo1fdaLcZOUk5xh5Tfn0TgzTPhzMmkXqXmlTfxfM0B-KCU81GOCz9OblRNSUcBK831ss9lhAcN4KYszxYjovF_3KxwoLngN-MwhXAOQZTiM1vgxY-D_Nk')"></div>
+<!-- Overlay Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+<!-- Floating Map Stats -->
+<div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+<div class="bg-surface-container/90 backdrop-blur-sm border border-outline-variant rounded p-stack-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">flag</span>
+<span class="font-label-technical text-label-technical text-on-surface">FINISH</span>
+</div>
+</div>
+</section>
+<!-- Stats Grid -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-unit">
+<!-- Stat Item -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-outline mb-2">timer</span>
+<span class="font-label-technical text-label-technical text-on-surface-variant uppercase mb-1">Duration</span>
+<span class="font-title-md text-title-md text-primary">2h 15m</span>
+</div>
+<!-- Stat Item -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-outline mb-2">route</span>
+<span class="font-label-technical text-label-technical text-on-surface-variant uppercase mb-1">Distance</span>
+<span class="font-title-md text-title-md text-primary">42.3 km</span>
+</div>
+<!-- Stat Item -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-outline mb-2">group</span>
+<span class="font-label-technical text-label-technical text-on-surface-variant uppercase mb-1">Riders</span>
+<span class="font-title-md text-title-md text-primary">3</span>
+</div>
+<!-- Stat Item -->
+<div class="bg-surface-container border border-outline-variant rounded-lg p-stack-md flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-outline mb-2">location_on</span>
+<span class="font-label-technical text-label-technical text-on-surface-variant uppercase mb-1">Stops</span>
+<span class="font-title-md text-title-md text-primary">2</span>
+</div>
+</section>
+<!-- Participants List -->
+<section class="flex flex-col gap-stack-sm">
+<h2 class="font-title-md text-title-md text-on-surface mb-2">Squad</h2>
+<div class="flex flex-col gap-unit">
+<!-- Rider 1 -->
+<div class="bg-surface-container border border-outline-variant rounded flex items-center p-stack-md gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline">
+<span class="font-label-technical text-label-technical text-on-surface">R1</span>
+</div>
+<div class="flex-grow">
+<div class="font-body-md text-body-md text-on-surface font-semibold">Rider One (You)</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Lead Navigator</div>
+</div>
+<div class="shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-fixed-dim">verified</span>
+</div>
+</div>
+<!-- Rider 2 -->
+<div class="bg-surface-container border border-outline-variant rounded flex items-center p-stack-md gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline">
+<span class="font-label-technical text-label-technical text-on-surface">MT</span>
+</div>
+<div class="flex-grow">
+<div class="font-body-md text-body-md text-on-surface font-semibold">Mike T.</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Wingman</div>
+</div>
+<div class="shrink-0">
+<span class="px-2 py-1 bg-surface-container-highest rounded text-label-sm font-label-sm text-on-surface-variant">Completed</span>
+</div>
+</div>
+<!-- Rider 3 -->
+<div class="bg-surface-container border border-outline-variant rounded flex items-center p-stack-md gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline">
+<span class="font-label-technical text-label-technical text-on-surface">SJ</span>
+</div>
+<div class="flex-grow">
+<div class="font-body-md text-body-md text-on-surface font-semibold">Sarah J.</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Sweep</div>
+</div>
+<div class="shrink-0">
+<span class="px-2 py-1 bg-surface-container-highest rounded text-label-sm font-label-sm text-on-surface-variant">Completed</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Fixed Bottom Action Area -->
+<div class="fixed bottom-0 left-0 right-0 p-margin-mobile bg-background/90 backdrop-blur-md border-t border-outline-variant z-50">
+<div class="max-w-4xl mx-auto flex justify-center">
+<a href="{% url 'pages:dashboard' %}" class="w-full md:w-auto md:min-w-[300px] h-touch-target-min bg-primary-container text-on-primary-container font-headline-lg-mobile text-headline-lg-mobile rounded uppercase flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                Done
+            </a>
+</div>
+</div>
+</body></html>

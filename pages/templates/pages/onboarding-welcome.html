@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="description" content="IGNITION - Group motorcycle touring app. Find riders, organize rides, and stay connected with your crew in real time."/>
+<meta property="og:title" content="IGNITION - Onboarding"/>
+<meta property="og:description" content="Group motorcycle touring app. Find riders, organize rides, and stay connected with your crew in real time."/>
+<meta property="og:type" content="website"/>
+<link rel="icon" type="image/svg+xml" href="{% static 'pages/favicon.svg' %}"/>
+<title>IGNITION - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<script src="{% static 'pages/tailwind-config.js' %}"></script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Subtle scanline overlay for technical feel */
+        .hud-overlay {
+            background: linear-gradient(rgba(18, 19, 23, 0) 50%, rgba(18, 19, 23, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+      </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-full flex flex-col overflow-hidden relative font-body-md text-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Brand Anchor (Absolute positioned over image) -->
+<div class="absolute top-0 left-0 w-full p-margin-mobile z-20 flex justify-between items-center">
+<span class="font-display-lg text-display-lg text-primary uppercase tracking-tighter">IGNITION</span>
+<a href="{% url 'pages:dashboard' %}" class="text-on-surface-variant font-label-technical text-label-technical uppercase tracking-widest hover:text-primary transition-colors">Skip</a>
+</div>
+<!-- Hero Image Area -->
+<div class="flex-1 relative w-full overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="High-end editorial photography of a cohesive group of modern adventure motorcycles riding in tight formation along a rugged, sweeping mountain pass at dusk. The visual aesthetic is highly technical, premium, and cinematic, dominated by deep blacks and slate grays with sharp, piercing amber headlights cutting through the twilight. The overall mood is rugged, reliable, and professional, perfectly suited for a high-performance riding app dark mode interface." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDajttWY0wjr9Gh4H54vrYGEsnr_OPyEqwq3V_1QiJDxsGn5qO9Ek-XGwNF_or12GSyR4nMpK1OKHB-8tbcvQibaSnaVPTfhtUv0kkNf1UZWQb2Tw1jYXTCN7SHj26dePKiwlPxdjydGtsnWU3CP8Bsbsp9Pbk__47KSnjg-6_ZdopGib0FwDvSN3kqPaAHh7oMrDFISVL31VamtBZpj4FrmzJj68m_lIZkU9R8RmvZ3vp-IG6uu7E')">
+</div>
+<!-- Technical HUD Overlay -->
+<div class="absolute inset-0 hud-overlay z-10 mix-blend-overlay opacity-30"></div>
+<!-- Bottom Gradient to blend into the container -->
+<div class="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-background to-transparent z-10"></div>
+</div>
+<!-- Bottom Action Sheet (Layer 1) -->
+<div class="relative z-20 w-full bg-surface border-t border-outline-variant pt-stack-lg px-margin-mobile pb-10 flex flex-col md:max-w-2xl md:mx-auto md:border md:border-outline-variant md:rounded-t-2xl md:-mt-8 shadow-[0px_-8px_32px_rgba(0,0,0,0.8)]">
+<!-- Status Indicator / Step -->
+<div class="flex items-center gap-unit mb-stack-md">
+<span class="w-6 h-1 bg-primary rounded-full"></span>
+<span class="w-2 h-1 bg-surface-container-highest rounded-full"></span>
+<span class="w-2 h-1 bg-surface-container-highest rounded-full"></span>
+</div>
+<div class="flex flex-col gap-stack-sm flex-1">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">
+                Ride together.<br/>
+<span class="text-on-surface-variant">Stay connected.</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-unit max-w-[90%]">
+                Find riders, organize group rides, and stay connected with your crew in real time.
+            </p>
+</div>
+<!-- Primary CTA -->
+<a href="{% url 'pages:dashboard' %}" class="w-full mt-stack-lg bg-primary-container text-on-primary-container font-label-technical text-label-technical uppercase tracking-wider h-touch-target-min rounded flex items-center justify-center gap-stack-sm active:scale-[0.98] transition-transform shadow-[0px_4px_0px_rgba(0,0,0,0.5)] border border-[#ffd600]/20 group">
+            Get Started
+            <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+<!-- Secondary / Login CTA -->
+<div class="mt-stack-md text-center">
+<p class="font-label-sm text-label-sm text-on-surface-variant">
+                ALREADY HAVE AN ACCOUNT? <a class="text-primary hover:underline ml-1" href="{% url 'pages:login' %}">LOG IN</a>
+</p>
+</div>
+</div>
+</body></html>
