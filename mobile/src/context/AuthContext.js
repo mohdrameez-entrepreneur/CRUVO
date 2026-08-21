@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { authAPI, profileAPI } from '../api';
 
 const AuthContext = createContext(null);
@@ -15,14 +15,14 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
+      const token = await SecureStore.getItemAsync('auth_token');
       if (token) {
         const res = await profileAPI.get();
         setProfile(res.data);
         setUser({ token });
       }
     } catch {
-      await AsyncStorage.removeItem('auth_token');
+      await SecureStore.deleteItemAsync('auth_token');
     } finally {
       setLoading(false);
     }
@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await authAPI.login({ email, password });
-    await AsyncStorage.setItem('auth_token', res.data.token);
+    await SecureStore.setItemAsync('auth_token', res.data.token);
     setProfile(res.data.user.profile);
     setUser({ token: res.data.token });
     return res.data;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     const res = await authAPI.register(data);
-    await AsyncStorage.setItem('auth_token', res.data.token);
+    await SecureStore.setItemAsync('auth_token', res.data.token);
     setProfile(res.data.user.profile);
     setUser({ token: res.data.token });
     return res.data;
@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
     try {
       await authAPI.logout();
     } catch {}
-    await AsyncStorage.removeItem('auth_token');
+    await SecureStore.deleteItemAsync('auth_token');
     setUser(null);
     setProfile(null);
   };

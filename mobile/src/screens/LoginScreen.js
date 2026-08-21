@@ -20,7 +20,14 @@ export default function LoginScreen({ navigation }) {
     try {
       await login(email, password);
     } catch (err) {
-      Alert.alert('Error', 'Invalid credentials');
+      console.log('LOGIN ERROR:', err.message, err.code, err.response?.status, err.response?.data);
+      const msg = err.response?.data;
+      if (msg && typeof msg === 'object') {
+        const firstError = Object.values(msg)[0];
+        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : firstError);
+      } else {
+        Alert.alert('Error', `Network error: ${err.message || 'Could not reach server'}`);
+      }
     } finally {
       setLoading(false);
     }

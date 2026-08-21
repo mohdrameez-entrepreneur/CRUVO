@@ -27,9 +27,14 @@ export default function SignupScreen({ navigation }) {
     try {
       await register(form);
     } catch (err) {
+      console.log('SIGNUP ERROR:', err.message, err.code, err.response?.status, err.response?.data);
       const msg = err.response?.data;
-      const firstError = typeof msg === 'object' ? Object.values(msg)[0] : 'Registration failed';
-      Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : firstError);
+      if (msg && typeof msg === 'object') {
+        const firstError = Object.values(msg)[0];
+        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : firstError);
+      } else {
+        Alert.alert('Error', `Network error: ${err.message || 'Could not reach server'}`);
+      }
     } finally {
       setLoading(false);
     }

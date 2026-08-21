@@ -1,15 +1,16 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const API_BASE = 'https://cruvo.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('auth_token');
+  const token = await SecureStore.getItemAsync('auth_token');
   if (token) {
     config.headers.Authorization = `Token ${token}`;
   }
