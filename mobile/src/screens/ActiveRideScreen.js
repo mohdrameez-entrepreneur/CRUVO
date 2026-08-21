@@ -226,6 +226,8 @@ export default function ActiveRideScreen({ navigation, route }) {
           ride={ride}
           positions={positions}
           myUserId={user?.id}
+          userLocation={location}
+          heading={location?.heading}
           followMyLocation
         />
       </View>

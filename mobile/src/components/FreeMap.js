@@ -1,12 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TILES = 'https://demotiles.maplibre.org/style.json';
-
-function buildHtml({ center, zoom, markers, polyline, riderPositions }) {
+function buildHtml({ center, zoom, markers, polyline, riderPositions, followUser }) {
   const markersJson = JSON.stringify(markers || []);
   const polylineJson = JSON.stringify(polyline || []);
   const ridersJson = JSON.stringify(riderPositions || []);
@@ -22,40 +20,90 @@ function buildHtml({ center, zoom, markers, polyline, riderPositions }) {
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body, #map { width:100%; height:100%; background:#121317; overflow:hidden; }
   .maplibregl-ctrl-attrib { display:none !important; }
+  .maplibregl-ctrl-group { box-shadow: none !important; }
+  .maplibregl-ctrl button { background: rgba(30,31,35,0.9) !important; border: 1px solid #4d4632 !important; }
+  .maplibregl-ctrl button span { filter: invert(1); }
+  #user-dot {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:16px; height:16px; border-radius:8px; background:#4285F4;
+    border:3px solid #fff; box-shadow:0 0 0 2px rgba(66,133,244,0.3), 0 2px 8px rgba(0,0,0,0.5);
+    z-index:10; pointer-events:none; display:none;
+  }
+  #user-ring {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:60px; height:60px; border-radius:30px; background:rgba(66,133,244,0.12);
+    z-index:9; pointer-events:none; display:none;
+  }
+  #user-heading {
+    position:absolute; top:50%; left:50%;
+    width:4px; height:22px; margin-left:-2px; margin-top:-28px;
+    background:#4285F4; border-radius:2px; transform-origin:bottom center;
+    z-index:11; pointer-events:none; display:none;
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
+<div id="user-ring"></div>
+<div id="user-dot"></div>
+<div id="user-heading"></div>
 <script>
 var style = {
   version: 8,
   name: 'CRUVO',
   sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: ''
-    }
+    osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 }
   },
-  layers: [{
-    id: 'osm',
-    type: 'raster',
-    source: 'osm',
-    minzoom: 0,
-    maxzoom: 19
-  }]
+  layers: [{ id: 'osm', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }]
 };
 
 var map = new maplibregl.Map({
   container: 'map',
   style: style,
   center: [${center[1]}, ${center[0]}],
-  zoom: ${zoom || 13},
+  zoom: ${followUser ? 17 : (zoom || 13)},
+  pitch: ${followUser ? 45 : 0},
+  bearing: 0,
   attributionControl: false
 });
 
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), 'top-right');
+
+var userMarker = document.getElementById('user-dot');
+var userRing = document.getElementById('user-ring');
+var userHeading = document.getElementById('user-heading');
+
+var firstUserPos = true;
+
+window.addEventListener('message', function(e) {
+  try {
+    var msg = JSON.parse(e.data);
+    if (msg.type === 'userLocation' && msg.lat && msg.lng) {
+      var lngLat = [msg.lng, msg.lat];
+
+      if (firstUserPos) {
+        firstUserPos = false;
+        userMarker.style.display = 'block';
+        userRing.style.display = 'block';
+        userHeading.style.display = 'block';
+        map.jumpTo({ center: lngLat, zoom: 17, pitch: 45, bearing: msg.heading || 0 });
+      } else {
+        userMarker.style.display = 'block';
+        userRing.style.display = 'block';
+        userHeading.style.display = 'block';
+        map.easeTo({ center: lngLat, zoom: 17, pitch: 45, bearing: msg.heading || 0, duration: 1000 });
+      }
+
+      if (msg.heading !== undefined && msg.heading !== null) {
+        userHeading.style.transform = 'translate(-50%,-100%) rotate(' + (-msg.heading) + 'deg)';
+      }
+    }
+
+    if (msg.type === 'flyTo' && msg.lat && msg.lng) {
+      map.flyTo({ center: [msg.lng, msg.lat], zoom: 17, pitch: 45, bearing: msg.heading || 0, speed: 1.2 });
+    }
+  } catch(err) {}
+});
 
 map.on('load', function() {
   var polyline = ${polylineJson};
@@ -74,10 +122,19 @@ map.on('load', function() {
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: { 'line-color': '#ffd600', 'line-width': 4, 'line-opacity': 0.9 }
     });
+    map.addLayer({
+      id: 'route-outline',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#705d00', 'line-width': 8, 'line-opacity': 0.4 }
+    }, 'route-line');
 
-    var bounds = polyline.reduce(function(b, p) { return b.extend([p[1], p[0]]); }, new maplibregl.LngLatBounds());
-    if (polyline.length > 1) {
-      map.fitBounds(bounds, { padding: { top: 50, bottom: 50, left: 50, right: 50 } });
+    if (!${followUser}) {
+      var bounds = polyline.reduce(function(b, p) { return b.extend([p[1], p[0]]); }, new maplibregl.LngLatBounds());
+      if (polyline.length > 1) {
+        map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 } });
+      }
     }
   }
 
@@ -105,20 +162,25 @@ map.on('load', function() {
 </html>`;
 }
 
-export default function FreeMap({ ride, positions = [], myUserId, followMyLocation = false, style }) {
+export default function FreeMap({ ride, positions = [], myUserId, userLocation, heading, followMyLocation = false, style }) {
+  const webViewRef = useRef(null);
+  const lastLocationRef = useRef(null);
+
   const center = useMemo(() => {
+    if (userLocation && followMyLocation) {
+      return [userLocation.latitude, userLocation.longitude];
+    }
     if (ride?.origin_lat && ride?.destination_lat) {
       return [(ride.origin_lat + ride.destination_lat) / 2, (ride.origin_lng + ride.destination_lng) / 2];
     }
     if (ride?.origin_lat) return [ride.origin_lat, ride.origin_lng];
     return [19.076, 72.8777];
-  }, [ride]);
+  }, [ride, userLocation, followMyLocation]);
 
   const zoom = useMemo(() => {
+    if (followMyLocation && userLocation) return 17;
     if (ride?.origin_lat && ride?.destination_lat) {
-      const dLat = Math.abs(ride.origin_lat - ride.destination_lat);
-      const dLng = Math.abs(ride.origin_lng - ride.destination_lng);
-      const d = Math.max(dLat, dLng);
+      const d = Math.max(Math.abs(ride.origin_lat - ride.destination_lat), Math.abs(ride.origin_lng - ride.destination_lng));
       if (d > 2) return 8;
       if (d > 1) return 9;
       if (d > 0.5) return 10;
@@ -127,7 +189,7 @@ export default function FreeMap({ ride, positions = [], myUserId, followMyLocati
       return 13;
     }
     return 13;
-  }, [ride]);
+  }, [ride, userLocation, followMyLocation]);
 
   const markers = useMemo(() => {
     const m = [];
@@ -150,21 +212,39 @@ export default function FreeMap({ ride, positions = [], myUserId, followMyLocati
   }, [ride]);
 
   const riderPositions = useMemo(() => {
-    return (positions || []).map(p => ({
-      lat: p.lat,
-      lng: p.lng,
-      initials: p.initials || '??',
-    }));
+    return (positions || []).map(p => ({ lat: p.lat, lng: p.lng, initials: p.initials || '??' }));
   }, [positions]);
 
   const html = useMemo(
-    () => buildHtml({ center, zoom, markers, polyline, riderPositions }),
-    [center, zoom, markers, polyline, riderPositions]
+    () => buildHtml({ center, zoom, markers, polyline, riderPositions, followUser: followMyLocation }),
+    [center, zoom, markers, polyline, riderPositions, followMyLocation]
   );
+
+  const sendMessage = useCallback((msg) => {
+    if (webViewRef.current) {
+      webViewRef.current.postMessage(JSON.stringify(msg));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userLocation && followMyLocation) {
+      const key = `${userLocation.latitude.toFixed(5)},${userLocation.longitude.toFixed(5)}`;
+      if (key !== lastLocationRef.current) {
+        lastLocationRef.current = key;
+        sendMessage({
+          type: 'userLocation',
+          lat: userLocation.latitude,
+          lng: userLocation.longitude,
+          heading: heading || 0,
+        });
+      }
+    }
+  }, [userLocation, heading, followMyLocation, sendMessage]);
 
   return (
     <View style={[styles.container, style]}>
       <WebView
+        ref={webViewRef}
         source={{ html }}
         style={styles.webview}
         originWhitelist={['*']}
@@ -173,6 +253,7 @@ export default function FreeMap({ ride, positions = [], myUserId, followMyLocati
         scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
+        onMessage={() => {}}
       />
     </View>
   );
