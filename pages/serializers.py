@@ -107,18 +107,27 @@ class LoginSerializer(serializers.Serializer):
 class RideParticipantSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     initials = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
     bike_info = serializers.SerializerMethodField()
 
     class Meta:
         model = RideParticipant
         fields = ['id', 'user', 'role', 'status', 'is_ready', 'joined_at', 'completed_at',
-                  'display_name', 'initials', 'bike_info']
+                  'display_name', 'initials', 'avatar_url', 'bike_info']
 
     def get_display_name(self, obj):
         return obj.user.profile.display_name
 
     def get_initials(self, obj):
         return obj.user.profile.initials()
+
+    def get_avatar_url(self, obj):
+        if obj.user.profile.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.user.profile.avatar.url)
+            return obj.user.profile.avatar.url
+        return None
 
     def get_bike_info(self, obj):
         p = obj.user.profile
@@ -217,14 +226,23 @@ class InvitationSerializer(serializers.ModelSerializer):
 class RidePositionSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     initials = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = RidePosition
         fields = ['id', 'user', 'lat', 'lng', 'heading', 'speed', 'updated_at',
-                  'display_name', 'initials']
+                  'display_name', 'initials', 'avatar_url']
 
     def get_display_name(self, obj):
         return obj.user.profile.display_name
 
     def get_initials(self, obj):
         return obj.user.profile.initials()
+
+    def get_avatar_url(self, obj):
+        if obj.user.profile.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.user.profile.avatar.url)
+            return obj.user.profile.avatar.url
+        return None

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Activity
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { discoveryAPI } from '../api';
+import UserAvatar from '../components/UserAvatar';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
@@ -91,9 +92,13 @@ function RiderCard({ rider }) {
   return (
     <View style={styles.riderCard}>
       <View style={styles.riderHeader}>
-        <View style={styles.riderAvatar}>
-          <Text style={styles.riderInitials}>{p?.initials || '??'}</Text>
-        </View>
+        <UserAvatar
+          avatarUrl={p?.avatar_url}
+          name={p?.display_name}
+          initials={p?.initials}
+          id={rider.id}
+          size={44}
+        />
         <View style={styles.riderInfo}>
           <Text style={styles.riderName}>{p?.display_name}</Text>
           <Text style={styles.riderBike}>{[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'No bike info'}</Text>

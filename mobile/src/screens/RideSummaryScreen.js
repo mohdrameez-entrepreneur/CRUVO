@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
+import UserAvatar from '../components/UserAvatar';
 
 const { width } = Dimensions.get('window');
 
@@ -220,9 +221,14 @@ export default function RideSummaryScreen({ navigation, route }) {
             const isRiderCreator = rider.user === ride.creator;
             return (
               <View key={rider.id || i} style={styles.riderRow}>
-                <View style={[styles.riderAvatar, !isRiderCreator && rider.is_ready && styles.riderAvatarReady]}>
-                  <Text style={styles.riderInitials}>{rider.initials}</Text>
-                </View>
+                <UserAvatar
+                  avatarUrl={rider.avatar_url}
+                  name={rider.display_name}
+                  initials={rider.initials}
+                  id={rider.user}
+                  size={44}
+                  style={!isRiderCreator && rider.is_ready ? styles.avatarReady : null}
+                />
                 <View style={styles.riderInfo}>
                   <Text style={styles.riderName}>
                     {rider.display_name} {isRiderCreator && <Text style={styles.youBadge}>Leader</Text>}
@@ -371,6 +377,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   riderAvatarReady: { backgroundColor: 'rgba(76,175,80,0.2)', borderWidth: 2, borderColor: '#4CAF50' },
+  avatarReady: { borderWidth: 2, borderColor: '#4CAF50' },
   riderInitials: { ...typography.labelTechnical, color: colors.onSurface },
   riderInfo: { flex: 1 },
   riderName: { ...typography.bodyMd, color: colors.onSurface },

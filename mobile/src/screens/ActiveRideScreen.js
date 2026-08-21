@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
+import UserAvatar from '../components/UserAvatar';
 import useLocation from '../hooks/useLocation';
 
 const { width, height } = Dimensions.get('window');
@@ -281,9 +282,14 @@ export default function ActiveRideScreen({ navigation, route }) {
             const isRiderCreator = rider.user === ride.creator;
             return (
               <View key={rider.id || i} style={styles.riderRow}>
-                <View style={[styles.riderAvatar, isRiderCreator && styles.riderAvatarLead]}>
-                  <Text style={styles.riderAvatarText}>{rider.initials}</Text>
-                </View>
+                <UserAvatar
+                  avatarUrl={rider.avatar_url}
+                  name={rider.display_name}
+                  initials={rider.initials}
+                  id={rider.user}
+                  size={40}
+                  style={isRiderCreator ? { borderWidth: 2, borderColor: colors.primaryContainer } : null}
+                />
                 <View style={styles.riderInfo}>
                   <Text style={styles.riderName}>
                     {rider.display_name} {isRiderCreator && <Text style={styles.youBadge}>Leader</Text>}

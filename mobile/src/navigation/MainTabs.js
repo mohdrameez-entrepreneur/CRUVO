@@ -6,7 +6,7 @@ import { colors, typography } from '../theme';
 import DashboardScreen from '../screens/DashboardScreen';
 import DiscoveryScreen from '../screens/DiscoveryScreen';
 import RidesListScreen from '../screens/RidesListScreen';
-import ActiveRideScreen from '../screens/ActiveRideScreen';
+import MapScreen from '../screens/MapScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -57,7 +57,7 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="Map"
-        component={ActiveRideScreen}
+        component={MapScreen}
         options={{
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'map' : 'map-outline'} size={24} color={color} />

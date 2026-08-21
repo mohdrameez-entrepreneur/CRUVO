@@ -3,14 +3,19 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } 
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { discoveryAPI, ridesAPI } from '../api';
+import UserAvatar from '../components/UserAvatar';
 
 function RiderCard({ rider, onToggle, isInvited }) {
   const p = rider.profile;
   return (
     <View style={styles.riderCard}>
-      <View style={styles.riderAvatar}>
-        <Text style={styles.riderInitials}>{p?.initials || '??'}</Text>
-      </View>
+      <UserAvatar
+        avatarUrl={p?.avatar_url}
+        name={p?.display_name}
+        initials={p?.initials}
+        id={rider.id}
+        size={44}
+      />
       <View style={styles.riderInfo}>
         <Text style={styles.riderName}>{p?.display_name || 'Unknown'}</Text>
         <Text style={styles.riderUsername}>@{rider.username}</Text>
