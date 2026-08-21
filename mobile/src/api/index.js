@@ -53,4 +53,9 @@ export const discoveryAPI = {
   searchRiders: (q) => api.get('/discovery/riders/', { params: { q } }),
 };
 
+export const invitationsAPI = {
+  list: () => api.get('/invitations/'),
+  respond: (participantId, action) => api.post(`/invitations/${participantId}/respond/`, { action }),
+};
+
 export default api;

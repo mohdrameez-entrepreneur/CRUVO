@@ -187,3 +187,25 @@ class RiderDiscoverySerializer(serializers.ModelSerializer):
 
     def get_distance_km(self, obj):
         return None
+
+
+class InvitationSerializer(serializers.ModelSerializer):
+    ride_name = serializers.CharField(source='ride.name', read_only=True)
+    ride_date = serializers.DateField(source='ride.date', read_only=True)
+    ride_time = serializers.TimeField(source='ride.time', read_only=True)
+    ride_origin = serializers.CharField(source='ride.origin_name', read_only=True)
+    ride_destination = serializers.CharField(source='ride.destination_name', read_only=True)
+    creator_name = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RideParticipant
+        fields = ['id', 'ride', 'ride_name', 'ride_date', 'ride_time',
+                  'ride_origin', 'ride_destination', 'status', 'role',
+                  'creator_name', 'display_name', 'joined_at']
+
+    def get_creator_name(self, obj):
+        return obj.ride.creator.profile.display_name
+
+    def get_display_name(self, obj):
+        return obj.user.profile.display_name

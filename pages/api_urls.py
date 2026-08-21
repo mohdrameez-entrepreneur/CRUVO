@@ -15,5 +15,7 @@ urlpatterns = [
     path('rides/<int:ride_id>/participants/', api.ride_participants_view, name='ride-participants'),
     path('rides/<int:ride_id>/flag-stops/', api.flag_stops_view, name='ride-flag-stops'),
     path('rides/<int:ride_id>/summary/', api.ride_summary_view, name='ride-summary'),
+    path('invitations/', api.invitations_view, name='invitations'),
+    path('invitations/<int:participant_id>/respond/', api.respond_invitation_view, name='respond-invitation'),
     path('discovery/riders/', api.discovery_view, name='discovery'),
 ]

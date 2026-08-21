@@ -12,6 +12,7 @@ from .serializers import (
     RegisterSerializer, LoginSerializer, ProfileSerializer,
     RideSerializer, RideCreateSerializer, RideParticipantSerializer,
     FlagStopSerializer, RiderDiscoverySerializer, UserSerializer,
+    InvitationSerializer,
 )
 
 
@@ -219,3 +220,31 @@ def discovery_view(request):
         )
     users = users[:20]
     return Response(RiderDiscoverySerializer(users, many=True).data)
+
+
+@api_view(['GET'])
+def invitations_view(request):
+    invitations = RideParticipant.objects.filter(
+        user=request.user,
+        status='INVITED',
+    ).select_related('ride', 'ride__creator', 'ride__creator__profile', 'user__profile')
+    return Response(InvitationSerializer(invitations, many=True).data)
+
+
+@api_view(['POST'])
+def respond_invitation_view(request, participant_id):
+    try:
+        participant = RideParticipant.objects.get(id=participant_id, user=request.user)
+    except RideParticipant.DoesNotExist:
+        return Response({'error': 'Invitation not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    action = request.data.get('action', '')
+    if action == 'accept':
+        participant.status = 'ACCEPTED'
+    elif action == 'decline':
+        participant.status = 'DECLINED'
+    else:
+        return Response({'error': 'Action must be "accept" or "decline"'}, status=status.HTTP_400_BAD_REQUEST)
+
+    participant.save()
+    return Response(InvitationSerializer(participant).data)

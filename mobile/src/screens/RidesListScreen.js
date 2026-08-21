@@ -1,8 +1,65 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
-import { ridesAPI } from '../api';
+import { ridesAPI, invitationsAPI } from '../api';
+
+function InvitationCard({ invitation, onAccept, onDecline, loading }) {
+  const dateStr = new Date(invitation.ride_date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+  const timeStr = new Date(`2000-01-01T${invitation.ride_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <View style={styles.inviteCard}>
+      <View style={styles.inviteHeader}>
+        <View style={styles.inviteIcon}>
+          <Ionicons name="mail-open" size={20} color={colors.primaryContainer} />
+        </View>
+        <View style={styles.inviteInfo}>
+          <Text style={styles.inviteRideName}>{invitation.ride_name}</Text>
+          <Text style={styles.inviteBy}>by {invitation.creator_name}</Text>
+        </View>
+      </View>
+
+      <View style={styles.inviteDetails}>
+        <View style={styles.inviteDetailRow}>
+          <Ionicons name="calendar" size={14} color={colors.onSurfaceVariant} />
+          <Text style={styles.inviteDetailText}>{dateStr} at {timeStr}</Text>
+        </View>
+        <View style={styles.inviteDetailRow}>
+          <Ionicons name="location" size={14} color={colors.primaryContainer} />
+          <Text style={styles.inviteDetailText} numberOfLines={1}>
+            {invitation.ride_origin || 'TBD'} → {invitation.ride_destination || 'TBD'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.inviteActions}>
+        <TouchableOpacity
+          style={[styles.inviteActionBtn, styles.declineBtn]}
+          onPress={onDecline}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={16} color={colors.error} />
+          <Text style={styles.declineBtnText}>REJECT</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.inviteActionBtn, styles.acceptBtn]}
+          onPress={onAccept}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.onPrimaryContainer} />
+          ) : (
+            <Ionicons name="checkmark" size={16} color={colors.onPrimaryContainer} />
+          )}
+          <Text style={styles.acceptBtnText}>ACCEPT</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 function RideCard({ ride, onPress, onInvite }) {
   const dateStr = new Date(ride.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -61,13 +118,19 @@ function RideCard({ ride, onPress, onInvite }) {
 
 export default function RidesListScreen({ navigation }) {
   const [rides, setRides] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [respondingId, setRespondingId] = useState(null);
 
-  const loadRides = async () => {
+  const loadAll = async () => {
     try {
-      const res = await ridesAPI.list();
-      setRides(res.data);
+      const [ridesRes, invRes] = await Promise.all([
+        ridesAPI.list(),
+        invitationsAPI.list(),
+      ]);
+      setRides(ridesRes.data);
+      setInvitations(invRes.data);
     } catch (err) {
       console.log('LOAD RIDES ERROR:', err.message);
     } finally {
@@ -76,14 +139,52 @@ export default function RidesListScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', loadRides);
+    const unsubscribe = navigation.addListener('focus', loadAll);
     return unsubscribe;
   }, [navigation]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRides();
+    await loadAll();
     setRefreshing(false);
+  };
+
+  const handleAccept = async (invitation) => {
+    setRespondingId(invitation.id);
+    try {
+      await invitationsAPI.respond(invitation.id, 'accept');
+      setInvitations(prev => prev.filter(i => i.id !== invitation.id));
+      loadAll();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to accept invitation');
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  const handleDecline = async (invitation) => {
+    Alert.alert(
+      'Decline Invitation',
+      `Decline ride "${invitation.ride_name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            setRespondingId(invitation.id);
+            try {
+              await invitationsAPI.respond(invitation.id, 'decline');
+              setInvitations(prev => prev.filter(i => i.id !== invitation.id));
+            } catch (err) {
+              Alert.alert('Error', 'Failed to decline invitation');
+            } finally {
+              setRespondingId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleRidePress = (ride) => {
@@ -93,6 +194,8 @@ export default function RidesListScreen({ navigation }) {
       navigation.navigate('RideSummary', { rideId: ride.id });
     }
   };
+
+  const hasInvitations = invitations.length > 0;
 
   return (
     <View style={styles.container}>
@@ -112,22 +215,6 @@ export default function RidesListScreen({ navigation }) {
           <Ionicons name="hourglass-outline" size={32} color={colors.onSurfaceVariant} />
           <Text style={styles.emptyStateText}>Loading rides...</Text>
         </View>
-      ) : rides.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="bicycle-outline" size={48} color={colors.primaryContainer} />
-          </View>
-          <Text style={styles.emptyTitle}>No Rides Yet</Text>
-          <Text style={styles.emptySubtitle}>Create your first ride and start{"\n"}riding with your crew</Text>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => navigation.navigate('CreateRide')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-road" size={20} color={colors.onPrimaryContainer} />
-            <Text style={styles.createButtonText}>CREATE A RIDE</Text>
-          </TouchableOpacity>
-        </View>
       ) : (
         <FlatList
           data={rides}
@@ -142,7 +229,52 @@ export default function RidesListScreen({ navigation }) {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryContainer} />}
           ListHeaderComponent={
-            <Text style={styles.listHeader}>{rides.length} ride{rides.length !== 1 ? 's' : ''}</Text>
+            <>
+              {hasInvitations && (
+                <View style={styles.inviteSection}>
+                  <View style={styles.inviteSectionHeader}>
+                    <Ionicons name="mail" size={18} color={colors.primaryContainer} />
+                    <Text style={styles.inviteSectionTitle}>PENDING INVITATIONS</Text>
+                    <View style={styles.inviteCount}>
+                      <Text style={styles.inviteCountText}>{invitations.length}</Text>
+                    </View>
+                  </View>
+                  {invitations.map(inv => (
+                    <InvitationCard
+                      key={inv.id}
+                      invitation={inv}
+                      onAccept={() => handleAccept(inv)}
+                      onDecline={() => handleDecline(inv)}
+                      loading={respondingId === inv.id}
+                    />
+                  ))}
+                </View>
+              )}
+              <Text style={styles.listHeader}>
+                {hasInvitations && rides.length > 0 ? 'YOUR RIDES' : ''}
+                {!hasInvitations && rides.length > 0 ? `${rides.length} ride${rides.length !== 1 ? 's' : ''}` : ''}
+                {rides.length === 0 && !hasInvitations ? '' : ''}
+              </Text>
+            </>
+          }
+          ListEmptyComponent={
+            !hasInvitations ? (
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons name="bicycle-outline" size={48} color={colors.primaryContainer} />
+                </View>
+                <Text style={styles.emptyTitle}>No Rides Yet</Text>
+                <Text style={styles.emptySubtitle}>Create your first ride and start{"\n"}riding with your crew</Text>
+                <TouchableOpacity
+                  style={styles.createButton}
+                  onPress={() => navigation.navigate('CreateRide')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="add-road" size={20} color={colors.onPrimaryContainer} />
+                  <Text style={styles.createButtonText}>CREATE A RIDE</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
           }
         />
       )}
@@ -160,7 +292,48 @@ const styles = StyleSheet.create({
   topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
   topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
   list: { padding: spacing.marginMobile, paddingBottom: 100 },
+
+  inviteSection: { marginBottom: spacing.stackLg },
+  inviteSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
+    marginBottom: spacing.stackMd,
+  },
+  inviteSectionTitle: { ...typography.labelTechnical, color: colors.primaryContainer, flex: 1 },
+  inviteCount: {
+    backgroundColor: colors.primaryContainer, borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center',
+  },
+  inviteCountText: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 12 },
+
+  inviteCard: {
+    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1,
+    borderColor: colors.primaryContainer, borderRadius: borderRadius.xl,
+    padding: spacing.stackMd, marginBottom: spacing.stackSm,
+    gap: spacing.stackSm,
+  },
+  inviteHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackMd },
+  inviteIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,214,0,0.15)', justifyContent: 'center', alignItems: 'center',
+  },
+  inviteInfo: { flex: 1 },
+  inviteRideName: { ...typography.titleMd, color: colors.onSurface },
+  inviteBy: { ...typography.labelSm, color: colors.onSurfaceVariant },
+  inviteDetails: { gap: 4 },
+  inviteDetailRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm },
+  inviteDetailText: { ...typography.bodyMd, color: colors.onSurfaceVariant, flex: 1 },
+  inviteActions: { flexDirection: 'row', gap: spacing.stackSm, marginTop: spacing.stackSm },
+  inviteActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 44, borderRadius: borderRadius.lg, gap: 6,
+  },
+  acceptBtn: { backgroundColor: colors.primaryContainer },
+  acceptBtnText: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 13 },
+  declineBtn: { borderWidth: 1, borderColor: colors.error },
+  declineBtnText: { ...typography.labelTechnical, color: colors.error, fontSize: 13 },
+
   listHeader: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackMd },
+
   rideCard: {
     backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackMd, marginBottom: spacing.stackMd,
