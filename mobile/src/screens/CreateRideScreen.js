@@ -56,20 +56,49 @@ export default function CreateRideScreen({ navigation }) {
       };
       const res = await ridesAPI.create(payload);
       const newRide = res.data;
-      Alert.alert(
-        'Ride Created',
-        `"${newRide.name}" has been ${isScheduled ? 'scheduled' : 'created'}!`,
-        [
-          {
-            text: 'Invite Riders',
-            onPress: () => navigation.replace('InviteRiders', { rideId: newRide.id, rideName: newRide.name }),
-          },
-          {
-            text: 'Done',
-            onPress: () => navigation.goBack(),
-          },
-        ],
-      );
+
+      if (isScheduled) {
+        Alert.alert(
+          'Ride Scheduled',
+          `"${newRide.name}" has been scheduled!`,
+          [
+            {
+              text: 'Invite Riders',
+              onPress: () => navigation.replace('InviteRiders', { rideId: newRide.id, rideName: newRide.name }),
+            },
+            {
+              text: 'View Ride',
+              onPress: () => navigation.replace('RideSummary', { rideId: newRide.id }),
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          'Ride Created',
+          `"${newRide.name}" is ready!`,
+          [
+            {
+              text: 'Invite Friends',
+              onPress: () => navigation.replace('InviteRiders', {
+                rideId: newRide.id,
+                rideName: newRide.name,
+                startOnDone: true,
+              }),
+            },
+            {
+              text: 'Start Ride',
+              onPress: async () => {
+                try {
+                  await ridesAPI.startRide(newRide.id);
+                  navigation.replace('ActiveRide', { rideId: newRide.id });
+                } catch {
+                  navigation.replace('RideSummary', { rideId: newRide.id });
+                }
+              },
+            },
+          ],
+        );
+      }
     } catch (err) {
       const msg = err.response?.data;
       if (msg && typeof msg === 'object') {

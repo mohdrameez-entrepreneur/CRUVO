@@ -31,11 +31,12 @@ function RiderCard({ rider, onToggle, isInvited }) {
 }
 
 export default function InviteRidersScreen({ navigation, route }) {
-  const { rideId, rideName } = route.params || {};
+  const { rideId, rideName, startOnDone } = route.params || {};
   const [riders, setRiders] = useState([]);
   const [invitedIds, setInvitedIds] = useState(new Set());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
 
   const loadRiders = async (query = '') => {
     try {
@@ -64,6 +65,22 @@ export default function InviteRidersScreen({ navigation, route }) {
   const handleSearch = (text) => {
     setSearch(text);
     loadRiders(text);
+  };
+
+  const handleDone = async () => {
+    if (!startOnDone) {
+      navigation.goBack();
+      return;
+    }
+    setStarting(true);
+    try {
+      await ridesAPI.startRide(rideId);
+      navigation.reset({ index: 0, routes: [{ name: 'ActiveRide', params: { rideId } }] });
+    } catch {
+      navigation.replace('RideSummary', { rideId });
+    } finally {
+      setStarting(false);
+    }
   };
 
   const handleToggle = async (rider) => {
@@ -95,8 +112,8 @@ export default function InviteRidersScreen({ navigation, route }) {
           <Text style={styles.topBarTitle}>INVITE RIDERS</Text>
           {rideName ? <Text style={styles.topBarSub}>{rideName}</Text> : null}
         </View>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.doneText}>DONE</Text>
+        <TouchableOpacity style={styles.topBarButton} onPress={handleDone} disabled={starting}>
+          <Text style={[styles.doneText, starting && { opacity: 0.5 }]}>{starting ? 'STARTING...' : 'DONE'}</Text>
         </TouchableOpacity>
       </View>
 
