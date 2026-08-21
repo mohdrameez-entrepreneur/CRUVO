@@ -51,7 +51,8 @@
           "locationAlwaysPermission": "Allow CRUVO to use your location for live ride tracking.",
           "locationWhenInUsePermission": "Allow CRUVO to use your location for live ride tracking."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

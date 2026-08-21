@@ -1,25 +1,45 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Switch, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import LocationPicker from '../components/LocationPicker';
 
+function formatDate(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function formatTime(d) {
+  return d.toTimeString().slice(0, 5);
+}
+
 export default function CreateRideScreen({ navigation }) {
   const [form, setForm] = useState({
-    name: '', date: '', time: '', is_public: false,
+    name: '', is_public: false,
   });
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState(new Date());
+  const [scheduledTime, setScheduledTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const handleCreate = async () => {
-    if (!form.name || !origin || !destination || !form.date || !form.time) {
-      Alert.alert('Error', 'Please fill in all fields and select locations from the search results');
+    if (!form.name || !origin || !destination) {
+      Alert.alert('Error', 'Please fill in all fields and select locations');
       return;
     }
+
+    const now = new Date();
+    const dateStr = isScheduled ? formatDate(scheduledDate) : formatDate(now);
+    const timeStr = isScheduled ? formatTime(scheduledTime) : formatTime(now);
+
     setLoading(true);
     try {
       const payload = {
@@ -30,15 +50,15 @@ export default function CreateRideScreen({ navigation }) {
         destination_name: destination.name,
         destination_lat: destination.lat,
         destination_lng: destination.lng,
-        date: form.date,
-        time: form.time,
+        date: dateStr,
+        time: timeStr,
         is_public: form.is_public,
       };
       const res = await ridesAPI.create(payload);
       const newRide = res.data;
       Alert.alert(
         'Ride Created',
-        `"${newRide.name}" has been scheduled!`,
+        `"${newRide.name}" has been ${isScheduled ? 'scheduled' : 'created'}!`,
         [
           {
             text: 'Invite Riders',
@@ -60,6 +80,24 @@ export default function CreateRideScreen({ navigation }) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setScheduledDate(selectedDate);
+    }
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+  };
+
+  const onTimeChange = (event, selectedTime) => {
+    if (selectedTime) {
+      setScheduledTime(selectedTime);
+    }
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
     }
   };
 
@@ -107,35 +145,50 @@ export default function CreateRideScreen({ navigation }) {
           onSelect={setDestination}
         />
 
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.label}>DATE</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="calendar-outline" size={20} color={colors.onSurfaceVariant} />
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.outline}
-                value={form.date}
-                onChangeText={(v) => update('date', v)}
-              />
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleInfo}>
+            <Ionicons name="calendar-outline" size={20} color={colors.onSurfaceVariant} />
+            <View>
+              <Text style={styles.toggleLabel}>Schedule Ride</Text>
+              <Text style={styles.toggleSubtext}>{isScheduled ? 'Set a future date & time' : 'Start ride now'}</Text>
             </View>
           </View>
-
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.label}>TIME</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="time-outline" size={20} color={colors.onSurfaceVariant} />
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM"
-                placeholderTextColor={colors.outline}
-                value={form.time}
-                onChangeText={(v) => update('time', v)}
-              />
-            </View>
-          </View>
+          <Switch
+            value={isScheduled}
+            onValueChange={setIsScheduled}
+            trackColor={{ false: colors.outlineVariant, true: colors.primaryContainer }}
+            thumbColor={isScheduled ? colors.onPrimaryContainer : colors.onSurface}
+          />
         </View>
+
+        {isScheduled && (
+          <View style={styles.dateTimePickerRow}>
+            <TouchableOpacity
+              style={[styles.pickerButton, { flex: 1 }]}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.primaryContainer} />
+              <Text style={styles.pickerButtonText}>{formatDate(scheduledDate)}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.pickerButton, { flex: 1 }]}
+              onPress={() => setShowTimePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="time-outline" size={18} color={colors.primaryContainer} />
+              <Text style={styles.pickerButtonText}>{formatTime(scheduledTime)}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!isScheduled && (
+          <View style={styles.startNowBadge}>
+            <Ionicons name="play-circle" size={20} color={colors.primaryContainer} />
+            <Text style={styles.startNowText}>Ride starts immediately with current date & time</Text>
+          </View>
+        )}
 
         <View style={styles.toggleRow}>
           <View style={styles.toggleInfo}>
@@ -153,14 +206,37 @@ export default function CreateRideScreen({ navigation }) {
           />
         </View>
 
+        {showDatePicker && (
+          <DateTimePicker
+            value={scheduledDate}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onDateChange}
+            minimumDate={new Date()}
+            themeVariant="dark"
+          />
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={scheduledTime}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onTimeChange}
+            themeVariant="dark"
+          />
+        )}
+
         <TouchableOpacity
           style={[styles.primaryButton, loading && styles.disabled]}
           onPress={handleCreate}
           disabled={loading}
           activeOpacity={0.8}
         >
-          <Ionicons name="navigate" size={24} color={colors.onPrimaryContainer} />
-          <Text style={styles.primaryButtonText}>{loading ? 'Creating...' : 'Create Ride'}</Text>
+          <Ionicons name={isScheduled ? "calendar" : "navigate"} size={24} color={colors.onPrimaryContainer} />
+          <Text style={styles.primaryButtonText}>
+            {loading ? 'Creating...' : isScheduled ? 'Save Ride' : 'Start Ride Now'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -192,11 +268,29 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackLg,
+    borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackMd,
   },
   toggleInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackMd, flex: 1 },
   toggleLabel: { ...typography.titleMd, color: colors.onSurface, fontSize: 16 },
   toggleSubtext: { ...typography.labelSm, color: colors.onSurfaceVariant },
+  dateTimePickerRow: {
+    flexDirection: 'row', gap: spacing.stackMd, marginBottom: spacing.stackMd,
+  },
+  pickerButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
+    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.primaryContainer,
+    borderRadius: borderRadius.lg, height: spacing.touchTargetMin,
+  },
+  pickerButtonText: {
+    ...typography.titleMd, color: colors.primaryContainer, fontSize: 15,
+  },
+  startNowBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
+    backgroundColor: colors.primaryContainer + '20', borderRadius: borderRadius.lg,
+    padding: spacing.stackMd, marginBottom: spacing.stackMd,
+    borderWidth: 1, borderColor: colors.primaryContainer + '50',
+  },
+  startNowText: { ...typography.bodyMd, color: colors.primaryContainer, flex: 1 },
   primaryButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
     backgroundColor: colors.primaryContainer, height: 56, borderRadius: borderRadius.lg,
