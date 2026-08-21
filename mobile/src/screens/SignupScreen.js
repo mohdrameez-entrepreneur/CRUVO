@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
+
+const FIELDS = [
+  { key: 'username', icon: 'at-outline', placeholder: 'Choose a unique username' },
+  { key: 'display_name', icon: 'person-outline', placeholder: 'Your name' },
+  { key: 'email', icon: 'mail-outline', placeholder: 'rider@cruvo.app', keyboardType: 'email-address' },
+  { key: 'password', icon: 'lock-closed-outline', placeholder: 'Create password', secure: true },
+  { key: 'password2', icon: 'lock-closed-outline', placeholder: 'Confirm password', secure: true },
+  { key: 'bike_make', icon: 'motorcycle-outline', placeholder: 'e.g. Royal Enfield' },
+  { key: 'bike_model', icon: 'bicycle-outline', placeholder: 'e.g. Himalayan 450' },
+];
 
 export default function SignupScreen({ navigation }) {
   const { register } = useAuth();
@@ -15,52 +25,92 @@ export default function SignupScreen({ navigation }) {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const scrollRef = useRef(null);
+  const fieldRefs = useRef({});
 
-  const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const scrollToField = (key) => {
+    const ref = fieldRefs.current[key];
+    if (ref?.current && scrollRef.current) {
+      ref.current.measureLayout(scrollRef.current, (x, y) => {
+        scrollRef.current.scrollTo({ y: Math.max(0, y - 100), animated: true });
+      }, () => {});
+    }
+  };
+
+  const update = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors(prev => ({ ...prev, [key]: null }));
+  };
 
   const handleSignup = async () => {
-    if (!form.username || !form.display_name || !form.email || !form.password || !form.password2) {
-      Alert.alert('Error', 'Please fill in required fields');
+    setErrors({});
+    const required = ['username', 'display_name', 'email', 'password', 'password2'];
+    const e = {};
+    required.forEach(key => { if (!form[key]) e[key] = 'This field is required'; });
+    if (form.password && form.password.length < 8) e.password = 'Password must be at least 8 characters';
+    if (form.password && form.password2 && form.password !== form.password2) e.password2 = 'Passwords do not match';
+    if (form.email && !form.email.includes('@')) e.email = 'Enter a valid email';
+
+    if (Object.keys(e).length > 0) {
+      setErrors(e);
+      scrollToField(Object.keys(e)[0]);
       return;
     }
+
     setLoading(true);
     try {
       await register(form);
     } catch (err) {
-      console.log('SIGNUP ERROR:', err.message, err.code, err.response?.status, err.response?.data);
       const msg = err.response?.data;
+      const e = {};
       if (msg && typeof msg === 'object') {
-        const firstError = Object.values(msg)[0];
-        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : firstError);
+        if (msg.non_field_errors) {
+          e.general = Array.isArray(msg.non_field_errors) ? msg.non_field_errors[0] : msg.non_field_errors;
+        } else if (msg.error) {
+          e.general = msg.error;
+        } else {
+          Object.entries(msg).forEach(([key, val]) => {
+            if (key !== 'non_field_errors') {
+              e[key] = Array.isArray(val) ? val[0] : val;
+            }
+          });
+        }
       } else {
-        Alert.alert('Error', `Network error: ${err.message || 'Could not reach server'}`);
+        e.general = err.message || 'Could not reach server';
       }
+      setErrors(e);
+      const firstField = Object.keys(e).find(k => k !== 'general');
+      if (firstField) scrollToField(firstField);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderInput = (icon, key, placeholder, options = {}) => (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>{key.replace(/_/g, ' ').toUpperCase()}</Text>
-      <View style={styles.inputContainer}>
-        <Ionicons name={icon} size={20} color={colors.onSurfaceVariant} style={styles.inputIcon} />
+  const renderInput = (field) => (
+    <View key={field.key} ref={el => { fieldRefs.current[field.key] = { current: el }; }} style={styles.inputGroup}>
+      <Text style={[styles.label, errors[field.key] && styles.labelError]}>
+        {field.key.replace(/_/g, ' ').toUpperCase()}
+      </Text>
+      <View style={[styles.inputContainer, errors[field.key] && styles.inputError]}>
+        <Ionicons name={field.icon} size={20} color={errors[field.key] ? '#e53935' : colors.onSurfaceVariant} style={styles.inputIcon} />
         <TextInput
           style={styles.input}
-          placeholder={placeholder}
+          placeholder={field.placeholder}
           placeholderTextColor={colors.outline}
-          value={form[key]}
-          onChangeText={(v) => update(key, v)}
-          secureTextEntry={options.secure && !showPassword}
-          keyboardType={options.keyboardType || 'default'}
+          value={form[field.key]}
+          onChangeText={(v) => update(field.key, v)}
+          secureTextEntry={field.secure && !showPassword}
+          keyboardType={field.keyboardType || 'default'}
           autoCapitalize="none"
         />
-        {options.secure && (
+        {field.secure && (
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
         )}
       </View>
+      {errors[field.key] ? <Text style={styles.errorText}>{errors[field.key]}</Text> : null}
     </View>
   );
 
@@ -74,34 +124,35 @@ export default function SignupScreen({ navigation }) {
         <View style={styles.backButton} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join the ride community</Text>
 
-        {renderInput('at-outline', 'username', 'Choose a unique username', { autoCapitalize: 'none' })}
-        {renderInput('person-outline', 'display_name', 'Your name')}
-        {renderInput('mail-outline', 'email', 'rider@cruvo.app', { keyboardType: 'email-address' })}
-        {renderInput('lock-closed-outline', 'password', 'Create password', { secure: true })}
-        {renderInput('lock-closed-outline', 'password2', 'Confirm password', { secure: true })}
-        {renderInput('motorcycle-outline', 'bike_make', 'e.g. Royal Enfield')}
-        {renderInput('bicycle-outline', 'bike_model', 'e.g. Himalayan 450')}
+        {errors.general && (
+          <View style={styles.generalError}>
+            <Ionicons name="alert-circle" size={18} color="#e53935" />
+            <Text style={styles.generalErrorText}>{errors.general}</Text>
+          </View>
+        )}
 
-        <View style={styles.inputGroup}>
+        {FIELDS.map(f => renderInput(f))}
+
+        <View ref={el => { fieldRefs.current['riding_style'] = { current: el }; }} style={styles.inputGroup}>
           <Text style={styles.label}>RIDING STYLE</Text>
           <View style={styles.chipContainer}>
-            {RIDING_STYLES.map(style => (
+            {RIDING_STYLES.map(s => (
               <TouchableOpacity
-                key={style}
-                style={[styles.chip, form.riding_style === style && styles.chipActive]}
-                onPress={() => update('riding_style', form.riding_style === style ? '' : style)}
+                key={s}
+                style={[styles.chip, form.riding_style === s && styles.chipActive]}
+                onPress={() => update('riding_style', form.riding_style === s ? '' : s)}
               >
-                <Text style={[styles.chipText, form.riding_style === style && styles.chipTextActive]}>{style}</Text>
+                <Text style={[styles.chipText, form.riding_style === s && styles.chipTextActive]}>{s}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
+        <View ref={el => { fieldRefs.current['experience_level'] = { current: el }; }} style={styles.inputGroup}>
           <Text style={styles.label}>EXPERIENCE</Text>
           <View style={styles.chipContainer}>
             {EXPERIENCE_LEVELS.map(level => (
@@ -161,14 +212,23 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.stackLg },
   inputGroup: { marginBottom: spacing.stackMd },
   label: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
+  labelError: { color: '#e53935' },
   inputContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceContainerLowest,
     borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
     height: spacing.touchTargetMin, paddingHorizontal: spacing.stackMd,
   },
+  inputError: { borderColor: '#e53935', backgroundColor: 'rgba(229,57,53,0.05)' },
   inputIcon: { marginRight: spacing.stackSm },
   input: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   eyeButton: { padding: spacing.stackSm },
+  errorText: { ...typography.labelSm, color: '#e53935', marginTop: 6, marginLeft: 4 },
+  generalError: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
+    backgroundColor: 'rgba(229,57,53,0.1)', borderWidth: 1, borderColor: 'rgba(229,57,53,0.3)',
+    borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackLg,
+  },
+  generalErrorText: { ...typography.bodyMd, color: '#e53935', flex: 1 },
   chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
