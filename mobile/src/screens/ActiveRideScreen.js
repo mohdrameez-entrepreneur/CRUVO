@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
@@ -9,6 +9,15 @@ import useLocation from '../hooks/useLocation';
 
 const { width, height } = Dimensions.get('window');
 const ROLE_LABELS = { CREATOR: 'Lead', LEAD: 'Lead', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
+const ARRIVAL_THRESHOLD_M = 200;
+
+function getDistanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default function ActiveRideScreen({ navigation, route }) {
   const { rideId } = route.params || {};
@@ -18,6 +27,9 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [panelExpanded, setPanelExpanded] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [rideFinished, setRideFinished] = useState(false);
+  const [arrivalCount, setArrivalCount] = useState(0);
+  const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
   const posInterval = useRef(null);
   const timerInterval = useRef(null);
@@ -60,23 +72,46 @@ export default function ActiveRideScreen({ navigation, route }) {
     };
   }, [rideId]);
 
-  const endRide = async () => {
+  useEffect(() => {
+    if (!ride || !ride.destination_lat || rideFinished || autoEndTriggered.current) return;
+    if (positions.length === 0) return;
+
+    const arrived = positions.filter(p => {
+      const dist = getDistanceMeters(p.lat, p.lng, ride.destination_lat, ride.destination_lng);
+      return dist <= ARRIVAL_THRESHOLD_M;
+    });
+
+    setArrivalCount(arrived.length);
+
+    const acceptedParticipants = (ride.participants || []).filter(p => p.status === 'ACCEPTED');
+    const allArrived = acceptedParticipants.length > 0 && arrived.length >= acceptedParticipants.length;
+
+    if (allArrived) {
+      autoEndTriggered.current = true;
+      completeRide();
+    }
+  }, [positions, ride?.destination_lat, rideFinished]);
+
+  const completeRide = async () => {
+    try {
+      await ridesAPI.update(rideId, { status: 'COMPLETED' });
+      stopWatching();
+      clearInterval(posInterval.current);
+      clearInterval(timerInterval.current);
+      setRideFinished(true);
+    } catch {}
+  };
+
+  const endRide = () => {
     Alert.alert('End Ride', 'Mark this ride as completed?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'End Ride',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await ridesAPI.update(rideId, { status: 'COMPLETED' });
-            stopWatching();
-            clearInterval(posInterval.current);
-            clearInterval(timerInterval.current);
-            navigation.navigate('RideSummary', { rideId });
-          } catch {}
-        },
-      },
+      { text: 'End Ride', style: 'destructive', onPress: completeRide },
     ]);
+  };
+
+  const handleViewSummary = () => {
+    setRideFinished(false);
+    navigation.navigate('RideSummary', { rideId });
   };
 
   const formatTime = (s) => {
@@ -194,6 +229,54 @@ export default function ActiveRideScreen({ navigation, route }) {
           })}
         </ScrollView>
       </View>
+
+      <Modal visible={rideFinished} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
+            </View>
+            <Text style={styles.modalTitle}>Ride Complete!</Text>
+            <Text style={styles.modalRideName}>{ride?.name}</Text>
+
+            <View style={styles.modalStats}>
+              <View style={styles.modalStat}>
+                <Ionicons name="time" size={20} color={colors.primaryContainer} />
+                <Text style={styles.modalStatValue}>{formatTime(elapsed)}</Text>
+                <Text style={styles.modalStatLabel}>DURATION</Text>
+              </View>
+              <View style={styles.modalStatDivider} />
+              <View style={styles.modalStat}>
+                <Ionicons name="route" size={20} color={colors.primaryContainer} />
+                <Text style={styles.modalStatValue}>{ride?.distance_km ? `${ride.distance_km} km` : 'N/A'}</Text>
+                <Text style={styles.modalStatLabel}>DISTANCE</Text>
+              </View>
+              <View style={styles.modalStatDivider} />
+              <View style={styles.modalStat}>
+                <Ionicons name="people" size={20} color={colors.primaryContainer} />
+                <Text style={styles.modalStatValue}>{positions.length}</Text>
+                <Text style={styles.modalStatLabel}>RIDERS</Text>
+              </View>
+            </View>
+
+            <View style={styles.modalRouteInfo}>
+              <View style={styles.modalRouteRow}>
+                <Ionicons name="location" size={14} color={colors.primaryContainer} />
+                <Text style={styles.modalRouteText} numberOfLines={1}>{ride?.origin_name}</Text>
+              </View>
+              <Ionicons name="arrow-down" size={14} color={colors.outlineVariant} />
+              <View style={styles.modalRouteRow}>
+                <Ionicons name="flag" size={14} color={colors.primaryContainer} />
+                <Text style={styles.modalRouteText} numberOfLines={1}>{ride?.destination_name}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.modalButton} onPress={handleViewSummary} activeOpacity={0.8}>
+              <Text style={styles.modalButtonText}>VIEW SUMMARY</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -264,4 +347,37 @@ const styles = StyleSheet.create({
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' },
   liveText: { ...typography.labelTechnical, color: '#4CAF50', fontSize: 10 },
   offlineText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 10 },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center',
+    padding: spacing.stackLg,
+  },
+  modalCard: {
+    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.xl, padding: spacing.stackLg, width: '100%', alignItems: 'center',
+    gap: spacing.stackMd,
+  },
+  modalIconWrap: { marginBottom: spacing.stackSm },
+  modalTitle: { ...typography.headlineLgMobile, color: colors.onSurface, textAlign: 'center' },
+  modalRideName: { ...typography.labelTechnical, color: colors.primaryContainer, textTransform: 'uppercase', letterSpacing: 1 },
+  modalStats: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerHigh, borderRadius: borderRadius.lg,
+    padding: spacing.stackMd, width: '100%', gap: spacing.stackMd,
+  },
+  modalStat: { flex: 1, alignItems: 'center', gap: 4 },
+  modalStatValue: { ...typography.headlineLg, color: colors.primaryContainer, fontSize: 22 },
+  modalStatLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 10 },
+  modalStatDivider: { width: 1, height: 36, backgroundColor: colors.outlineVariant },
+  modalRouteInfo: {
+    width: '100%', gap: 6, backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: borderRadius.lg, padding: spacing.stackMd,
+  },
+  modalRouteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm },
+  modalRouteText: { ...typography.bodyMd, color: colors.onSurface, flex: 1 },
+  modalButton: {
+    width: '100%', height: 52, borderRadius: borderRadius.lg, backgroundColor: colors.primaryContainer,
+    justifyContent: 'center', alignItems: 'center', marginTop: spacing.stackSm,
+    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
+  },
+  modalButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
 });
