@@ -10,7 +10,7 @@ export default function OnboardingScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.heroSection}>
         <View style={styles.heroOverlay}>
-          <Text style={styles.heroTitle}>IGNITION</Text>
+          <Text style={styles.heroTitle}>CRUVO</Text>
           <Text style={styles.heroSubtitle}>Group Motorcycle Touring</Text>
         </View>
       </View>

@@ -5,7 +5,7 @@ import { colors, typography } from '../theme';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import DiscoveryScreen from '../screens/DiscoveryScreen';
-import CreateRideScreen from '../screens/CreateRideScreen';
+import RidesListScreen from '../screens/RidesListScreen';
 import ActiveRideScreen from '../screens/ActiveRideScreen';
 
 const Tab = createBottomTabNavigator();
@@ -48,7 +48,7 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="Rides"
-        component={CreateRideScreen}
+        component={RidesListScreen}
         options={{
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'bicycle' : 'bicycle-outline'} size={24} color={color} />

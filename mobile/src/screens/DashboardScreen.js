@@ -91,7 +91,7 @@ export default function DashboardScreen({ navigation }) {
         <TouchableOpacity style={styles.topBarButton}>
           <Ionicons name="menu" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>IGNITION</Text>
+        <Text style={styles.topBarTitle}>CRUVO</Text>
         <TouchableOpacity style={styles.topBarButton}>
           <Ionicons name="settings-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
@@ -147,7 +147,17 @@ export default function DashboardScreen({ navigation }) {
           </View>
 
           {rides.length > 0 ? (
-            rides.map(ride => <RideCard key={ride.id} ride={ride} />)
+            rides.map(ride => (
+              <TouchableOpacity key={ride.id} onPress={() => {
+                if (ride.status === 'ACTIVE') {
+                  navigation.navigate('ActiveRide', { rideId: ride.id });
+                } else {
+                  navigation.navigate('RideSummary', { rideId: ride.id });
+                }
+              }} activeOpacity={0.7}>
+                <RideCard ride={ride} />
+              </TouchableOpacity>
+            ))
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="information-circle-outline" size={24} color={colors.onSurfaceVariant} />

@@ -39,7 +39,7 @@ export default function LoginScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>IGNITION</Text>
+        <Text style={styles.headerTitle}>CRUVO</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -53,7 +53,7 @@ export default function LoginScreen({ navigation }) {
             <Ionicons name="mail-outline" size={20} color={colors.onSurfaceVariant} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="rider@ignition.app"
+              placeholder="rider@cruvo.app"
               placeholderTextColor={colors.outline}
               value={email}
               onChangeText={setEmail}

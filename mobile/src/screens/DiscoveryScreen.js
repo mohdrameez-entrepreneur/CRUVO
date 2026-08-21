@@ -54,7 +54,7 @@ export default function DiscoveryScreen({ navigation }) {
         <TouchableOpacity style={styles.topBarButton}>
           <Ionicons name="menu" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>IGNITION</Text>
+        <Text style={styles.topBarTitle}>CRUVO</Text>
         <TouchableOpacity style={styles.topBarButton}>
           <Ionicons name="settings-outline" size={24} color={colors.primary} />
         </TouchableOpacity>

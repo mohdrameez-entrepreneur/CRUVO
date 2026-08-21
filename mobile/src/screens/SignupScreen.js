@@ -70,7 +70,7 @@ export default function SignupScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>IGNITION</Text>
+        <Text style={styles.headerTitle}>CRUVO</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -79,7 +79,7 @@ export default function SignupScreen({ navigation }) {
         <Text style={styles.subtitle}>Join the ride community</Text>
 
         {renderInput('person-outline', 'display_name', 'Your name')}
-        {renderInput('mail-outline', 'email', 'rider@ignition.app', { keyboardType: 'email-address' })}
+        {renderInput('mail-outline', 'email', 'rider@cruvo.app', { keyboardType: 'email-address' })}
         {renderInput('lock-closed-outline', 'password', 'Create password', { secure: true })}
         {renderInput('lock-closed-outline', 'password2', 'Confirm password', { secure: true })}
         {renderInput('motorcycle-outline', 'bike_make', 'e.g. Royal Enfield')}

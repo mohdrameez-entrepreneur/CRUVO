@@ -1,26 +1,29 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "CRUVO",
+    "slug": "cruvo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/CRUVO LOGO.jpg",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/CRUVO LOGO.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#121317"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cruvo.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/CRUVO LOGO.jpg",
+        "backgroundColor": "#121317"
       },
       "package": "com.cruvo.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/CRUVO LOGO.jpg"
     }
   }
 }

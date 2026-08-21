@@ -23,7 +23,7 @@ export default function RideSummaryScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.topBarButton} />
-        <Text style={styles.topBarTitle}>IGNITION</Text>
+        <Text style={styles.topBarTitle}>CRUVO</Text>
         <View style={styles.topBarButton} />
       </View>
 

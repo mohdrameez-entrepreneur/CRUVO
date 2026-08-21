@@ -20,10 +20,19 @@ export default function CreateRideScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      await ridesAPI.create(form);
-      navigation.navigate('Main');
+      const res = await ridesAPI.create(form);
+      Alert.alert('Ride Created', `"${res.data.name}" has been scheduled!`, [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (err) {
-      Alert.alert('Error', 'Failed to create ride');
+      console.log('CREATE RIDE ERROR:', err.message, err.response?.data);
+      const msg = err.response?.data;
+      if (msg && typeof msg === 'object') {
+        const firstError = Object.values(msg)[0];
+        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : String(firstError));
+      } else {
+        Alert.alert('Error', 'Failed to create ride');
+      }
     } finally {
       setLoading(false);
     }
@@ -35,7 +44,7 @@ export default function CreateRideScreen({ navigation }) {
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>IGNITION</Text>
+        <Text style={styles.topBarTitle}>CRUVO</Text>
         <View style={styles.topBarButton} />
       </View>
 
