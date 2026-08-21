@@ -111,7 +111,7 @@ class RideParticipantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RideParticipant
-        fields = ['id', 'user', 'role', 'status', 'joined_at', 'completed_at',
+        fields = ['id', 'user', 'role', 'status', 'is_ready', 'joined_at', 'completed_at',
                   'display_name', 'initials', 'bike_info']
 
     def get_display_name(self, obj):

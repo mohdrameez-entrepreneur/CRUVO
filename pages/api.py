@@ -178,6 +178,59 @@ def ride_participants_view(request, ride_id):
     return Response(RideParticipantSerializer(participant).data, status=status.HTTP_201_CREATED)
 
 
+@api_view(['POST'])
+def toggle_ready_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    participant = ride.participants.filter(user=request.user).first()
+    if not participant or participant.status != 'ACCEPTED':
+        return Response({'error': 'Not an accepted participant'}, status=status.HTTP_400_BAD_REQUEST)
+
+    participant.is_ready = not participant.is_ready
+    participant.save()
+
+    all_ready = ride.participants.filter(status='ACCEPTED').exclude(is_ready=True).count() == 0
+    total_accepted = ride.participants.filter(status='ACCEPTED').count()
+    ready_count = ride.participants.filter(status='ACCEPTED', is_ready=True).count()
+
+    return Response({
+        'is_ready': participant.is_ready,
+        'all_ready': all_ready and total_accepted > 1,
+        'ready_count': ready_count,
+        'total_accepted': total_accepted,
+    })
+
+
+@api_view(['POST'])
+def start_ride_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if ride.creator != request.user:
+        return Response({'error': 'Only the creator can start the ride'}, status=status.HTTP_403_FORBIDDEN)
+
+    if ride.status != 'SCHEDULED':
+        return Response({'error': 'Ride is not in SCHEDULED status'}, status=status.HTTP_400_BAD_REQUEST)
+
+    accepted = ride.participants.filter(status='ACCEPTED')
+    all_ready = accepted.exclude(is_ready=True).count() == 0
+
+    if accepted.count() <= 1:
+        return Response({'error': 'Need at least 2 riders to start'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not all_ready:
+        return Response({'error': 'Not all riders are ready'}, status=status.HTTP_400_BAD_REQUEST)
+
+    ride.status = 'ACTIVE'
+    ride.save()
+    return Response(RideSerializer(ride).data)
+
+
 @api_view(['GET', 'POST'])
 def flag_stops_view(request, ride_id):
     try:

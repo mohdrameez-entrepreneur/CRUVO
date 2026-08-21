@@ -14,10 +14,20 @@ export default function RideSummaryScreen({ navigation, route }) {
   const { user } = useAuth();
   const [ride, setRide] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [togglingReady, setTogglingReady] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  const loadRide = async () => {
+    if (!rideId) return;
+    try {
+      const res = await ridesAPI.get(rideId);
+      setRide(res.data);
+    } catch {}
+  };
 
   useEffect(() => {
     if (!rideId) { setLoading(false); return; }
-    ridesAPI.get(rideId).then(res => { setRide(res.data); }).catch(() => {}).finally(() => setLoading(false));
+    loadRide().finally(() => setLoading(false));
   }, [rideId]);
 
   const handleDelete = () => {
@@ -42,6 +52,38 @@ export default function RideSummaryScreen({ navigation, route }) {
         },
       ]
     );
+  };
+
+  const handleToggleReady = async () => {
+    setTogglingReady(true);
+    try {
+      const res = await ridesAPI.toggleReady(rideId);
+      setRide(prev => {
+        if (!prev) return prev;
+        const updatedParticipants = prev.participants.map(p =>
+          p.user === user.id ? { ...p, is_ready: res.data.is_ready } : p
+        );
+        return { ...prev, participants: updatedParticipants };
+      });
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update ready status');
+    } finally {
+      setTogglingReady(false);
+    }
+  };
+
+  const handleStartRide = async () => {
+    setStarting(true);
+    try {
+      const res = await ridesAPI.startRide(rideId);
+      setRide(res.data);
+      navigation.navigate('ActiveRide', { rideId });
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to start ride';
+      Alert.alert('Error', msg);
+    } finally {
+      setStarting(false);
+    }
   };
 
   const isCreator = ride && user && ride.creator === user.id;
@@ -79,10 +121,18 @@ export default function RideSummaryScreen({ navigation, route }) {
   }
 
   const participants = ride.participants || [];
+  const acceptedParticipants = participants.filter(p => p.status === 'ACCEPTED');
+  const readyCount = acceptedParticipants.filter(p => p.is_ready).length;
+  const totalAccepted = acceptedParticipants.length;
+  const allReady = totalAccepted > 1 && readyCount === totalAccepted;
+  const myParticipant = participants.find(p => p.user === user?.id);
+  const myReady = myParticipant?.is_ready || false;
+  const isScheduled = ride.status === 'SCHEDULED';
+
   const stats = [
     { label: 'Date', value: new Date(ride.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), icon: 'calendar' },
     { label: 'Distance', value: ride.distance_km ? `${ride.distance_km} km` : 'TBD', icon: 'route' },
-    { label: 'Riders', value: String(participants.length), icon: 'people' },
+    { label: 'Riders', value: `${readyCount}/${totalAccepted}`, icon: 'people' },
     { label: 'Status', value: ride.status, icon: 'flag' },
   ];
 
@@ -129,7 +179,7 @@ export default function RideSummaryScreen({ navigation, route }) {
           <Text style={styles.sectionTitle}>Squad</Text>
           {participants.map((rider, i) => (
             <View key={rider.id || i} style={styles.riderRow}>
-              <View style={[styles.riderAvatar, i === 0 && styles.riderAvatarLead]}>
+              <View style={[styles.riderAvatar, rider.is_ready && styles.riderAvatarReady]}>
                 <Text style={styles.riderInitials}>{rider.initials}</Text>
               </View>
               <View style={styles.riderInfo}>
@@ -138,14 +188,14 @@ export default function RideSummaryScreen({ navigation, route }) {
                 </Text>
                 <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
               </View>
-              <View style={styles.statusBadge}>
+              <View style={styles.readyIndicator}>
                 <Ionicons
-                  name={rider.status === 'ACCEPTED' ? 'checkmark-circle' : rider.status === 'COMPLETED' ? 'checkmark-done-circle' : 'time-outline'}
-                  size={16}
-                  color={rider.status === 'ACCEPTED' ? colors.primaryContainer : colors.onSurfaceVariant}
+                  name={rider.is_ready ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={rider.is_ready ? '#4CAF50' : colors.outlineVariant}
                 />
-                <Text style={[styles.statusText, rider.status === 'ACCEPTED' && styles.statusTextActive]}>
-                  {rider.status}
+                <Text style={[styles.readyText, rider.is_ready && styles.readyTextActive]}>
+                  {rider.is_ready ? 'Ready' : 'Waiting'}
                 </Text>
               </View>
             </View>
@@ -157,12 +207,61 @@ export default function RideSummaryScreen({ navigation, route }) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
+        {isScheduled && !isCreator && myParticipant?.status === 'ACCEPTED' && (
+          <TouchableOpacity
+            style={[styles.readyButton, myReady && styles.readyButtonActive]}
+            onPress={handleToggleReady}
+            disabled={togglingReady}
+            activeOpacity={0.8}
+          >
+            {togglingReady ? (
+              <ActivityIndicator size="small" color={myReady ? colors.onPrimaryContainer : colors.primaryContainer} />
+            ) : (
+              <Ionicons name={myReady ? 'checkmark-circle' : 'radio-button-off'} size={20} color={myReady ? colors.onPrimaryContainer : colors.primaryContainer} />
+            )}
+            <Text style={[styles.readyButtonText, myReady && styles.readyButtonTextActive]}>
+              {myReady ? 'READY' : 'MARK READY'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {isScheduled && isCreator && (
+          <>
+            <View style={styles.readyStatus}>
+              <Ionicons
+                name={allReady ? 'checkmark-circle' : 'time-outline'}
+                size={16}
+                color={allReady ? '#4CAF50' : colors.onSurfaceVariant}
+              />
+              <Text style={[styles.readyStatusText, allReady && styles.readyStatusTextActive]}>
+                {allReady ? 'All riders ready!' : `${readyCount}/${totalAccepted} riders ready`}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.startButton, !allReady && styles.startButtonDisabled]}
+              onPress={handleStartRide}
+              disabled={!allReady || starting}
+              activeOpacity={0.8}
+            >
+              {starting ? (
+                <ActivityIndicator size="small" color={colors.onPrimaryContainer} />
+              ) : (
+                <Ionicons name="play" size={20} color={colors.onPrimaryContainer} />
+              )}
+              <Text style={styles.startButtonText}>
+                {allReady ? 'START RIDE' : 'WAITING FOR RIDERS'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
         {isCreator && (
           <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
             <Ionicons name="trash-outline" size={18} color={colors.error} />
             <Text style={styles.deleteText}>DELETE RIDE</Text>
           </TouchableOpacity>
         )}
+
         <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')} activeOpacity={0.8}>
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
@@ -180,7 +279,7 @@ const styles = StyleSheet.create({
   },
   topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
   topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
-  content: { padding: spacing.marginMobile, paddingBottom: 120 },
+  content: { padding: spacing.marginMobile, paddingBottom: 250 },
   header: { alignItems: 'center', gap: spacing.stackSm, marginBottom: spacing.stackLg },
   headerTitle: { ...typography.headlineLgMobile, color: colors.onSurface },
   headerSubtitle: { ...typography.labelTechnical, color: colors.primaryContainer },
@@ -209,20 +308,43 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
   },
-  riderAvatarLead: { backgroundColor: colors.primaryContainer },
+  riderAvatarReady: { backgroundColor: 'rgba(76,175,80,0.2)', borderWidth: 2, borderColor: '#4CAF50' },
   riderInitials: { ...typography.labelTechnical, color: colors.onSurface },
   riderInfo: { flex: 1 },
   riderName: { ...typography.bodyMd, color: colors.onSurface },
   youBadge: { ...typography.labelSm, color: colors.primaryContainer },
   riderRole: { ...typography.labelSm, color: colors.onSurfaceVariant },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statusText: { ...typography.labelSm, color: colors.onSurfaceVariant },
-  statusTextActive: { color: colors.primaryContainer },
+  readyIndicator: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  readyText: { ...typography.labelSm, color: colors.onSurfaceVariant },
+  readyTextActive: { color: '#4CAF50' },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     padding: spacing.marginMobile, paddingBottom: 34, gap: spacing.stackSm,
     backgroundColor: colors.surfaceContainerLowest, borderTopWidth: 1, borderTopColor: colors.outlineVariant,
   },
+  readyButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
+    height: 52, borderRadius: borderRadius.lg,
+    borderWidth: 2, borderColor: colors.primaryContainer,
+  },
+  readyButtonActive: {
+    backgroundColor: '#4CAF50', borderColor: '#4CAF50',
+  },
+  readyButtonText: { ...typography.titleMd, color: colors.primaryContainer },
+  readyButtonTextActive: { color: colors.white },
+  readyStatus: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  readyStatusText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
+  readyStatusTextActive: { color: '#4CAF50' },
+  startButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
+    height: 52, borderRadius: borderRadius.lg, backgroundColor: '#4CAF50',
+  },
+  startButtonDisabled: {
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  startButtonText: { ...typography.titleMd, color: colors.white },
   deleteButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
     height: 48, borderRadius: borderRadius.lg,

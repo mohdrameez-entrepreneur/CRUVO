@@ -91,6 +91,7 @@ class RideParticipant(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ride_participations')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='WINGMAN')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='INVITED')
+    is_ready = models.BooleanField(default=False)
     joined_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
