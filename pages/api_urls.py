@@ -20,4 +20,7 @@ urlpatterns = [
     path('invitations/', api.invitations_view, name='invitations'),
     path('invitations/<int:participant_id>/respond/', api.respond_invitation_view, name='respond-invitation'),
     path('discovery/riders/', api.discovery_view, name='discovery'),
+    path('rides/<int:ride_id>/positions/', api.get_positions_view, name='ride-positions'),
+    path('rides/<int:ride_id>/update-position/', api.update_position_view, name='update-position'),
+    path('rides/<int:ride_id>/fetch-route/', api.fetch_route_view, name='fetch-route'),
 ]

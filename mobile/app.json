@@ -13,17 +13,45 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cruvo.app"
+      "bundleIdentifier": "com.cruvo.app",
+      "config": {
+        "googleMapsApiKey": ""
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "CRUVO needs your location to track your position during rides.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "CRUVO needs your location to track your position during rides.",
+        "NSLocationAlwaysUsageDescription": "CRUVO needs your location to track your position during rides."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/CRUVO LOGO.jpg",
         "backgroundColor": "#121317"
       },
-      "package": "com.cruvo.app"
+      "package": "com.cruvo.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/CRUVO LOGO.jpg"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow CRUVO to use your location for live ride tracking.",
+          "locationAlwaysPermission": "Allow CRUVO to use your location for live ride tracking.",
+          "locationWhenInUsePermission": "Allow CRUVO to use your location for live ride tracking."
+        }
+      ]
+    ]
   }
 }

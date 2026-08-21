@@ -63,6 +63,9 @@ class Ride(models.Model):
     is_public = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SCHEDULED')
     distance_km = models.FloatField(null=True, blank=True)
+    route_polyline = models.TextField(blank=True, default='')
+    route_distance_m = models.IntegerField(null=True, blank=True)
+    route_duration_s = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -122,3 +125,19 @@ class FlagStop(models.Model):
 
     def __str__(self):
         return f"{self.stop_type} stop on {self.ride.name}"
+
+
+class RidePosition(models.Model):
+    ride = models.ForeignKey(Ride, on_delete=models.CASCADE, related_name='positions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    lat = models.FloatField()
+    lng = models.FloatField()
+    heading = models.FloatField(default=0)
+    speed = models.FloatField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('ride', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} at {self.lat},{self.lng} on {self.ride.name}"

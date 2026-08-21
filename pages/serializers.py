@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.conf import settings
-from .models import Profile, Ride, RideParticipant, FlagStop
+from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -135,7 +135,8 @@ class RideSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'creator', 'creator_name', 'name', 'origin_name', 'origin_lat',
             'origin_lng', 'destination_name', 'destination_lat', 'destination_lng',
-            'date', 'time', 'is_public', 'status', 'distance_km', 'created_at',
+            'date', 'time', 'is_public', 'status', 'distance_km', 'route_polyline',
+            'route_distance_m', 'route_duration_s', 'created_at',
             'updated_at', 'participant_count', 'participants',
         ]
         read_only_fields = ['id', 'creator', 'created_at', 'updated_at']
@@ -153,7 +154,8 @@ class RideCreateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'origin_name', 'origin_lat', 'origin_lng',
             'destination_name', 'destination_lat', 'destination_lng',
-            'date', 'time', 'is_public',
+            'date', 'time', 'is_public', 'route_polyline',
+            'route_distance_m', 'route_duration_s',
         ]
 
     def validate_date(self, value):
@@ -210,3 +212,19 @@ class InvitationSerializer(serializers.ModelSerializer):
 
     def get_display_name(self, obj):
         return obj.user.profile.display_name
+
+
+class RidePositionSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+    initials = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RidePosition
+        fields = ['id', 'user', 'lat', 'lng', 'heading', 'speed', 'updated_at',
+                  'display_name', 'initials']
+
+    def get_display_name(self, obj):
+        return obj.user.profile.display_name
+
+    def get_initials(self, obj):
+        return obj.user.profile.initials()

@@ -7,12 +7,12 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from datetime import date
 
-from .models import Profile, Ride, RideParticipant, FlagStop
+from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition
 from .serializers import (
     RegisterSerializer, LoginSerializer, ProfileSerializer,
     RideSerializer, RideCreateSerializer, RideParticipantSerializer,
     FlagStopSerializer, RiderDiscoverySerializer, UserSerializer,
-    InvitationSerializer,
+    InvitationSerializer, RidePositionSerializer,
 )
 
 
@@ -334,3 +334,88 @@ def respond_invitation_view(request, participant_id):
 
     participant.save()
     return Response(InvitationSerializer(participant).data)
+
+
+@api_view(['POST'])
+def update_position_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if ride.status != 'ACTIVE':
+        return Response({'error': 'Ride is not active'}, status=status.HTTP_400_BAD_REQUEST)
+
+    is_participant = ride.participants.filter(user=request.user, status='ACCEPTED').exists()
+    if not is_participant:
+        return Response({'error': 'Not a participant'}, status=status.HTTP_403_FORBIDDEN)
+
+    lat = request.data.get('lat')
+    lng = request.data.get('lng')
+    heading = request.data.get('heading', 0)
+    speed = request.data.get('speed', 0)
+
+    if lat is None or lng is None:
+        return Response({'error': 'lat and lng required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    RidePosition.objects.update_or_create(
+        ride=ride, user=request.user,
+        defaults={'lat': lat, 'lng': lng, 'heading': heading, 'speed': speed},
+    )
+    return Response({'ok': True})
+
+
+@api_view(['GET'])
+def get_positions_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    positions = RidePosition.objects.filter(ride=ride).select_related('user__profile')
+    return Response(RidePositionSerializer(positions, many=True).data)
+
+
+@api_view(['POST'])
+def fetch_route_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if not ride.origin_lat or not ride.destination_lat:
+        return Response({'error': 'Origin and destination coordinates required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    import urllib.request, json
+    from django.conf import settings
+
+    api_key = getattr(settings, 'TOMTOM_API_KEY', '54S1S2VigjyRLWIZiK8XRI8OsPPz30Sd')
+    url = (
+        f'https://api.tomtom.com/routing/1/calculateRoute/'
+        f'{ride.origin_lat},{ride.origin_lng}:{ride.destination_lat},{ride.destination_lng}'
+        f'/json?key={api_key}&instructionsType=text&language=en-US&routeType=fastest'
+    )
+
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+
+        route = data['routes'][0]
+        polyline = route['legs'][0]['points']
+        distance_m = route['summary']['lengthInMeters']
+        duration_s = route['summary']['travelTimeInSeconds']
+
+        ride.route_polyline = json.dumps(polyline)
+        ride.route_distance_m = distance_m
+        ride.route_duration_s = duration_s
+        ride.distance_km = round(distance_m / 1000, 1)
+        ride.save()
+
+        return Response({
+            'route_polyline': polyline,
+            'distance_km': ride.distance_km,
+            'duration_s': duration_s,
+        })
+    except Exception as e:
+        return Response({'error': f'Route fetch failed: {str(e)}'}, status=status.HTTP_502_BAD_GATEWAY)

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import RideMap from '../components/RideMap';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ export default function RideSummaryScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [togglingReady, setTogglingReady] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [fetchingRoute, setFetchingRoute] = useState(false);
 
   const loadRide = async () => {
     if (!rideId) return;
@@ -29,6 +31,21 @@ export default function RideSummaryScreen({ navigation, route }) {
     if (!rideId) { setLoading(false); return; }
     loadRide().finally(() => setLoading(false));
   }, [rideId]);
+
+  useEffect(() => {
+    if (ride && ride.origin_lat && ride.destination_lat && !ride.route_polyline && ride.status === 'SCHEDULED') {
+      setFetchingRoute(true);
+      ridesAPI.fetchRoute(rideId).then(res => {
+        setRide(prev => ({
+          ...prev,
+          route_polyline: JSON.stringify(res.data.route_polyline),
+          distance_km: res.data.distance_km,
+          route_distance_m: res.data.distance_km * 1000,
+          route_duration_s: res.data.duration_s,
+        }));
+      }).catch(() => {}).finally(() => setFetchingRoute(false));
+    }
+  }, [ride?.id, ride?.origin_lat, ride?.route_polyline]);
 
   const handleDelete = () => {
     if (!ride) return;
@@ -130,12 +147,20 @@ export default function RideSummaryScreen({ navigation, route }) {
   const myParticipant = participants.find(p => p.user === user?.id);
   const myReady = myParticipant?.is_ready || false;
   const isScheduled = ride.status === 'SCHEDULED';
+  const hasRoute = ride.origin_lat && ride.destination_lat;
+
+  const formatDuration = (s) => {
+    if (!s) return 'TBD';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
 
   const stats = [
     { label: 'Date', value: new Date(ride.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), icon: 'calendar' },
     { label: 'Distance', value: ride.distance_km ? `${ride.distance_km} km` : 'TBD', icon: 'route' },
+    { label: 'Duration', value: formatDuration(ride.route_duration_s), icon: 'time' },
     { label: 'Riders', value: noOtherRiders ? 'Solo' : `${readyCount}/${totalRiders}`, icon: 'people' },
-    { label: 'Status', value: ride.status, icon: 'flag' },
   ];
 
   return (
@@ -154,6 +179,18 @@ export default function RideSummaryScreen({ navigation, route }) {
           <Text style={styles.headerTitle}>{ride.name}</Text>
           <Text style={styles.headerSubtitle}>{ride.status}</Text>
         </View>
+
+        {hasRoute && (
+          <View style={styles.mapPreview}>
+            <RideMap ride={ride} positions={[]} followMyLocation={false} style={styles.mapPreviewInner} />
+            {fetchingRoute && (
+              <View style={styles.routeLoading}>
+                <ActivityIndicator size="small" color={colors.primaryContainer} />
+                <Text style={styles.routeLoadingText}>Calculating route...</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.routeCard}>
           <View style={styles.routeRow}>
@@ -296,6 +333,18 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: spacing.stackSm, marginBottom: spacing.stackLg },
   headerTitle: { ...typography.headlineLgMobile, color: colors.onSurface },
   headerSubtitle: { ...typography.labelTechnical, color: colors.primaryContainer },
+  mapPreview: {
+    height: 180, borderRadius: borderRadius.xl, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.outlineVariant, marginBottom: spacing.stackLg,
+    backgroundColor: colors.surfaceContainerLow,
+  },
+  mapPreviewInner: { flex: 1 },
+  routeLoading: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: spacing.stackSm, backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  routeLoadingText: { ...typography.labelSm, color: colors.primaryContainer },
   routeCard: {
     backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackLg, gap: spacing.stackSm,

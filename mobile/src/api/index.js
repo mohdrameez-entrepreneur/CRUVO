@@ -49,6 +49,9 @@ export const ridesAPI = {
   getFlagStops: (id) => api.get(`/rides/${id}/flag-stops/`),
   createFlagStop: (id, data) => api.post(`/rides/${id}/flag-stops/`, data),
   getSummary: (id) => api.get(`/rides/${id}/summary/`),
+  updatePosition: (id, data) => api.post(`/rides/${id}/update-position/`, data),
+  getPositions: (id) => api.get(`/rides/${id}/positions/`),
+  fetchRoute: (id) => api.post(`/rides/${id}/fetch-route/`),
 };
 
 export const discoveryAPI = {
