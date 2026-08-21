@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import RideMap from '../components/RideMap';
+import FreeMap from '../components/FreeMap';
 import useLocation from '../hooks/useLocation';
 
 const { width, height } = Dimensions.get('window');
@@ -222,7 +222,7 @@ export default function ActiveRideScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <View style={styles.mapWrap}>
-        <RideMap
+        <FreeMap
           ride={ride}
           positions={positions}
           myUserId={user?.id}

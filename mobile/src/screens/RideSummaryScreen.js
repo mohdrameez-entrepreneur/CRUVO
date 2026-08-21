@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
-import RideMap from '../components/RideMap';
+import FreeMap from '../components/FreeMap';
 
 const { width } = Dimensions.get('window');
 
@@ -182,7 +182,7 @@ export default function RideSummaryScreen({ navigation, route }) {
 
         {hasRoute && (
           <View style={styles.mapPreview}>
-            <RideMap ride={ride} positions={[]} followMyLocation={false} style={styles.mapPreviewInner} />
+            <FreeMap ride={ride} positions={[]} followMyLocation={false} style={styles.mapPreviewInner} />
             {fetchingRoute && (
               <View style={styles.routeLoading}>
                 <ActivityIndicator size="small" color={colors.primaryContainer} />
