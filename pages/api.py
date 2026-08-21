@@ -226,14 +226,33 @@ def ride_summary_view(request, ride_id):
 @api_view(['GET'])
 def discovery_view(request):
     query = request.GET.get('q', '')
+    style = request.GET.get('style', '')
+    experience = request.GET.get('experience', '')
+    bike = request.GET.get('bike', '')
+    location = request.GET.get('location', '')
+
     users = User.objects.exclude(id=request.user.id).select_related('profile')
+
     if query:
         users = users.filter(
             Q(username__icontains=query) |
             Q(profile__display_name__icontains=query) |
             Q(profile__bike_make__icontains=query) |
+            Q(profile__bike_model__icontains=query) |
             Q(profile__location_city__icontains=query)
         )
+    if style:
+        users = users.filter(profile__riding_style__iexact=style)
+    if experience:
+        users = users.filter(profile__experience_level__iexact=experience)
+    if bike:
+        users = users.filter(
+            Q(profile__bike_make__icontains=bike) |
+            Q(profile__bike_model__icontains=bike)
+        )
+    if location:
+        users = users.filter(profile__location_city__icontains=location)
+
     users = users[:20]
     return Response(RiderDiscoverySerializer(users, many=True).data)
 

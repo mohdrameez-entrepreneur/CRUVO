@@ -50,7 +50,7 @@ export const ridesAPI = {
 };
 
 export const discoveryAPI = {
-  searchRiders: (q) => api.get('/discovery/riders/', { params: { q } }),
+  searchRiders: (q, filters = {}) => api.get('/discovery/riders/', { params: { q, ...filters } }),
 };
 
 export const invitationsAPI = {

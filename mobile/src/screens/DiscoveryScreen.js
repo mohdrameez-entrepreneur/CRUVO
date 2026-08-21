@@ -1,8 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { discoveryAPI } from '../api';
+
+const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
+const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
+
+function FilterChip({ label, icon, active, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.filterChip, active && styles.filterChipActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {icon && <Ionicons name={icon} size={14} color={active ? colors.onPrimaryContainer : colors.onSurfaceVariant} />}
+      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function FilterModal({ visible, filters, onApply, onClear, onClose }) {
+  const [local, setLocal] = useState(filters);
+
+  useEffect(() => { setLocal(filters); }, [visible]);
+
+  if (!visible) return null;
+
+  const toggle = (key, value) => {
+    setLocal(prev => ({ ...prev, [key]: prev[key] === value ? '' : value }));
+  };
+
+  return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>FILTERS</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.filterLabel}>RIDING STYLE</Text>
+        <View style={styles.filterGroup}>
+          {RIDING_STYLES.map(s => (
+            <FilterChip key={s} label={s} active={local.style === s} onPress={() => toggle('style', s)} />
+          ))}
+        </View>
+
+        <Text style={styles.filterLabel}>EXPERIENCE</Text>
+        <View style={styles.filterGroup}>
+          {EXPERIENCE_LEVELS.map(e => (
+            <FilterChip key={e} label={e} active={local.experience === e} onPress={() => toggle('experience', e)} />
+          ))}
+        </View>
+
+        <Text style={styles.filterLabel}>LOCATION</Text>
+        <TextInput
+          style={styles.modalInput}
+          placeholder="e.g. Delhi, Mumbai..."
+          placeholderTextColor={colors.outline}
+          value={local.location}
+          onChangeText={v => setLocal(prev => ({ ...prev, location: v }))}
+        />
+
+        <Text style={styles.filterLabel}>BIKE</Text>
+        <TextInput
+          style={styles.modalInput}
+          placeholder="e.g. Royal Enfield, BMW..."
+          placeholderTextColor={colors.outline}
+          value={local.bike}
+          onChangeText={v => setLocal(prev => ({ ...prev, bike: v }))}
+        />
+
+        <View style={styles.modalActions}>
+          <TouchableOpacity style={styles.clearBtn} onPress={() => { onClear(); onClose(); }}>
+            <Text style={styles.clearBtnText}>CLEAR ALL</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.applyBtn} onPress={() => { onApply(local); onClose(); }}>
+            <Text style={styles.applyBtnText}>APPLY</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function RiderCard({ rider }) {
   const p = rider.profile;
@@ -14,7 +96,7 @@ function RiderCard({ rider }) {
         </View>
         <View style={styles.riderInfo}>
           <Text style={styles.riderName}>{p?.display_name}</Text>
-          <Text style={styles.riderBike}>{p?.bike_make} {p?.bike_model}</Text>
+          <Text style={styles.riderBike}>{[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'No bike info'}</Text>
           <Text style={styles.riderLocation}>{p?.location_city || 'Unknown location'}</Text>
         </View>
       </View>
@@ -22,10 +104,6 @@ function RiderCard({ rider }) {
         {p?.riding_style ? <View style={styles.tag}><Text style={styles.tagText}>{p.riding_style}</Text></View> : null}
         {p?.experience_level ? <View style={styles.tag}><Text style={styles.tagText}>{p.experience_level}</Text></View> : null}
       </View>
-      <TouchableOpacity style={styles.inviteButton} activeOpacity={0.8}>
-        <Ionicons name="person-add-outline" size={18} color={colors.onPrimaryContainer} />
-        <Text style={styles.inviteButtonText}>Invite</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -34,19 +112,38 @@ export default function DiscoveryScreen({ navigation }) {
   const [query, setQuery] = useState('');
   const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({ style: '', experience: '', bike: '', location: '' });
+  const [showFilters, setShowFilters] = useState(false);
+  const debounceRef = useRef(null);
 
-  const searchRiders = async (q = '') => {
+  const searchRiders = useCallback(async (q, f) => {
     setLoading(true);
     try {
-      const res = await discoveryAPI.searchRiders(q);
+      const res = await discoveryAPI.searchRiders(q, f);
       setRiders(res.data);
     } catch {}
     setLoading(false);
+  }, []);
+
+  useEffect(() => { searchRiders('', {}); }, []);
+
+  const handleTextChange = (text) => {
+    setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchRiders(text, filters), 400);
   };
 
-  useEffect(() => { searchRiders(); }, []);
+  const handleApplyFilters = (newFilters) => {
+    setFilters(newFilters);
+    searchRiders(query, newFilters);
+  };
 
-  const handleSearch = () => searchRiders(query);
+  const handleClearFilters = () => {
+    setFilters({ style: '', experience: '', bike: '', location: '' });
+    searchRiders(query, {});
+  };
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   return (
     <View style={styles.container}>
@@ -68,45 +165,68 @@ export default function DiscoveryScreen({ navigation }) {
             placeholder="Search riders, bikes, locations..."
             placeholderTextColor={colors.outline}
             value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={handleSearch}
+            onChangeText={handleTextChange}
+            returnKeyType="search"
           />
-          <TouchableOpacity onPress={() => {}}>
-            <Ionicons name="mic" size={20} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => { setQuery(''); searchRiders('', filters); }}>
+              <Ionicons name="close-circle" size={20} color={colors.onSurfaceVariant} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       <View style={styles.filterSection}>
-        <TouchableOpacity style={styles.filterChipActive}>
-          <Text style={styles.filterChipTextActive}>Filters</Text>
+        <TouchableOpacity
+          style={[styles.filterChip, styles.filterChipPrimary]}
+          onPress={() => setShowFilters(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="options" size={14} color={colors.onPrimaryContainer} />
+          <Text style={[styles.filterChipText, styles.filterChipTextActive]}>
+            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.filterChip}>
-          <Ionicons name="location" size={14} color={colors.onSurfaceVariant} />
-          <Text style={styles.filterChipText}>Nearby (50km)</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterChip}>
-          <Text style={styles.filterChipText}>Style: ADV</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterChip}>
-          <Text style={styles.filterChipText}>Bike: Royal Enfield</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterChip}>
-          <Text style={styles.filterChipText}>Exp: Veteran</Text>
-        </TouchableOpacity>
+        {filters.style ? (
+          <FilterChip label={filters.style} active onPress={() => handleApplyFilters({ ...filters, style: '' })} />
+        ) : null}
+        {filters.experience ? (
+          <FilterChip label={filters.experience} active onPress={() => handleApplyFilters({ ...filters, experience: '' })} />
+        ) : null}
+        {filters.location ? (
+          <FilterChip label={filters.location} icon="location" active onPress={() => handleApplyFilters({ ...filters, location: '' })} />
+        ) : null}
+        {filters.bike ? (
+          <FilterChip label={filters.bike} active onPress={() => handleApplyFilters({ ...filters, bike: '' })} />
+        ) : null}
       </View>
 
-      <FlatList
-        data={riders}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <RiderCard rider={item} />}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={48} color={colors.outline} />
-            <Text style={styles.emptyStateText}>No riders found</Text>
-          </View>
-        }
+      {loading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={colors.primaryContainer} />
+          <Text style={styles.emptyStateText}>Searching...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={riders}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => <RiderCard rider={item} />}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="people-outline" size={48} color={colors.outline} />
+              <Text style={styles.emptyStateText}>No riders found</Text>
+            </View>
+          }
+        />
+      )}
+
+      <FilterModal
+        visible={showFilters}
+        filters={filters}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+        onClose={() => setShowFilters(false)}
       />
     </View>
   );
@@ -138,12 +258,14 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
     backgroundColor: colors.surfaceContainerLow,
   },
+  filterChipPrimary: {
+    backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer,
+  },
   filterChipActive: {
-    paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
-    borderRadius: borderRadius.lg, backgroundColor: colors.primaryContainer,
+    backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer,
   },
   filterChipText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 12 },
-  filterChipTextActive: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 12 },
+  filterChipTextActive: { color: colors.onPrimaryContainer },
   listContent: { padding: spacing.marginMobile, paddingBottom: 100, gap: spacing.stackMd },
   riderCard: {
     backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
@@ -166,12 +288,38 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,214,0,0.2)',
   },
   tagText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 11 },
-  inviteButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
-    backgroundColor: colors.primaryContainer, height: 44, borderRadius: borderRadius.lg,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
-  },
-  inviteButtonText: { ...typography.labelTechnical, color: colors.onPrimaryContainer },
   emptyState: { alignItems: 'center', gap: spacing.stackMd, padding: spacing.stackLg * 2 },
   emptyStateText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
+
+  modalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surfaceContainer, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl,
+    padding: spacing.marginMobile, paddingBottom: 50, maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.stackLg,
+  },
+  modalTitle: { ...typography.titleMd, color: colors.onSurface },
+  filterLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm, marginTop: spacing.stackMd },
+  filterGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm },
+  modalInput: {
+    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg, paddingHorizontal: spacing.stackMd, height: 48,
+    ...typography.bodyMd, color: colors.onSurface,
+  },
+  modalActions: { flexDirection: 'row', gap: spacing.stackMd, marginTop: spacing.stackLg },
+  clearBtn: {
+    flex: 1, height: 48, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  clearBtnText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
+  applyBtn: {
+    flex: 1, height: 48, borderRadius: borderRadius.lg, backgroundColor: colors.primaryContainer,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  applyBtnText: { ...typography.labelTechnical, color: colors.onPrimaryContainer },
 });
