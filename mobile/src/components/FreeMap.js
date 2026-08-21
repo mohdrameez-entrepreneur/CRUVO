@@ -1,9 +1,8 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { colors } from '../theme';
 
-const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILES = 'https://demotiles.maplibre.org/style.json';
 
 function buildHtml({ center, zoom, markers, polyline, riderPositions }) {
   const markersJson = JSON.stringify(markers || []);
@@ -15,77 +14,96 @@ function buildHtml({ center, zoom, markers, polyline, riderPositions }) {
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body, #map { width:100%; height:100%; background:#121317; }
-  .rider-marker {
-    background:#ffd600; color:#121317; font-weight:700; font-size:11px;
-    font-family:monospace; width:36px; height:36px; border-radius:18px;
-    display:flex; align-items:center; justify-content:center;
-    border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.5);
-  }
-  .origin-marker {
-    background:#4CAF50; color:#fff; width:26px; height:26px; border-radius:13px;
-    display:flex; align-items:center; justify-content:center;
-    border:3px solid #fff; font-size:12px;
-  }
-  .dest-marker {
-    background:#e53935; color:#fff; width:26px; height:26px; border-radius:13px;
-    display:flex; align-items:center; justify-content:center;
-    border:3px solid #fff; font-size:12px;
-  }
+  html, body, #map { width:100%; height:100%; background:#121317; overflow:hidden; }
+  .maplibregl-ctrl-attrib { display:none !important; }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <script>
-  var map = L.map('map', {
-    zoomControl: false,
-    attributionControl: false
-  }).setView([${center[0]}, ${center[1]}], ${zoom || 13});
+var style = {
+  version: 8,
+  name: 'CRUVO',
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: ''
+    }
+  },
+  layers: [{
+    id: 'osm',
+    type: 'raster',
+    source: 'osm',
+    minzoom: 0,
+    maxzoom: 19
+  }]
+};
 
-  L.tileLayer('${TILE_URL}', {
-    maxZoom: 19
-  }).addTo(map);
+var map = new maplibregl.Map({
+  container: 'map',
+  style: style,
+  center: [${center[1]}, ${center[0]}],
+  zoom: ${zoom || 13},
+  attributionControl: false
+});
 
-  var markers = ${markersJson};
-  markers.forEach(function(m) {
-    var cls = m.type === 'origin' ? 'origin-marker' : 'dest-marker';
-    var icon = L.divIcon({ className: '', html: '<div class="' + cls + '">' + (m.type === 'origin' ? '&#9654;' : '&#9873;') + '</div>', iconSize: [26, 26], iconAnchor: [13, 13] });
-    L.marker([m.lat, m.lng], { icon: icon }).addTo(map);
-  });
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
+map.on('load', function() {
   var polyline = ${polylineJson};
   if (polyline.length > 0) {
-    L.polyline(polyline, { color: '#ffd600', weight: 4, opacity: 0.9 }).addTo(map);
+    map.addSource('route', {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: polyline.map(function(p) { return [p[1], p[0]]; }) }
+      }
+    });
+    map.addLayer({
+      id: 'route-line',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#ffd600', 'line-width': 4, 'line-opacity': 0.9 }
+    });
+
+    var bounds = polyline.reduce(function(b, p) { return b.extend([p[1], p[0]]); }, new maplibregl.LngLatBounds());
     if (polyline.length > 1) {
-      var bounds = L.latLngBounds(polyline);
-      map.fitBounds(bounds, { padding: [40, 40] });
+      map.fitBounds(bounds, { padding: { top: 50, bottom: 50, left: 50, right: 50 } });
     }
   }
 
-  var riders = ${ridersJson};
-  var RIDER_COLORS = ['#ffd600','#4CAF50','#FF9800','#2196F3','#E91E63','#9C27B0','#00BCD4','#FF5722'];
-  riders.forEach(function(r, i) {
-    var color = RIDER_COLORS[i % RIDER_COLORS.length];
-    var icon = L.divIcon({
-      className: '',
-      html: '<div class="rider-marker" style="background:' + color + '">' + r.initials + '</div>',
-      iconSize: [36, 36],
-      iconAnchor: [18, 18]
-    });
-    L.marker([r.lat, r.lng], { icon: icon }).addTo(map);
+  var markers = ${markersJson};
+  markers.forEach(function(m) {
+    var color = m.type === 'origin' ? '#4CAF50' : '#e53935';
+    var el = document.createElement('div');
+    el.style.cssText = 'width:28px;height:28px;border-radius:14px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#fff;font-size:12px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.5);';
+    el.innerHTML = m.type === 'origin' ? '&#9654;' : '&#9873;';
+    new maplibregl.Marker({ element: el }).setLngLat([m.lng, m.lat]).addTo(map);
   });
+
+  var riders = ${ridersJson};
+  var COLORS = ['#ffd600','#4CAF50','#FF9800','#2196F3','#E91E63','#9C27B0','#00BCD4','#FF5722'];
+  riders.forEach(function(r, i) {
+    var color = COLORS[i % COLORS.length];
+    var el = document.createElement('div');
+    el.style.cssText = 'width:38px;height:38px;border-radius:19px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#121317;font-size:11px;font-weight:700;font-family:monospace;box-shadow:0 2px 8px rgba(0,0,0,0.5);';
+    el.textContent = r.initials;
+    new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(map);
+  });
+});
 </script>
 </body>
 </html>`;
 }
 
 export default function FreeMap({ ride, positions = [], myUserId, followMyLocation = false, style }) {
-  const webViewRef = useRef(null);
-
   const center = useMemo(() => {
     if (ride?.origin_lat && ride?.destination_lat) {
       return [(ride.origin_lat + ride.destination_lat) / 2, (ride.origin_lng + ride.destination_lng) / 2];
@@ -137,12 +155,14 @@ export default function FreeMap({ ride, positions = [], myUserId, followMyLocati
     }));
   }, [positions]);
 
-  const html = useMemo(() => buildHtml({ center, zoom, markers, polyline, riderPositions }), [center, zoom, markers, polyline, riderPositions]);
+  const html = useMemo(
+    () => buildHtml({ center, zoom, markers, polyline, riderPositions }),
+    [center, zoom, markers, polyline, riderPositions]
+  );
 
   return (
     <View style={[styles.container, style]}>
       <WebView
-        ref={webViewRef}
         source={{ html }}
         style={styles.webview}
         originWhitelist={['*']}
