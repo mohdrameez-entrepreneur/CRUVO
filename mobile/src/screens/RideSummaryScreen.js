@@ -124,7 +124,8 @@ export default function RideSummaryScreen({ navigation, route }) {
   const acceptedParticipants = participants.filter(p => p.status === 'ACCEPTED');
   const readyCount = acceptedParticipants.filter(p => p.is_ready).length;
   const totalAccepted = acceptedParticipants.length;
-  const allReady = totalAccepted > 1 && readyCount === totalAccepted;
+  const singleRider = totalAccepted <= 1;
+  const allReady = singleRider || (totalAccepted > 1 && readyCount === totalAccepted);
   const myParticipant = participants.find(p => p.user === user?.id);
   const myReady = myParticipant?.is_ready || false;
   const isScheduled = ride.status === 'SCHEDULED';

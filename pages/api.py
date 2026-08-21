@@ -217,13 +217,13 @@ def start_ride_view(request, ride_id):
     if ride.status != 'SCHEDULED':
         return Response({'error': 'Ride is not in SCHEDULED status'}, status=status.HTTP_400_BAD_REQUEST)
 
+    if ride.creator != request.user:
+        return Response({'error': 'Only the creator can start the ride'}, status=status.HTTP_403_FORBIDDEN)
+
     accepted = ride.participants.filter(status='ACCEPTED')
     all_ready = accepted.exclude(is_ready=True).count() == 0
 
-    if accepted.count() <= 1:
-        return Response({'error': 'Need at least 2 riders to start'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if not all_ready:
+    if accepted.count() > 1 and not all_ready:
         return Response({'error': 'Not all riders are ready'}, status=status.HTTP_400_BAD_REQUEST)
 
     ride.status = 'ACTIVE'
