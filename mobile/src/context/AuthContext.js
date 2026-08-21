@@ -28,8 +28,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = async (email, password) => {
-    const res = await authAPI.login({ email, password });
+  const login = async (username, password) => {
+    const res = await authAPI.login({ username, password });
     await SecureStore.setItemAsync('auth_token', res.data.token);
     setProfile(res.data.user.profile);
     setUser({ token: res.data.token });

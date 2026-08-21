@@ -36,7 +36,7 @@ def login_view(request):
     if serializer.is_valid():
         user = authenticate(
             request,
-            username=serializer.validated_data['email'],
+            username=serializer.validated_data['username'],
             password=serializer.validated_data['password'],
         )
         if user:
@@ -184,6 +184,7 @@ def discovery_view(request):
     users = User.objects.exclude(id=request.user.id).select_related('profile')
     if query:
         users = users.filter(
+            Q(username__icontains=query) |
             Q(profile__display_name__icontains=query) |
             Q(profile__bike_make__icontains=query) |
             Q(profile__location_city__icontains=query)

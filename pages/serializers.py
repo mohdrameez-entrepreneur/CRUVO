@@ -24,10 +24,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'profile']
+        fields = ['id', 'username', 'email', 'profile']
 
 
 class RegisterSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=30, min_length=3)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
@@ -41,8 +42,13 @@ class RegisterSerializer(serializers.Serializer):
         choices=[c[0] for c in Profile.EXPERIENCE_CHOICES], required=False, default=''
     )
 
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('This username is already taken.')
+        return value.lower()
+
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('An account with this email already exists.')
         return value
 
@@ -60,7 +66,7 @@ class RegisterSerializer(serializers.Serializer):
         validated_data.pop('password2')
 
         user = User.objects.create_user(
-            username=validated_data['email'],
+            username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
         )
@@ -76,7 +82,7 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField()
 
 
@@ -154,7 +160,7 @@ class RiderDiscoverySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'profile', 'distance_km']
+        fields = ['id', 'username', 'profile', 'distance_km']
 
     def get_distance_km(self, obj):
         return None

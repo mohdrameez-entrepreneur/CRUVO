@@ -44,6 +44,7 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.avatarInitials}>{profile?.initials || '??'}</Text>
           </View>
           <Text style={styles.profileName}>{profile?.display_name || 'Rider'}</Text>
+          <Text style={styles.profileUsername}>@{user?.username || ''}</Text>
           <Text style={styles.profileEmail}>{user?.email || ''}</Text>
         </View>
 
@@ -59,6 +60,7 @@ export default function SettingsScreen({ navigation }) {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>ACCOUNT</Text>
+          <InfoRow icon="at-outline" label="Username" value={`@${user?.username}`} />
           <InfoRow icon="mail-outline" label="Email" value={user?.email} />
           <InfoRow icon="key-outline" label="User ID" value={`#${user?.id || profile?.id}`} />
           <InfoRow icon="calendar-outline" label="Joined" value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : ''} />
@@ -91,6 +93,7 @@ const styles = StyleSheet.create({
   },
   avatarInitials: { ...typography.headlineLgMobile, color: colors.primaryContainer },
   profileName: { ...typography.headlineLgMobile, color: colors.onSurface },
+  profileUsername: { ...typography.labelTechnical, color: colors.primaryContainer },
   profileEmail: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   card: {
     backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,

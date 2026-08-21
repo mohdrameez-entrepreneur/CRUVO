@@ -13,6 +13,7 @@ function RiderCard({ rider, onInvite, invited }) {
       </View>
       <View style={styles.riderInfo}>
         <Text style={styles.riderName}>{p?.display_name || 'Unknown'}</Text>
+        <Text style={styles.riderUsername}>@{rider.username}</Text>
         <Text style={styles.riderBike}>{[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'No bike info'}</Text>
         {p?.riding_style ? <Text style={styles.riderStyle}>{p.riding_style}</Text> : null}
       </View>
@@ -156,6 +157,7 @@ const styles = StyleSheet.create({
   riderInitials: { ...typography.labelTechnical, color: colors.primaryContainer },
   riderInfo: { flex: 1, gap: 2 },
   riderName: { ...typography.titleMd, color: colors.onSurface, fontSize: 16 },
+  riderUsername: { ...typography.labelSm, color: colors.primaryContainer },
   riderBike: { ...typography.bodyMd, color: colors.onSurfaceVariant, fontSize: 13 },
   riderStyle: { ...typography.labelSm, color: colors.primaryContainer },
   inviteButton: {

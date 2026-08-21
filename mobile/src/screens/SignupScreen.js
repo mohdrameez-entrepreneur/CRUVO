@@ -10,7 +10,7 @@ const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
 export default function SignupScreen({ navigation }) {
   const { register } = useAuth();
   const [form, setForm] = useState({
-    display_name: '', email: '', password: '', password2: '',
+    username: '', display_name: '', email: '', password: '', password2: '',
     bike_make: '', bike_model: '', riding_style: '', experience_level: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +19,7 @@ export default function SignupScreen({ navigation }) {
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const handleSignup = async () => {
-    if (!form.display_name || !form.email || !form.password || !form.password2) {
+    if (!form.username || !form.display_name || !form.email || !form.password || !form.password2) {
       Alert.alert('Error', 'Please fill in required fields');
       return;
     }
@@ -78,6 +78,7 @@ export default function SignupScreen({ navigation }) {
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join the ride community</Text>
 
+        {renderInput('at-outline', 'username', 'Choose a unique username', { autoCapitalize: 'none' })}
         {renderInput('person-outline', 'display_name', 'Your name')}
         {renderInput('mail-outline', 'email', 'rider@cruvo.app', { keyboardType: 'email-address' })}
         {renderInput('lock-closed-outline', 'password', 'Create password', { secure: true })}

@@ -6,19 +6,19 @@ import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!username || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(username, password);
     } catch (err) {
       console.log('LOGIN ERROR:', err.message, err.code, err.response?.status, err.response?.data);
       const msg = err.response?.data;
@@ -48,16 +48,15 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.subtitle}>Sign in to continue riding</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>EMAIL</Text>
+          <Text style={styles.label}>USERNAME</Text>
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color={colors.onSurfaceVariant} style={styles.inputIcon} />
+            <Ionicons name="person-outline" size={20} color={colors.onSurfaceVariant} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="rider@cruvo.app"
+              placeholder="Enter your username"
               placeholderTextColor={colors.outline}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              value={username}
+              onChangeText={setUsername}
               autoCapitalize="none"
             />
           </View>
