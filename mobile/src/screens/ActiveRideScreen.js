@@ -70,6 +70,19 @@ export default function ActiveRideScreen({ navigation, route }) {
   }, [rideId]);
 
   useEffect(() => {
+    if (ride && ride.origin_lat && ride.destination_lat && !ride.route_polyline) {
+      ridesAPI.fetchRoute(rideId).then(res => {
+        setRide(prev => ({
+          ...prev,
+          route_polyline: JSON.stringify(res.data.route_polyline),
+          route_distance_m: res.data.distance_km * 1000,
+          route_duration_s: res.data.duration_s,
+        }));
+      }).catch(() => {});
+    }
+  }, [ride?.id, ride?.origin_lat, ride?.route_polyline]);
+
+  useEffect(() => {
     requestPermission().then(granted => {
       if (granted) {
         startWatching((coords) => {
