@@ -106,7 +106,7 @@ function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
           <Text style={styles.rideStatText}>{ride.participant_count || 0} riders</Text>
           {ride.distance_km ? (
             <>
-              <Ionicons name="route" size={16} color={colors.onSurfaceVariant} style={{ marginLeft: spacing.stackMd }} />
+              <Ionicons name="navigate" size={16} color={colors.onSurfaceVariant} style={{ marginLeft: spacing.stackMd }} />
               <Text style={styles.rideStatText}>{ride.distance_km} km</Text>
             </>
           ) : null}

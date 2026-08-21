@@ -334,7 +334,7 @@ export default function ActiveRideScreen({ navigation, route }) {
               </View>
               <View style={styles.completeStatDivider} />
               <View style={styles.completeStat}>
-                <Ionicons name="route" size={20} color={colors.primaryContainer} />
+                <Ionicons name="navigate" size={20} color={colors.primaryContainer} />
                 <Text style={styles.completeStatValue}>{ride?.distance_km ? `${ride.distance_km} km` : 'N/A'}</Text>
                 <Text style={styles.completeStatLabel}>DISTANCE</Text>
               </View>

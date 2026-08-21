@@ -48,7 +48,7 @@ function RideCard({ ride }) {
           <Text style={styles.rideDetailText}>{ride.participant_count} riders</Text>
           {ride.distance_km && (
             <>
-              <Ionicons name="route" size={18} color={colors.onSurfaceVariant} style={{ marginLeft: spacing.stackMd }} />
+              <Ionicons name="navigate" size={18} color={colors.onSurfaceVariant} style={{ marginLeft: spacing.stackMd }} />
               <Text style={styles.rideDetailText}>{ride.distance_km} km</Text>
             </>
           )}
