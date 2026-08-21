@@ -26,7 +26,6 @@ export default function SignupScreen({ navigation }) {
     setLoading(true);
     try {
       await register(form);
-      navigation.replace('Main');
     } catch (err) {
       const msg = err.response?.data;
       const firstError = typeof msg === 'object' ? Object.values(msg)[0] : 'Registration failed';

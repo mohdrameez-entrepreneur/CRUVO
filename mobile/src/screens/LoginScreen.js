@@ -19,7 +19,6 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       await login(email, password);
-      navigation.replace('Main');
     } catch (err) {
       Alert.alert('Error', 'Invalid credentials');
     } finally {
