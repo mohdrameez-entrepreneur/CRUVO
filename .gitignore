@@ -74,3 +74,6 @@ yarn-error.log*
 .metro-health-check*
 android/
 ios/
+
+# Documentation
+CODEBASE_EXPLAINER.md
