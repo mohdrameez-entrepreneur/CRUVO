@@ -134,7 +134,7 @@ export default function RideSummaryScreen({ navigation, route }) {
               </View>
               <View style={styles.riderInfo}>
                 <Text style={styles.riderName}>
-                  {rider.display_name} {rider.role === 'CREATOR' && <Text style={styles.youBadge}>(You)</Text>}
+                  {rider.display_name} {rider.user === user?.id && <Text style={styles.youBadge}>(You)</Text>}
                 </Text>
                 <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
               </View>

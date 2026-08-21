@@ -106,6 +106,7 @@ def rides_view(request):
     if request.method == 'GET':
         rides = Ride.objects.filter(
             participants__user=request.user,
+            participants__status='ACCEPTED',
         ).order_by('-date', '-time')[:50]
         return Response(RideSerializer(rides, many=True).data)
 
