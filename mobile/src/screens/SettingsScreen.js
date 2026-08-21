@@ -56,7 +56,17 @@ export default function SettingsScreen({ navigation }) {
           <InfoRow icon="bicycle-outline" label="Bike" value={`${profile?.bike_make || ''} ${profile?.bike_model || ''}`.trim()} />
           <InfoRow icon="speedometer-outline" label="Style" value={profile?.riding_style} />
           <InfoRow icon="trophy-outline" label="Experience" value={profile?.experience_level} />
+          {profile?.bio ? <InfoRow icon="document-text-outline" label="Bio" value={profile.bio} /> : null}
         </View>
+
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => navigation.navigate('ProfileEdit')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="create-outline" size={20} color={colors.onPrimaryContainer} />
+          <Text style={styles.editButtonText}>EDIT PROFILE</Text>
+        </TouchableOpacity>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>ACCOUNT</Text>
@@ -113,4 +123,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.stackMd,
   },
   logoutText: { ...typography.titleMd, color: '#F44336', textTransform: 'uppercase' },
+  editButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
+    backgroundColor: colors.primaryContainer, height: spacing.touchTargetMin,
+    borderRadius: borderRadius.lg, marginTop: spacing.stackMd,
+  },
+  editButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
 });

@@ -75,9 +75,7 @@ def rides_view(request):
     if request.method == 'GET':
         rides = Ride.objects.filter(
             participants__user=request.user,
-            status__in=['DRAFT', 'SCHEDULED'],
-            date__gte=date.today(),
-        ).order_by('date', 'time')[:20]
+        ).order_by('-date', '-time')[:50]
         return Response(RideSerializer(rides, many=True).data)
 
     serializer = RideCreateSerializer(data=request.data)

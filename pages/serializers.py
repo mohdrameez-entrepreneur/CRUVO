@@ -138,6 +138,12 @@ class RideCreateSerializer(serializers.ModelSerializer):
             'date', 'time', 'is_public',
         ]
 
+    def validate_date(self, value):
+        from datetime import date as today_date
+        if value < today_date.today():
+            raise serializers.ValidationError('Ride date cannot be in the past.')
+        return value
+
 
 class FlagStopSerializer(serializers.ModelSerializer):
     flagged_by_name = serializers.SerializerMethodField()

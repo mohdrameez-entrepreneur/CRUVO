@@ -15,6 +15,7 @@ import ActiveRideScreen from '../screens/ActiveRideScreen';
 import FlagStopScreen from '../screens/FlagStopScreen';
 import RideSummaryScreen from '../screens/RideSummaryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import ProfileEditScreen from '../screens/ProfileEditScreen';
 import InviteRidersScreen from '../screens/InviteRidersScreen';
 import MainTabs from './MainTabs';
 
@@ -49,6 +50,7 @@ export default function AppNavigator() {
             <Stack.Screen name="FlagStop" component={FlagStopScreen} options={{ presentation: 'modal' }} />
             <Stack.Screen name="RideSummary" component={RideSummaryScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
             <Stack.Screen name="InviteRiders" component={InviteRidersScreen} />
           </>
         )}
