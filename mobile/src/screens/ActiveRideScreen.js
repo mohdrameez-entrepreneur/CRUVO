@@ -19,6 +19,8 @@ const STOP_TYPES = [
   { key: 'ISSUE', icon: 'warning', label: 'Issue' },
 ];
 
+const FLAG_ICONS = { FUEL: 'car', FOOD: 'restaurant', BREAK: 'pause-circle', GENERAL: 'ellipsis-horizontal', ISSUE: 'warning' };
+
 function getDistanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -40,20 +42,30 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [flagType, setFlagType] = useState('FUEL');
   const [flagging, setFlagging] = useState(false);
+  const [myFlag, setMyFlag] = useState(null);
+  const [clearingFlag, setClearingFlag] = useState(false);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
   const posInterval = useRef(null);
   const timerInterval = useRef(null);
 
-  useEffect(() => {
-    if (!rideId) { setLoading(false); return; }
-    Promise.all([
-      ridesAPI.get(rideId),
-      ridesAPI.getPositions(rideId).catch(() => ({ data: [] })),
-    ]).then(([rideRes, posRes]) => {
+  const loadRideAndFlags = async () => {
+    if (!rideId) return;
+    try {
+      const [rideRes, posRes, flagsRes] = await Promise.all([
+        ridesAPI.get(rideId),
+        ridesAPI.getPositions(rideId).catch(() => ({ data: [] })),
+        ridesAPI.getFlagStops(rideId).catch(() => ({ data: [] })),
+      ]);
       setRide(rideRes.data);
       setPositions(posRes.data);
-    }).catch(() => {}).finally(() => setLoading(false));
+      const mine = (flagsRes.data || []).find(f => f.flagged_by === user?.id && !f.resolved_at);
+      setMyFlag(mine || null);
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadRideAndFlags().finally(() => setLoading(false));
   }, [rideId]);
 
   useEffect(() => {
@@ -125,6 +137,21 @@ export default function ActiveRideScreen({ navigation, route }) {
     navigation.navigate('RideSummary', { rideId });
   };
 
+  const handleFlagPress = () => {
+    if (myFlag) {
+      Alert.alert(
+        `${myFlag.stop_type} Stop Active`,
+        'You have an active flag. Clear it to continue riding?',
+        [
+          { text: 'Keep Flagged', style: 'cancel' },
+          { text: 'Clear Flag', onPress: handleClearFlag },
+        ]
+      );
+    } else {
+      setShowFlagModal(true);
+    }
+  };
+
   const handleFlagStop = async () => {
     if (!location) {
       Alert.alert('Location Required', 'Cannot flag a stop without location access');
@@ -139,11 +166,26 @@ export default function ActiveRideScreen({ navigation, route }) {
         location_name: `${flagType} stop`,
       });
       setShowFlagModal(false);
-      Alert.alert('Stop Flagged', `${flagType} stop has been flagged for the crew`);
+      const flagsRes = await ridesAPI.getFlagStops(rideId);
+      const mine = (flagsRes.data || []).find(f => f.flagged_by === user?.id && !f.resolved_at);
+      setMyFlag(mine || null);
     } catch {
       Alert.alert('Error', 'Failed to flag stop');
     } finally {
       setFlagging(false);
+    }
+  };
+
+  const handleClearFlag = async () => {
+    if (!myFlag) return;
+    setClearingFlag(true);
+    try {
+      await ridesAPI.update(rideId, {});
+      setMyFlag(null);
+    } catch {
+      Alert.alert('Error', 'Failed to clear flag');
+    } finally {
+      setClearingFlag(false);
     }
   };
 
@@ -156,68 +198,68 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primaryContainer} />
-          <Text style={styles.loadingText}>Loading ride...</Text>
-        </View>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primaryContainer} />
+        <Text style={styles.loadingText}>Loading ride...</Text>
       </View>
     );
   }
 
   if (!ride) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingWrap}>
-          <Ionicons name="alert-circle-outline" size={32} color={colors.onSurfaceVariant} />
-          <Text style={styles.loadingText}>Ride not found</Text>
-        </View>
+      <View style={styles.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={32} color={colors.onSurfaceVariant} />
+        <Text style={styles.loadingText}>Ride not found</Text>
       </View>
     );
   }
 
   const participants = ride.participants || [];
   const isCreator = user && ride.creator === user.id;
+  const flagIcon = myFlag ? (FLAG_ICONS[myFlag.stop_type] || 'flag') : 'flag';
+  const flagLabel = myFlag ? myFlag.stop_type : null;
 
   return (
     <View style={styles.container}>
-      <View style={styles.mapContainer}>
+      <View style={styles.mapWrap}>
         <RideMap
           ride={ride}
           positions={positions}
           myUserId={user?.id}
           followMyLocation
         />
+      </View>
 
-        <View style={styles.floatingHeader}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>{ride.name}</Text>
-            <Text style={styles.headerSubtitle}>
-              {positions.length} RIDER{positions.length !== 1 ? 'S' : ''} LIVE · {formatTime(elapsed)}
-            </Text>
-          </View>
-          {isCreator && (
-            <TouchableOpacity style={styles.endRideButton} onPress={endRide}>
-              <Text style={styles.endRideText}>END</Text>
-            </TouchableOpacity>
-          )}
+      <View style={styles.floatingHeader}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>{ride.name}</Text>
+          <Text style={styles.headerSubtitle}>
+            {positions.length} RIDER{positions.length !== 1 ? 'S' : ''} LIVE · {formatTime(elapsed)}
+          </Text>
         </View>
-
-        <View style={styles.sideControls}>
-          <TouchableOpacity style={styles.controlButton}
-            onPress={() => {
-              if (location) {
-                ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
-              }
-            }}>
-            <Ionicons name="refresh" size={24} color={colors.onSurface} />
+        {isCreator && (
+          <TouchableOpacity style={styles.endRideButton} onPress={endRide}>
+            <Text style={styles.endRideText}>END</Text>
           </TouchableOpacity>
-        </View>
+        )}
+      </View>
 
-        <TouchableOpacity style={styles.flagFab} onPress={() => setShowFlagModal(true)}>
-          <Ionicons name="flag" size={28} color={colors.white} />
+      <View style={styles.sideControls}>
+        <TouchableOpacity style={styles.controlButton}
+          onPress={() => {
+            ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
+          }}>
+          <Ionicons name="refresh" size={24} color={colors.onSurface} />
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={[styles.flagFab, myFlag && styles.flagFabActive]}
+        onPress={handleFlagPress}
+      >
+        <Ionicons name={flagIcon} size={28} color={colors.white} />
+        {flagLabel && <Text style={styles.flagFabLabel}>{flagLabel}</Text>}
+      </TouchableOpacity>
 
       <View style={[styles.bottomPanel, panelExpanded && styles.bottomPanelExpanded]}>
         <TouchableOpacity style={styles.panelHandle} onPress={() => setPanelExpanded(!panelExpanded)}>
@@ -265,16 +307,16 @@ export default function ActiveRideScreen({ navigation, route }) {
 
       {/* Flag Stop Modal */}
       <Modal visible={showFlagModal} transparent animationType="fade" statusBarTranslucent>
-        <View style={styles.flagOverlay}>
-          <View style={styles.flagCard}>
-            <Text style={styles.flagTitle}>Flag a Stop</Text>
-            <Text style={styles.flagSubtitle}>Let the crew know you need to pull over</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Flag a Stop</Text>
+            <Text style={styles.modalSubtitle}>Let the crew know you need to pull over</Text>
 
             <View style={styles.flagGrid}>
               {STOP_TYPES.map((type) => (
                 <TouchableOpacity
                   key={type.key}
-                  style={[styles.flagCard2, flagType === type.key && styles.flagCardActive]}
+                  style={[styles.flagOption, flagType === type.key && styles.flagOptionActive]}
                   onPress={() => setFlagType(type.key)}
                   activeOpacity={0.7}
                 >
@@ -283,7 +325,7 @@ export default function ActiveRideScreen({ navigation, route }) {
                     size={24}
                     color={flagType === type.key ? colors.onPrimaryContainer : colors.onSurfaceVariant}
                   />
-                  <Text style={[styles.flagCardLabel, flagType === type.key && styles.flagCardLabelActive]}>
+                  <Text style={[styles.flagOptionLabel, flagType === type.key && styles.flagOptionLabelActive]}>
                     {type.label}
                   </Text>
                 </TouchableOpacity>
@@ -292,14 +334,14 @@ export default function ActiveRideScreen({ navigation, route }) {
 
             <View style={styles.flagButtonRow}>
               <TouchableOpacity
-                style={styles.flagCancelButton}
+                style={styles.flagCancelBtn}
                 onPress={() => setShowFlagModal(false)}
                 activeOpacity={0.8}
               >
                 <Text style={styles.flagCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.flagSubmitButton}
+                style={styles.flagSubmitBtn}
                 onPress={handleFlagStop}
                 disabled={flagging}
                 activeOpacity={0.8}
@@ -318,8 +360,8 @@ export default function ActiveRideScreen({ navigation, route }) {
 
       {/* Ride Complete Modal */}
       <Modal visible={rideFinished} transparent animationType="fade" statusBarTranslucent>
-        <View style={styles.flagOverlay}>
-          <View style={styles.flagCard}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
             <View style={styles.completeIcon}>
               <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
             </View>
@@ -370,16 +412,15 @@ export default function ActiveRideScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  mapContainer: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-  },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd, backgroundColor: colors.background },
+  mapWrap: { ...StyleSheet.absoluteFillObject },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd, backgroundColor: colors.background },
   loadingText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   floatingHeader: {
     position: 'absolute', top: spacing.stackLg, left: spacing.marginMobile, right: spacing.marginMobile,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: colors.surfaceContainer, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackMd,
+    shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4,
   },
   headerInfo: { flex: 1 },
   headerTitle: { ...typography.titleMd, color: colors.onSurface },
@@ -401,6 +442,13 @@ const styles = StyleSheet.create({
     width: 64, height: 64, borderRadius: 32, backgroundColor: colors.error,
     justifyContent: 'center', alignItems: 'center',
     shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 8,
+  },
+  flagFabActive: {
+    backgroundColor: '#FF9800',
+  },
+  flagFabLabel: {
+    position: 'absolute', bottom: -18,
+    ...typography.labelTechnical, color: colors.onSurface, fontSize: 9, textTransform: 'uppercase',
   },
   bottomPanel: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -436,32 +484,32 @@ const styles = StyleSheet.create({
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' },
   liveText: { ...typography.labelTechnical, color: '#4CAF50', fontSize: 10 },
   offlineText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 10 },
-  flagOverlay: {
+  modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center',
     padding: spacing.stackLg,
   },
-  flagCard: {
+  modalCard: {
     backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackLg, width: '100%', gap: spacing.stackMd,
   },
-  flagTitle: { ...typography.headlineLgMobile, color: colors.onSurface },
-  flagSubtitle: { ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
+  modalTitle: { ...typography.headlineLgMobile, color: colors.onSurface },
+  modalSubtitle: { ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
   flagGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm },
-  flagCard2: {
+  flagOption: {
     width: '48%', aspectRatio: 1.8, backgroundColor: colors.surfaceContainer,
     borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
     justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
   },
-  flagCardActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
-  flagCardLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
-  flagCardLabelActive: { color: colors.onPrimaryContainer },
+  flagOptionActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
+  flagOptionLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
+  flagOptionLabelActive: { color: colors.onPrimaryContainer },
   flagButtonRow: { flexDirection: 'row', gap: spacing.stackMd, marginTop: spacing.stackSm },
-  flagCancelButton: {
+  flagCancelBtn: {
     flex: 1, height: spacing.touchTargetMin, borderWidth: 2, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
   },
   flagCancelText: { ...typography.labelTechnical, color: colors.onSurface },
-  flagSubmitButton: {
+  flagSubmitBtn: {
     flex: 2, height: spacing.touchTargetMin, backgroundColor: colors.error,
     borderRadius: borderRadius.lg, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
   },

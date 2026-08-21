@@ -44,7 +44,7 @@ export default function RideMap({ ride, positions = [], myUserId, style, followM
 
   return (
     <MapView
-      style={[styles.map, style]}
+      style={StyleSheet.absoluteFillObject}
       initialRegion={initialRegion}
       showsUserLocation={false}
       showsMyLocationButton={false}
@@ -54,6 +54,8 @@ export default function RideMap({ ride, positions = [], myUserId, style, followM
       showsBuildings={false}
       showsTraffic={false}
       mapType="standard"
+      pitchEnabled={false}
+      rotateEnabled={false}
     >
       {routeCoords.length > 0 && (
         <Polyline
