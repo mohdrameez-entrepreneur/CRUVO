@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const TILES = 'https://demotiles.maplibre.org/style.json';
 
@@ -177,6 +179,6 @@ export default function FreeMap({ ride, positions = [], myUserId, followMyLocati
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121317', overflow: 'hidden' },
-  webview: { flex: 1, backgroundColor: '#121317' },
+  container: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, backgroundColor: '#121317', overflow: 'hidden' },
+  webview: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, backgroundColor: '#121317' },
 });

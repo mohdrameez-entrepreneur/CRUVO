@@ -412,7 +412,7 @@ export default function ActiveRideScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  mapWrap: { ...StyleSheet.absoluteFillObject },
+  mapWrap: { position: 'absolute', top: 0, left: 0, width, height },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd, backgroundColor: colors.background },
   loadingText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   floatingHeader: {
