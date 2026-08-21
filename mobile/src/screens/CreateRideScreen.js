@@ -21,9 +21,21 @@ export default function CreateRideScreen({ navigation }) {
     setLoading(true);
     try {
       const res = await ridesAPI.create(form);
-      Alert.alert('Ride Created', `"${res.data.name}" has been scheduled!`, [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      const newRide = res.data;
+      Alert.alert(
+        'Ride Created',
+        `"${newRide.name}" has been scheduled!`,
+        [
+          {
+            text: 'Invite Riders',
+            onPress: () => navigation.replace('InviteRiders', { rideId: newRide.id, rideName: newRide.name }),
+          },
+          {
+            text: 'Done',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
     } catch (err) {
       console.log('CREATE RIDE ERROR:', err.message, err.response?.data);
       const msg = err.response?.data;

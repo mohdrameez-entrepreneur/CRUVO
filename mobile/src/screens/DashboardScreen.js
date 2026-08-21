@@ -88,11 +88,11 @@ export default function DashboardScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.topBarButton}>
+        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.navigate('Settings')}>
           <Ionicons name="menu" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>CRUVO</Text>
-        <TouchableOpacity style={styles.topBarButton}>
+        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.navigate('Settings')}>
           <Ionicons name="settings-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>

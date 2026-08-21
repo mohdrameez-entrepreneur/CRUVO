@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 
-function RideCard({ ride, onPress }) {
+function RideCard({ ride, onPress, onInvite }) {
   const dateStr = new Date(ride.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
   const timeStr = new Date(`2000-01-01T${ride.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -48,7 +48,12 @@ function RideCard({ ride, onPress }) {
             </>
           ) : null}
         </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.onSurfaceVariant} />
+        {ride.status === 'SCHEDULED' && (
+          <TouchableOpacity style={styles.inviteBtn} onPress={() => onInvite(ride)} activeOpacity={0.7}>
+            <Ionicons name="person-add-outline" size={16} color={colors.primaryContainer} />
+            <Text style={styles.inviteBtnText}>Invite</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -128,7 +133,11 @@ export default function RidesListScreen({ navigation }) {
           data={rides}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
-            <RideCard ride={item} onPress={() => handleRidePress(item)} />
+            <RideCard
+              ride={item}
+              onPress={() => handleRidePress(item)}
+              onInvite={(ride) => navigation.navigate('InviteRiders', { rideId: ride.id, rideName: ride.name })}
+            />
           )}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryContainer} />}
@@ -176,6 +185,12 @@ const styles = StyleSheet.create({
   },
   rideStats: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rideStatText: { ...typography.bodyMd, color: colors.onSurfaceVariant, fontSize: 14 },
+  inviteBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
+    borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.primaryContainer,
+  },
+  inviteBtnText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 12 },
   emptyContainer: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.marginMobile,
