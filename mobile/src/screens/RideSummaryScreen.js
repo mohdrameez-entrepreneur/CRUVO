@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -10,6 +11,7 @@ const ROLE_LABELS = { CREATOR: 'Lead Navigator', LEAD: 'Lead Navigator', SWEEP: 
 
 export default function RideSummaryScreen({ navigation, route }) {
   const { rideId } = route.params || {};
+  const { user } = useAuth();
   const [ride, setRide] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +19,32 @@ export default function RideSummaryScreen({ navigation, route }) {
     if (!rideId) { setLoading(false); return; }
     ridesAPI.get(rideId).then(res => { setRide(res.data); }).catch(() => {}).finally(() => setLoading(false));
   }, [rideId]);
+
+  const handleDelete = () => {
+    if (!ride) return;
+    Alert.alert(
+      'Delete Ride',
+      `Are you sure you want to delete "${ride.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ridesAPI.delete(ride.id);
+              navigation.navigate('Main', { screen: 'Rides' });
+            } catch (err) {
+              const msg = err.response?.data?.error || 'Failed to delete ride';
+              Alert.alert('Error', msg);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const isCreator = ride && user && ride.creator === user.id;
 
   if (loading) {
     return (
@@ -129,6 +157,12 @@ export default function RideSummaryScreen({ navigation, route }) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
+        {isCreator && (
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Text style={styles.deleteText}>DELETE RIDE</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')} activeOpacity={0.8}>
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
@@ -186,9 +220,15 @@ const styles = StyleSheet.create({
   statusTextActive: { color: colors.primaryContainer },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: spacing.marginMobile, paddingBottom: 34,
+    padding: spacing.marginMobile, paddingBottom: 34, gap: spacing.stackSm,
     backgroundColor: colors.surfaceContainerLowest, borderTopWidth: 1, borderTopColor: colors.outlineVariant,
   },
+  deleteButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
+    height: 48, borderRadius: borderRadius.lg,
+    borderWidth: 1, borderColor: colors.error,
+  },
+  deleteText: { ...typography.labelTechnical, color: colors.error, fontSize: 13 },
   doneButton: {
     backgroundColor: colors.primaryContainer, height: spacing.touchTargetMin, borderRadius: borderRadius.lg,
     justifyContent: 'center', alignItems: 'center',

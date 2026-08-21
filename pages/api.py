@@ -136,6 +136,9 @@ def ride_detail_view(request, ride_id):
             return Response(RideSerializer(ride).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    if ride.creator != request.user:
+        return Response({'error': 'Only the ride creator can delete this ride'}, status=status.HTTP_403_FORBIDDEN)
+
     ride.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 

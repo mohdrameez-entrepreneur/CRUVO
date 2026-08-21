@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Ale
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI, invitationsAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 function InvitationCard({ invitation, onAccept, onDecline, loading }) {
   const dateStr = new Date(invitation.ride_date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -61,7 +62,7 @@ function InvitationCard({ invitation, onAccept, onDecline, loading }) {
   );
 }
 
-function RideCard({ ride, onPress, onInvite }) {
+function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
   const dateStr = new Date(ride.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
   const timeStr = new Date(`2000-01-01T${ride.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -76,7 +77,12 @@ function RideCard({ ride, onPress, onInvite }) {
   const sc = statusColors[ride.status] || statusColors.SCHEDULED;
 
   return (
-    <TouchableOpacity style={styles.rideCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.rideCard}
+      onPress={onPress}
+      onLongPress={isCreator ? onDelete : undefined}
+      activeOpacity={0.7}
+    >
       <View style={styles.rideCardHeader}>
         <View style={styles.rideCardInfo}>
           <Text style={styles.rideCardTime}>{dateStr} at {timeStr}</Text>
@@ -112,11 +118,18 @@ function RideCard({ ride, onPress, onInvite }) {
           </TouchableOpacity>
         )}
       </View>
+
+      {isCreator && (
+        <TouchableOpacity style={styles.deleteIcon} onPress={onDelete} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="trash-outline" size={16} color={colors.error} />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
 
 export default function RidesListScreen({ navigation }) {
+  const { user } = useAuth();
   const [rides, setRides] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -195,6 +208,29 @@ export default function RidesListScreen({ navigation }) {
     }
   };
 
+  const handleDeleteRide = (ride) => {
+    Alert.alert(
+      'Delete Ride',
+      `Are you sure you want to delete "${ride.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ridesAPI.delete(ride.id);
+              setRides(prev => prev.filter(r => r.id !== ride.id));
+            } catch (err) {
+              const msg = err.response?.data?.error || 'Failed to delete ride';
+              Alert.alert('Error', msg);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const hasInvitations = invitations.length > 0;
 
   return (
@@ -224,6 +260,8 @@ export default function RidesListScreen({ navigation }) {
               ride={item}
               onPress={() => handleRidePress(item)}
               onInvite={(ride) => navigation.navigate('InviteRiders', { rideId: ride.id, rideName: ride.name })}
+              onDelete={() => handleDeleteRide(item)}
+              isCreator={item.creator === user?.id}
             />
           )}
           contentContainerStyle={styles.list}
@@ -337,7 +375,10 @@ const styles = StyleSheet.create({
   rideCard: {
     backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackMd, marginBottom: spacing.stackMd,
-    gap: spacing.stackSm,
+    gap: spacing.stackSm, position: 'relative',
+  },
+  deleteIcon: {
+    position: 'absolute', top: spacing.stackMd, right: spacing.stackMd,
   },
   rideCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   rideCardInfo: { flex: 1, gap: 2 },

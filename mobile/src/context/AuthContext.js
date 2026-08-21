@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
       if (token) {
         const res = await profileAPI.get();
         setProfile(res.data);
-        setUser({ token, username: res.data.username, email: res.data.email });
+        setUser({ token, id: res.data.user_id, username: res.data.username, email: res.data.email });
       }
     } catch {
       await SecureStore.deleteItemAsync('auth_token');
@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
     const res = await authAPI.login({ username, password });
     await SecureStore.setItemAsync('auth_token', res.data.token);
     setProfile(res.data.user.profile);
-    setUser({ token: res.data.token, username: res.data.user.username, email: res.data.user.email });
+    setUser({ token: res.data.token, id: res.data.user.id, username: res.data.user.username, email: res.data.user.email });
     return res.data;
   };
 
@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     const res = await authAPI.register(data);
     await SecureStore.setItemAsync('auth_token', res.data.token);
     setProfile(res.data.user.profile);
-    setUser({ token: res.data.token, username: res.data.user.username, email: res.data.user.email });
+    setUser({ token: res.data.token, id: res.data.user.id, username: res.data.user.username, email: res.data.user.email });
     return res.data;
   };
 
