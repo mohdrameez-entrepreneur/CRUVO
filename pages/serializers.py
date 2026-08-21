@@ -1,22 +1,32 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.conf import settings
 from .models import Profile, Ride, RideParticipant, FlagStop
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     initials = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = [
-            'id', 'display_name', 'avatar', 'bio', 'bike_make', 'bike_model',
+            'id', 'display_name', 'avatar', 'avatar_url', 'bio', 'bike_make', 'bike_model',
             'riding_style', 'experience_level', 'location_city', 'location_lat',
             'location_lng', 'phone', 'created_at', 'initials',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'avatar_url']
 
     def get_initials(self, obj):
         return obj.initials()
+
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return f"{settings.MEDIA_URL}{obj.avatar}"
+        return None
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -25,6 +35,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'profile']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['profile'] = ProfileSerializer(instance.profile, context=self.context).data
+        return data
 
 
 class RegisterSerializer(serializers.Serializer):

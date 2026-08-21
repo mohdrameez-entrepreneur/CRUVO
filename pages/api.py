@@ -23,9 +23,9 @@ def register_view(request):
         user = serializer.save()
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
-            'token': token.key,
-            'user': UserSerializer(user).data,
-        }, status=status.HTTP_201_CREATED)
+                'token': token.key,
+                'user': UserSerializer(user, context={'request': request}).data,
+            }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -43,7 +43,7 @@ def login_view(request):
             token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 'token': token.key,
-                'user': UserSerializer(user).data,
+                'user': UserSerializer(user, context={'request': request}).data,
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -62,12 +62,12 @@ def logout_view(request):
 def profile_view(request):
     profile = request.user.profile
     if request.method == 'PATCH':
-        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    return Response(ProfileSerializer(profile).data)
+    return Response(ProfileSerializer(profile, context={'request': request}).data)
 
 
 @api_view(['POST'])

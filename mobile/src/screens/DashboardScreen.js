@@ -12,10 +12,10 @@ function getGreeting(hour) {
 }
 
 function Avatar({ profile, size = 64 }) {
-  if (profile?.avatar) {
+  if (profile?.avatar_url) {
     return (
       <View style={[styles.avatarContainer, { width: size, height: size }]}>
-        <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+        <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
       </View>
     );
   }

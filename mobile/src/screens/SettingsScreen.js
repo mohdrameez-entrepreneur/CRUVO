@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
@@ -40,9 +40,13 @@ export default function SettingsScreen({ navigation }) {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.profileSection}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarInitials}>{profile?.initials || '??'}</Text>
-          </View>
+          {profile?.avatar_url ? (
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatarLarge} />
+          ) : (
+            <View style={styles.avatarLarge}>
+              <Text style={styles.avatarInitials}>{profile?.initials || '??'}</Text>
+            </View>
+          )}
           <Text style={styles.profileName}>{profile?.display_name || 'Rider'}</Text>
           <Text style={styles.profileUsername}>@{user?.username || ''}</Text>
           <Text style={styles.profileEmail}>{user?.email || ''}</Text>
