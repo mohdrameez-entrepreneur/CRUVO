@@ -143,6 +143,7 @@ export default function CreateRideScreen({ navigation }) {
           placeholder="Search destination..."
           value={destination?.name}
           onSelect={setDestination}
+          showCurrentLocation={false}
         />
 
         <View style={styles.toggleRow}>

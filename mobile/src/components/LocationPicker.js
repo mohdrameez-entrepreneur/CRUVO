@@ -6,7 +6,7 @@ import { TOMTOM_API_KEY, TOMTOM_BASE_URL } from '../config';
 import * as Location from 'expo-location';
 import axios from 'axios';
 
-export default function LocationPicker({ label, icon, placeholder, value, onSelect }) {
+export default function LocationPicker({ label, icon, placeholder, value, onSelect, showCurrentLocation = true }) {
   const [query, setQuery] = useState(value || '');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -106,21 +106,23 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.currentLocationBtn, usingCurrentLocation && styles.currentLocationBtnActive]}
-        onPress={handleCurrentLocation}
-        disabled={loading}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={usingCurrentLocation ? "locate" : "navigate"}
-          size={16}
-          color={usingCurrentLocation ? colors.onPrimaryContainer : colors.primaryContainer}
-        />
-        <Text style={[styles.currentLocationText, usingCurrentLocation && styles.currentLocationTextActive]}>
-          {usingCurrentLocation ? 'Using Current Location' : 'Use Current Location'}
-        </Text>
-      </TouchableOpacity>
+      {showCurrentLocation && (
+        <TouchableOpacity
+          style={[styles.currentLocationBtn, usingCurrentLocation && styles.currentLocationBtnActive]}
+          onPress={handleCurrentLocation}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={usingCurrentLocation ? "locate" : "navigate"}
+            size={16}
+            color={usingCurrentLocation ? colors.onPrimaryContainer : colors.primaryContainer}
+          />
+          <Text style={[styles.currentLocationText, usingCurrentLocation && styles.currentLocationTextActive]}>
+            {usingCurrentLocation ? 'Using Current Location' : 'Use Current Location'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {showResults && results.length > 0 && (
         <View style={styles.dropdown}>
