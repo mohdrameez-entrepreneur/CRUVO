@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { discoveryAPI, ridesAPI } from '../api';
 
-function RiderCard({ rider, onInvite, invited }) {
+function RiderCard({ rider, onToggle, isInvited }) {
   const p = rider.profile;
   return (
     <View style={styles.riderCard}>
@@ -18,13 +18,12 @@ function RiderCard({ rider, onInvite, invited }) {
         {p?.riding_style ? <Text style={styles.riderStyle}>{p.riding_style}</Text> : null}
       </View>
       <TouchableOpacity
-        style={[styles.inviteButton, invited && styles.invitedButton]}
-        onPress={() => onInvite(rider)}
-        disabled={invited}
+        style={[styles.inviteButton, isInvited && styles.invitedButton]}
+        onPress={() => onToggle(rider)}
         activeOpacity={0.7}
       >
-        <Text style={[styles.inviteButtonText, invited && styles.invitedButtonText]}>
-          {invited ? 'INVITED' : 'INVITE'}
+        <Text style={[styles.inviteButtonText, isInvited && styles.invitedButtonText]}>
+          {isInvited ? 'INVITED' : 'INVITE'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -49,20 +48,40 @@ export default function InviteRidersScreen({ navigation, route }) {
     }
   };
 
-  useEffect(() => { loadRiders(); }, []);
+  const loadParticipants = async () => {
+    try {
+      const res = await ridesAPI.getParticipants(rideId);
+      const ids = new Set(res.data.filter(p => p.status === 'INVITED').map(p => p.user));
+      setInvitedIds(ids);
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadRiders();
+    loadParticipants();
+  }, []);
 
   const handleSearch = (text) => {
     setSearch(text);
     loadRiders(text);
   };
 
-  const handleInvite = async (rider) => {
+  const handleToggle = async (rider) => {
+    const wasInvited = invitedIds.has(rider.id);
     try {
-      await ridesAPI.addParticipant(rideId, { user_id: rider.id, role: 'WINGMAN' });
-      setInvitedIds(prev => new Set([...prev, rider.id]));
+      const res = await ridesAPI.addParticipant(rideId, { user_id: rider.id, role: 'WINGMAN' });
+      if (res.data.action === 'removed') {
+        setInvitedIds(prev => {
+          const next = new Set(prev);
+          next.delete(rider.id);
+          return next;
+        });
+      } else {
+        setInvitedIds(prev => new Set([...prev, rider.id]));
+      }
     } catch (err) {
       console.log('INVITE ERROR:', err.message, err.response?.data);
-      Alert.alert('Error', 'Failed to invite rider');
+      Alert.alert('Error', 'Failed to update invitation');
     }
   };
 
@@ -114,8 +133,8 @@ export default function InviteRidersScreen({ navigation, route }) {
           renderItem={({ item }) => (
             <RiderCard
               rider={item}
-              onInvite={handleInvite}
-              invited={invitedIds.has(item.id)}
+              onToggle={handleToggle}
+              isInvited={invitedIds.has(item.id)}
             />
           )}
           contentContainerStyle={styles.list}

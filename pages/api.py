@@ -126,6 +126,11 @@ def ride_detail_view(request, ride_id):
     except Ride.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+    if request.method == 'GET' and not ride.is_public:
+        is_participant = ride.participants.filter(user=request.user).exists()
+        if not is_participant:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
     if request.method == 'GET':
         return Response(RideSerializer(ride).data)
 
@@ -161,13 +166,15 @@ def ride_participants_view(request, ride_id):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    participant, created = RideParticipant.objects.get_or_create(
-        ride=ride, user=user, defaults={'role': role, 'status': 'INVITED'},
-    )
-    return Response(
-        RideParticipantSerializer(participant).data,
-        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
-    )
+    existing = RideParticipant.objects.filter(ride=ride, user=user).first()
+    if existing:
+        if existing.status == 'INVITED':
+            existing.delete()
+            return Response({'action': 'removed'}, status=status.HTTP_200_OK)
+        return Response(RideParticipantSerializer(existing).data, status=status.HTTP_200_OK)
+
+    participant = RideParticipant.objects.create(ride=ride, user=user, role=role, status='INVITED')
+    return Response(RideParticipantSerializer(participant).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'POST'])
@@ -194,6 +201,11 @@ def ride_summary_view(request, ride_id):
         ride = Ride.objects.get(id=ride_id)
     except Ride.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if not ride.is_public:
+        is_participant = ride.participants.filter(user=request.user).exists()
+        if not is_participant:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     participants = ride.participants.select_related('user__profile').all()
     flag_stops = ride.flag_stops.all()

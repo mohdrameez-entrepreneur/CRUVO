@@ -111,19 +111,20 @@ function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
             </>
           ) : null}
         </View>
-        {ride.status === 'SCHEDULED' && (
-          <TouchableOpacity style={styles.inviteBtn} onPress={() => onInvite(ride)} activeOpacity={0.7}>
-            <Ionicons name="person-add-outline" size={16} color={colors.primaryContainer} />
-            <Text style={styles.inviteBtnText}>Invite</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.rideCardActions}>
+          {isCreator && (
+            <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.7}>
+              <Ionicons name="trash-outline" size={14} color={colors.error} />
+            </TouchableOpacity>
+          )}
+          {ride.status === 'SCHEDULED' && (
+            <TouchableOpacity style={styles.inviteBtn} onPress={() => onInvite(ride)} activeOpacity={0.7}>
+              <Ionicons name="person-add-outline" size={16} color={colors.primaryContainer} />
+              <Text style={styles.inviteBtnText}>Invite</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-
-      {isCreator && (
-        <TouchableOpacity style={styles.deleteIcon} onPress={onDelete} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="trash-outline" size={16} color={colors.error} />
-        </TouchableOpacity>
-      )}
     </TouchableOpacity>
   );
 }
@@ -375,10 +376,12 @@ const styles = StyleSheet.create({
   rideCard: {
     backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackMd, marginBottom: spacing.stackMd,
-    gap: spacing.stackSm, position: 'relative',
+    gap: spacing.stackSm,
   },
-  deleteIcon: {
-    position: 'absolute', top: spacing.stackMd, right: spacing.stackMd,
+  rideCardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm },
+  deleteBtn: {
+    width: 32, height: 32, borderRadius: borderRadius.sm,
+    borderWidth: 1, borderColor: colors.error, justifyContent: 'center', alignItems: 'center',
   },
   rideCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   rideCardInfo: { flex: 1, gap: 2 },
