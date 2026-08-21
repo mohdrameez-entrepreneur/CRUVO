@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
+import { ridesAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
+
+const ROLE_LABELS = { CREATOR: 'Lead', LEAD: 'Lead', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
+const MARKER_COLORS = [colors.primaryContainer, '#4CAF50', '#FF9800', '#2196F3', '#E91E63', '#9C27B0'];
 
 function RiderMarker({ initials, label, color, style }) {
   return (
@@ -16,44 +21,90 @@ function RiderMarker({ initials, label, color, style }) {
   );
 }
 
-export default function ActiveRideScreen({ navigation }) {
+export default function ActiveRideScreen({ navigation, route }) {
+  const { rideId } = route.params || {};
+  const { user } = useAuth();
+  const [ride, setRide] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [panelExpanded, setPanelExpanded] = useState(false);
 
-  const riders = [
-    { initials: 'RZ', name: 'Rameez', role: 'Lead', distance: '0m', speed: '85 km/h' },
-    { initials: 'AY', name: 'Ayaan', role: 'Wingman', distance: '+120m', speed: '82 km/h' },
-    { initials: 'DN', name: 'Danish', role: 'Sweep', distance: '-80m', speed: '78 km/h' },
+  useEffect(() => {
+    if (!rideId) { setLoading(false); return; }
+    ridesAPI.get(rideId).then(res => { setRide(res.data); }).catch(() => {}).finally(() => setLoading(false));
+  }, [rideId]);
+
+  const endRide = async () => {
+    try {
+      await ridesAPI.update(rideId, { status: 'COMPLETED' });
+      navigation.navigate('RideSummary', { rideId });
+    } catch {}
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.mapContainer}>
+          <View style={styles.mapGrid} />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primaryContainer} />
+            <Text style={styles.loadingText}>Loading ride...</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!ride) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.mapContainer}>
+          <View style={styles.mapGrid} />
+          <View style={styles.loadingContainer}>
+            <Ionicons name="alert-circle-outline" size={32} color={colors.onSurfaceVariant} />
+            <Text style={styles.loadingText}>Ride not found</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  const participants = ride.participants || [];
+
+  const markerPositions = [
+    { top: '40%', left: '45%' },
+    { top: '35%', left: '55%' },
+    { top: '48%', left: '38%' },
+    { top: '30%', left: '50%' },
+    { top: '45%', left: '60%' },
+    { top: '38%', left: '42%' },
   ];
 
   return (
     <View style={styles.container}>
-      {/* Map placeholder */}
       <View style={styles.mapContainer}>
         <View style={styles.mapGrid} />
-
-        {/* Route line */}
         <View style={styles.routeLine} />
 
-        {/* Rider markers */}
-        <RiderMarker initials="RZ" label="Lead" color={colors.primaryContainer} style={{ top: '40%', left: '45%' }} />
-        <RiderMarker initials="AY" label="+120m" color={colors.secondary} style={{ top: '35%', left: '52%' }} />
-        <RiderMarker initials="DN" label="-80m" color={colors.tertiary} style={{ top: '45%', left: '38%' }} />
+        {participants.slice(0, 6).map((rider, i) => (
+          <RiderMarker
+            key={rider.id || i}
+            initials={rider.initials}
+            label={i === 0 ? 'Lead' : ROLE_LABELS[rider.role] || 'Rider'}
+            color={MARKER_COLORS[i % MARKER_COLORS.length]}
+            style={markerPositions[i]}
+          />
+        ))}
 
-        {/* Floating header */}
         <View style={styles.floatingHeader}>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Sunday Morning Ride</Text>
-            <Text style={styles.headerSubtitle}>3 RIDERS ACTIVE</Text>
+            <Text style={styles.headerTitle}>{ride.name}</Text>
+            <Text style={styles.headerSubtitle}>{participants.length} RIDERS ACTIVE</Text>
           </View>
-          <TouchableOpacity
-            style={styles.endRideButton}
-            onPress={() => navigation.navigate('RideSummary')}
-          >
+          <TouchableOpacity style={styles.endRideButton} onPress={endRide}>
             <Text style={styles.endRideText}>END</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Side controls */}
         <View style={styles.sideControls}>
           <TouchableOpacity style={styles.controlButton}>
             <Ionicons name="compass" size={24} color={colors.onSurface} />
@@ -63,50 +114,37 @@ export default function ActiveRideScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Flag Stop FAB */}
-        <TouchableOpacity
-          style={styles.flagFab}
-          onPress={() => navigation.navigate('FlagStop')}
-        >
+        <TouchableOpacity style={styles.flagFab} onPress={() => navigation.navigate('FlagStop', { rideId })}>
           <Ionicons name="flag" size={28} color={colors.white} />
         </TouchableOpacity>
       </View>
 
-      {/* Bottom panel */}
       <View style={[styles.bottomPanel, panelExpanded && styles.bottomPanelExpanded]}>
-        <TouchableOpacity
-          style={styles.panelHandle}
-          onPress={() => setPanelExpanded(!panelExpanded)}
-        >
+        <TouchableOpacity style={styles.panelHandle} onPress={() => setPanelExpanded(!panelExpanded)}>
           <View style={styles.handleBar} />
         </TouchableOpacity>
 
         <View style={styles.panelHeader}>
           <View>
             <Text style={styles.panelTitle}>Rider Roster</Text>
-            <Text style={styles.panelSubtitle}>{riders.length} riders connected</Text>
-          </View>
-          <View style={styles.speedBadge}>
-            <Ionicons name="speedometer" size={16} color={colors.primaryContainer} />
-            <Text style={styles.speedText}>85 KM/H</Text>
+            <Text style={styles.panelSubtitle}>{participants.length} riders connected</Text>
           </View>
         </View>
 
         <ScrollView style={styles.riderList}>
-          {riders.map((rider, i) => (
-            <View key={i} style={styles.riderRow}>
+          {participants.map((rider, i) => (
+            <View key={rider.id || i} style={styles.riderRow}>
               <View style={[styles.riderAvatar, i === 0 && styles.riderAvatarLead]}>
                 <Text style={styles.riderAvatarText}>{rider.initials}</Text>
               </View>
               <View style={styles.riderInfo}>
                 <Text style={styles.riderName}>
-                  {rider.name} {i === 0 && <Text style={styles.youBadge}>(You)</Text>}
+                  {rider.display_name} {rider.role === 'CREATOR' && <Text style={styles.youBadge}>(You)</Text>}
                 </Text>
-                <Text style={styles.riderRole}>{rider.role}</Text>
+                <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
               </View>
               <View style={styles.riderDistance}>
-                <Text style={styles.distanceText}>{rider.distance}</Text>
-                <Text style={styles.speedSmall}>{rider.speed}</Text>
+                <Text style={styles.distanceText}>{rider.status}</Text>
               </View>
             </View>
           ))}
@@ -119,9 +157,9 @@ export default function ActiveRideScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   mapContainer: { flex: 1, backgroundColor: colors.surfaceContainerLowest, position: 'relative', overflow: 'hidden' },
-  mapGrid: {
-    ...StyleSheet.absoluteFillObject, opacity: 0.05,
-  },
+  mapGrid: { ...StyleSheet.absoluteFillObject, opacity: 0.05 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd },
+  loadingText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   routeLine: {
     position: 'absolute', top: '30%', left: '20%', width: '60%', height: 3,
     backgroundColor: colors.primaryContainer, borderRadius: 2, opacity: 0.8,
@@ -150,8 +188,7 @@ const styles = StyleSheet.create({
   },
   endRideText: { ...typography.labelTechnical, color: colors.white },
   sideControls: {
-    position: 'absolute', right: spacing.marginMobile, top: '50%',
-    gap: spacing.stackSm,
+    position: 'absolute', right: spacing.marginMobile, top: '50%', gap: spacing.stackSm,
   },
   controlButton: {
     width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceContainer,
@@ -177,8 +214,6 @@ const styles = StyleSheet.create({
   },
   panelTitle: { ...typography.titleMd, color: colors.onSurface },
   panelSubtitle: { ...typography.labelSm, color: colors.onSurfaceVariant },
-  speedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  speedText: { ...typography.labelTechnical, color: colors.primaryContainer },
   riderList: { paddingHorizontal: spacing.marginMobile },
   riderRow: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.stackSm,
@@ -196,5 +231,4 @@ const styles = StyleSheet.create({
   riderRole: { ...typography.labelSm, color: colors.onSurfaceVariant },
   riderDistance: { alignItems: 'flex-end' },
   distanceText: { ...typography.labelTechnical, color: colors.onSurface },
-  speedSmall: { ...typography.labelSm, color: colors.onSurfaceVariant },
 });

@@ -1,47 +1,92 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
+import { ridesAPI } from '../api';
 
 const { width } = Dimensions.get('window');
 
-const stats = [
-  { label: 'Duration', value: '2h 15m', icon: 'time' },
-  { label: 'Distance', value: '42.3 km', icon: 'route' },
-  { label: 'Riders', value: '3', icon: 'people' },
-  { label: 'Stops', value: '2', icon: 'flag' },
-];
+const ROLE_LABELS = { CREATOR: 'Lead Navigator', LEAD: 'Lead Navigator', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
 
-const riders = [
-  { name: 'Rameez', role: 'Lead Navigator', status: 'verified', initials: 'RZ' },
-  { name: 'Mike T.', role: 'Wingman', status: 'completed', initials: 'MT' },
-  { name: 'Sarah J.', role: 'Sweep', status: 'completed', initials: 'SJ' },
-];
+export default function RideSummaryScreen({ navigation, route }) {
+  const { rideId } = route.params || {};
+  const [ride, setRide] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-export default function RideSummaryScreen({ navigation }) {
+  useEffect(() => {
+    if (!rideId) { setLoading(false); return; }
+    ridesAPI.get(rideId).then(res => { setRide(res.data); }).catch(() => {}).finally(() => setLoading(false));
+  }, [rideId]);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.topBar}>
+          <View style={styles.topBarButton} />
+          <Text style={styles.topBarTitle}>CRUVO</Text>
+          <View style={styles.topBarButton} />
+        </View>
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={colors.primaryContainer} />
+          <Text style={styles.emptyText}>Loading ride...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!ride) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.topBar}>
+          <View style={styles.topBarButton} />
+          <Text style={styles.topBarTitle}>CRUVO</Text>
+          <View style={styles.topBarButton} />
+        </View>
+        <View style={styles.emptyState}>
+          <Ionicons name="alert-circle-outline" size={32} color={colors.onSurfaceVariant} />
+          <Text style={styles.emptyText}>Ride not found</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const participants = ride.participants || [];
+  const stats = [
+    { label: 'Date', value: new Date(ride.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), icon: 'calendar' },
+    { label: 'Distance', value: ride.distance_km ? `${ride.distance_km} km` : 'TBD', icon: 'route' },
+    { label: 'Riders', value: String(participants.length), icon: 'people' },
+    { label: 'Status', value: ride.status, icon: 'flag' },
+  ];
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <View style={styles.topBarButton} />
+        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={colors.primaryContainer} />
+        </TouchableOpacity>
         <Text style={styles.topBarTitle}>CRUVO</Text>
         <View style={styles.topBarButton} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Ionicons name="checkmark-circle" size={48} color={colors.primaryContainer} />
-          <Text style={styles.headerTitle}>Ride Completed</Text>
+          <Ionicons name={ride.status === 'COMPLETED' ? 'checkmark-circle' : 'bicycle'} size={48} color={colors.primaryContainer} />
+          <Text style={styles.headerTitle}>{ride.name}</Text>
+          <Text style={styles.headerSubtitle}>{ride.status}</Text>
         </View>
 
-        {/* Map overview placeholder */}
-        <View style={styles.mapOverview}>
-          <View style={styles.mapGrid} />
-          <View style={styles.finishFlag}>
-            <Ionicons name="flag" size={32} color={colors.primaryContainer} />
+        <View style={styles.routeCard}>
+          <View style={styles.routeRow}>
+            <Ionicons name="location" size={16} color={colors.primaryContainer} />
+            <Text style={styles.routeText}>{ride.origin_name || 'TBD'}</Text>
+          </View>
+          <View style={styles.routeLine} />
+          <View style={styles.routeRow}>
+            <Ionicons name="flag" size={16} color={colors.primaryContainer} />
+            <Text style={styles.routeText}>{ride.destination_name || 'TBD'}</Text>
           </View>
         </View>
 
-        {/* Stats grid */}
         <View style={styles.statsGrid}>
           {stats.map((stat, i) => (
             <View key={i} style={styles.statCard}>
@@ -52,42 +97,39 @@ export default function RideSummaryScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Squad list */}
         <View style={styles.squadSection}>
           <Text style={styles.sectionTitle}>Squad</Text>
-          {riders.map((rider, i) => (
-            <View key={i} style={styles.riderRow}>
+          {participants.map((rider, i) => (
+            <View key={rider.id || i} style={styles.riderRow}>
               <View style={[styles.riderAvatar, i === 0 && styles.riderAvatarLead]}>
                 <Text style={styles.riderInitials}>{rider.initials}</Text>
               </View>
               <View style={styles.riderInfo}>
                 <Text style={styles.riderName}>
-                  {rider.name} {i === 0 && <Text style={styles.youBadge}>(You)</Text>}
+                  {rider.display_name} {rider.role === 'CREATOR' && <Text style={styles.youBadge}>(You)</Text>}
                 </Text>
-                <Text style={styles.riderRole}>{rider.role}</Text>
+                <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
               </View>
               <View style={styles.statusBadge}>
                 <Ionicons
-                  name={rider.status === 'verified' ? 'checkmark-circle' : 'checkmark-done-circle'}
+                  name={rider.status === 'ACCEPTED' ? 'checkmark-circle' : rider.status === 'COMPLETED' ? 'checkmark-done-circle' : 'time-outline'}
                   size={16}
-                  color={rider.status === 'verified' ? colors.primaryContainer : colors.onSurfaceVariant}
+                  color={rider.status === 'ACCEPTED' ? colors.primaryContainer : colors.onSurfaceVariant}
                 />
-                <Text style={[styles.statusText, rider.status === 'verified' && styles.statusTextActive]}>
-                  {rider.status === 'verified' ? 'Verified' : 'Completed'}
+                <Text style={[styles.statusText, rider.status === 'ACCEPTED' && styles.statusTextActive]}>
+                  {rider.status}
                 </Text>
               </View>
             </View>
           ))}
+          {participants.length === 0 && (
+            <Text style={styles.emptyText}>No riders yet</Text>
+          )}
         </View>
       </ScrollView>
 
-      {/* Fixed bottom */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.doneButton}
-          onPress={() => navigation.navigate('Main')}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')} activeOpacity={0.8}>
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
       </View>
@@ -102,17 +144,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.marginMobile, height: spacing.touchTargetMin,
     borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
   },
-  topBarButton: { width: 48, height: 48 },
+  topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
   topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
-  content: { padding: spacing.marginMobile, paddingBottom: 100 },
+  content: { padding: spacing.marginMobile, paddingBottom: 120 },
   header: { alignItems: 'center', gap: spacing.stackSm, marginBottom: spacing.stackLg },
   headerTitle: { ...typography.headlineLgMobile, color: colors.onSurface },
-  mapOverview: {
-    height: 200, backgroundColor: colors.surfaceContainerLowest, borderRadius: borderRadius.xl,
-    borderWidth: 1, borderColor: colors.outlineVariant, overflow: 'hidden', marginBottom: spacing.stackLg, position: 'relative',
+  headerSubtitle: { ...typography.labelTechnical, color: colors.primaryContainer },
+  routeCard: {
+    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackLg, gap: spacing.stackSm,
   },
-  mapGrid: { ...StyleSheet.absoluteFillObject, opacity: 0.05 },
-  finishFlag: { position: 'absolute', bottom: spacing.stackMd, right: spacing.stackMd },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm },
+  routeText: { ...typography.bodyMd, color: colors.onSurface, flex: 1 },
+  routeLine: { width: 1, height: 12, backgroundColor: colors.outlineVariant, marginLeft: 7 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm, marginBottom: spacing.stackLg },
   statCard: {
     width: (width - spacing.marginMobile * 2 - spacing.stackSm) / 2,
@@ -151,4 +195,6 @@ const styles = StyleSheet.create({
     shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
   },
   doneText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd },
+  emptyText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
 });
