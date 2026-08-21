@@ -120,7 +120,7 @@ export default function DashboardScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <View style={styles.ctaIconContainer}>
-              <Ionicons name="add-road" size={32} color={colors.primaryContainer} />
+              <Ionicons name="navigate" size={32} color={colors.primaryContainer} />
             </View>
             <View>
               <Text style={styles.ctaTitle}>CREATE A RIDE</Text>

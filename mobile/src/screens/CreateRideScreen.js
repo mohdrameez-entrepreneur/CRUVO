@@ -158,7 +158,7 @@ export default function CreateRideScreen({ navigation }) {
           disabled={loading}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-road" size={24} color={colors.onPrimaryContainer} />
+          <Ionicons name="navigate" size={24} color={colors.onPrimaryContainer} />
           <Text style={styles.primaryButtonText}>{loading ? 'Creating...' : 'Create Ride'}</Text>
         </TouchableOpacity>
       </ScrollView>

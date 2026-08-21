@@ -308,7 +308,7 @@ export default function RidesListScreen({ navigation }) {
                   onPress={() => navigation.navigate('CreateRide')}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="add-road" size={20} color={colors.onPrimaryContainer} />
+                  <Ionicons name="navigate" size={20} color={colors.onPrimaryContainer} />
                   <Text style={styles.createButtonText}>CREATE A RIDE</Text>
                 </TouchableOpacity>
               </View>
