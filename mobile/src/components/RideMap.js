@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../theme';
 
@@ -45,11 +45,14 @@ export default function RideMap({ ride, positions = [], myUserId, style, followM
   return (
     <MapView
       style={[styles.map, style]}
-      provider={PROVIDER_DEFAULT}
       initialRegion={initialRegion}
       showsUserLocation={false}
       showsMyLocationButton={false}
       followsUserLocation={followMyLocation}
+      showsCompass={false}
+      showsScale={false}
+      showsBuildings={false}
+      showsTraffic={false}
       mapType="standard"
     >
       {routeCoords.length > 0 && (
@@ -99,7 +102,7 @@ export default function RideMap({ ride, positions = [], myUserId, style, followM
 }
 
 const styles = StyleSheet.create({
-  map: { flex: 1 },
+  map: { width: '100%', height: '100%' },
   originMarker: {
     width: 28, height: 28, borderRadius: 14, backgroundColor: '#4CAF50',
     justifyContent: 'center', alignItems: 'center',
