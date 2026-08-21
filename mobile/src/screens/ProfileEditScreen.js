@@ -92,8 +92,8 @@ export default function ProfileEditScreen({ navigation }) {
 
   const openAccountModal = (type) => {
     const currentValue = type === 'username'
-      ? (profile?.username || '')
-      : (profile?.email || '');
+      ? (user?.username || '')
+      : (user?.email || '');
     setModalValue(currentValue);
     setModalPassword('');
     setModal(type);

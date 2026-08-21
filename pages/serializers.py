@@ -7,15 +7,17 @@ from .models import Profile, Ride, RideParticipant, FlagStop
 class ProfileSerializer(serializers.ModelSerializer):
     initials = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
 
     class Meta:
         model = Profile
         fields = [
-            'id', 'display_name', 'avatar', 'avatar_url', 'bio', 'bike_make', 'bike_model',
+            'id', 'username', 'email', 'display_name', 'avatar', 'avatar_url', 'bio', 'bike_make', 'bike_model',
             'riding_style', 'experience_level', 'location_city', 'location_lat',
             'location_lng', 'phone', 'created_at', 'initials',
         ]
-        read_only_fields = ['id', 'created_at', 'avatar_url']
+        read_only_fields = ['id', 'created_at', 'avatar_url', 'username', 'email']
 
     def get_initials(self, obj):
         return obj.initials()
