@@ -141,7 +141,7 @@ export default function DashboardScreen({ navigation }) {
         <View style={styles.ridesSection}>
           <View style={styles.ridesSectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Rides</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Rides' })}>
               <Text style={styles.viewAll}>View All</Text>
             </TouchableOpacity>
           </View>

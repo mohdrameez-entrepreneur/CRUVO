@@ -70,6 +70,36 @@ def profile_view(request):
     return Response(ProfileSerializer(profile).data)
 
 
+@api_view(['POST'])
+def change_username_view(request):
+    new_username = request.data.get('username', '').strip().lower()
+    password = request.data.get('password', '')
+    if not new_username or len(new_username) < 3:
+        return Response({'error': 'Username must be at least 3 characters'}, status=status.HTTP_400_BAD_REQUEST)
+    if not request.user.check_password(password):
+        return Response({'error': 'Incorrect password'}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(username__iexact=new_username).exclude(id=request.user.id).exists():
+        return Response({'error': 'Username already taken'}, status=status.HTTP_400_BAD_REQUEST)
+    request.user.username = new_username
+    request.user.save()
+    return Response({'username': request.user.username})
+
+
+@api_view(['POST'])
+def change_email_view(request):
+    new_email = request.data.get('email', '').strip().lower()
+    password = request.data.get('password', '')
+    if not new_email:
+        return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+    if not request.user.check_password(password):
+        return Response({'error': 'Incorrect password'}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
+        return Response({'error': 'Email already in use'}, status=status.HTTP_400_BAD_REQUEST)
+    request.user.email = new_email
+    request.user.save()
+    return Response({'email': request.user.email})
+
+
 @api_view(['GET', 'POST'])
 def rides_view(request):
     if request.method == 'GET':

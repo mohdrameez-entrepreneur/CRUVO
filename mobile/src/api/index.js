@@ -26,6 +26,11 @@ export const authAPI = {
 export const profileAPI = {
   get: () => api.get('/profile/'),
   update: (data) => api.patch('/profile/', data),
+  changeUsername: (data) => api.post('/profile/change-username/', data),
+  changeEmail: (data) => api.post('/profile/change-email/', data),
+  uploadAvatar: (formData) => api.patch('/profile/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 export const ridesAPI = {
