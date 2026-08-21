@@ -3,24 +3,38 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Switch
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
+import LocationPicker from '../components/LocationPicker';
 
 export default function CreateRideScreen({ navigation }) {
   const [form, setForm] = useState({
-    name: '', origin_name: '', destination_name: '',
-    date: '', time: '', is_public: false,
+    name: '', date: '', time: '', is_public: false,
   });
+  const [origin, setOrigin] = useState(null);
+  const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const handleCreate = async () => {
-    if (!form.name || !form.origin_name || !form.destination_name || !form.date || !form.time) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!form.name || !origin || !destination || !form.date || !form.time) {
+      Alert.alert('Error', 'Please fill in all fields and select locations from the search results');
       return;
     }
     setLoading(true);
     try {
-      const res = await ridesAPI.create(form);
+      const payload = {
+        name: form.name,
+        origin_name: origin.name,
+        origin_lat: origin.lat,
+        origin_lng: origin.lng,
+        destination_name: destination.name,
+        destination_lat: destination.lat,
+        destination_lng: destination.lng,
+        date: form.date,
+        time: form.time,
+        is_public: form.is_public,
+      };
+      const res = await ridesAPI.create(payload);
       const newRide = res.data;
       Alert.alert(
         'Ride Created',
@@ -37,7 +51,6 @@ export default function CreateRideScreen({ navigation }) {
         ],
       );
     } catch (err) {
-      console.log('CREATE RIDE ERROR:', err.message, err.response?.data);
       const msg = err.response?.data;
       if (msg && typeof msg === 'object') {
         const firstError = Object.values(msg)[0];
@@ -78,33 +91,21 @@ export default function CreateRideScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>ORIGIN</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="location-outline" size={20} color={colors.onSurfaceVariant} />
-            <TextInput
-              style={styles.input}
-              placeholder="Starting point"
-              placeholderTextColor={colors.outline}
-              value={form.origin_name}
-              onChangeText={(v) => update('origin_name', v)}
-            />
-          </View>
-        </View>
+        <LocationPicker
+          label="ORIGIN"
+          icon="location-outline"
+          placeholder="Search starting point..."
+          value={origin?.name}
+          onSelect={setOrigin}
+        />
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>DESTINATION</Text>
-          <View style={styles.inputContainer}>
-            <Ionicons name="search" size={20} color={colors.onSurfaceVariant} />
-            <TextInput
-              style={styles.input}
-              placeholder="End point"
-              placeholderTextColor={colors.outline}
-              value={form.destination_name}
-              onChangeText={(v) => update('destination_name', v)}
-            />
-          </View>
-        </View>
+        <LocationPicker
+          label="DESTINATION"
+          icon="search"
+          placeholder="Search destination..."
+          value={destination?.name}
+          onSelect={setDestination}
+        />
 
         <View style={styles.row}>
           <View style={[styles.inputGroup, { flex: 1 }]}>

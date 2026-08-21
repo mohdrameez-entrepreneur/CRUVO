@@ -185,6 +185,9 @@ def toggle_ready_view(request, ride_id):
     except Ride.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+    if ride.creator == request.user:
+        return Response({'error': 'Creator cannot mark ready — just start the ride'}, status=status.HTTP_400_BAD_REQUEST)
+
     participant = ride.participants.filter(user=request.user).first()
     if not participant or participant.status != 'ACCEPTED':
         return Response({'error': 'Not an accepted participant'}, status=status.HTTP_400_BAD_REQUEST)
@@ -192,15 +195,16 @@ def toggle_ready_view(request, ride_id):
     participant.is_ready = not participant.is_ready
     participant.save()
 
-    all_ready = ride.participants.filter(status='ACCEPTED').exclude(is_ready=True).count() == 0
-    total_accepted = ride.participants.filter(status='ACCEPTED').count()
-    ready_count = ride.participants.filter(status='ACCEPTED', is_ready=True).count()
+    non_creator = ride.participants.filter(status='ACCEPTED').exclude(user=ride.creator)
+    all_ready = non_creator.count() > 0 and non_creator.exclude(is_ready=True).count() == 0
+    total_non_creator = non_creator.count()
+    ready_count = non_creator.filter(is_ready=True).count()
 
     return Response({
         'is_ready': participant.is_ready,
-        'all_ready': all_ready and total_accepted > 1,
+        'all_ready': all_ready,
         'ready_count': ready_count,
-        'total_accepted': total_accepted,
+        'total_riders': total_non_creator,
     })
 
 
@@ -214,16 +218,10 @@ def start_ride_view(request, ride_id):
     if ride.creator != request.user:
         return Response({'error': 'Only the creator can start the ride'}, status=status.HTTP_403_FORBIDDEN)
 
-    if ride.status != 'SCHEDULED':
-        return Response({'error': 'Ride is not in SCHEDULED status'}, status=status.HTTP_400_BAD_REQUEST)
+    non_creator = ride.participants.filter(status='ACCEPTED').exclude(user=ride.creator)
+    all_ready = non_creator.count() > 0 and non_creator.exclude(is_ready=True).count() == 0
 
-    if ride.creator != request.user:
-        return Response({'error': 'Only the creator can start the ride'}, status=status.HTTP_403_FORBIDDEN)
-
-    accepted = ride.participants.filter(status='ACCEPTED')
-    all_ready = accepted.exclude(is_ready=True).count() == 0
-
-    if accepted.count() > 1 and not all_ready:
+    if non_creator.count() > 0 and not all_ready:
         return Response({'error': 'Not all riders are ready'}, status=status.HTTP_400_BAD_REQUEST)
 
     ride.status = 'ACTIVE'

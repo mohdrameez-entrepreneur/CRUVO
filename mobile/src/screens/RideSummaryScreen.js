@@ -122,10 +122,11 @@ export default function RideSummaryScreen({ navigation, route }) {
 
   const participants = ride.participants || [];
   const acceptedParticipants = participants.filter(p => p.status === 'ACCEPTED');
-  const readyCount = acceptedParticipants.filter(p => p.is_ready).length;
-  const totalAccepted = acceptedParticipants.length;
-  const singleRider = totalAccepted <= 1;
-  const allReady = singleRider || (totalAccepted > 1 && readyCount === totalAccepted);
+  const nonCreatorRiders = acceptedParticipants.filter(p => p.user !== ride.creator);
+  const readyCount = nonCreatorRiders.filter(p => p.is_ready).length;
+  const totalRiders = nonCreatorRiders.length;
+  const noOtherRiders = totalRiders === 0;
+  const allReady = noOtherRiders || readyCount === totalRiders;
   const myParticipant = participants.find(p => p.user === user?.id);
   const myReady = myParticipant?.is_ready || false;
   const isScheduled = ride.status === 'SCHEDULED';
@@ -133,7 +134,7 @@ export default function RideSummaryScreen({ navigation, route }) {
   const stats = [
     { label: 'Date', value: new Date(ride.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), icon: 'calendar' },
     { label: 'Distance', value: ride.distance_km ? `${ride.distance_km} km` : 'TBD', icon: 'route' },
-    { label: 'Riders', value: `${readyCount}/${totalAccepted}`, icon: 'people' },
+    { label: 'Riders', value: noOtherRiders ? 'Solo' : `${readyCount}/${totalRiders}`, icon: 'people' },
     { label: 'Status', value: ride.status, icon: 'flag' },
   ];
 
@@ -178,29 +179,40 @@ export default function RideSummaryScreen({ navigation, route }) {
 
         <View style={styles.squadSection}>
           <Text style={styles.sectionTitle}>Squad</Text>
-          {participants.map((rider, i) => (
-            <View key={rider.id || i} style={styles.riderRow}>
-              <View style={[styles.riderAvatar, rider.is_ready && styles.riderAvatarReady]}>
-                <Text style={styles.riderInitials}>{rider.initials}</Text>
+          {participants.map((rider, i) => {
+            const isRiderCreator = rider.user === ride.creator;
+            return (
+              <View key={rider.id || i} style={styles.riderRow}>
+                <View style={[styles.riderAvatar, !isRiderCreator && rider.is_ready && styles.riderAvatarReady]}>
+                  <Text style={styles.riderInitials}>{rider.initials}</Text>
+                </View>
+                <View style={styles.riderInfo}>
+                  <Text style={styles.riderName}>
+                    {rider.display_name} {isRiderCreator && <Text style={styles.youBadge}>Leader</Text>}
+                    {!isRiderCreator && rider.user === user?.id && <Text style={styles.youBadge}>(You)</Text>}
+                  </Text>
+                  <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
+                </View>
+                {!isRiderCreator && (
+                  <View style={styles.readyIndicator}>
+                    <Ionicons
+                      name={rider.is_ready ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={20}
+                      color={rider.is_ready ? '#4CAF50' : colors.outlineVariant}
+                    />
+                    <Text style={[styles.readyText, rider.is_ready && styles.readyTextActive]}>
+                      {rider.is_ready ? 'Ready' : 'Waiting'}
+                    </Text>
+                  </View>
+                )}
+                {isRiderCreator && (
+                  <View style={styles.readyIndicator}>
+                    <Ionicons name="shield-checkmark" size={20} color={colors.primaryContainer} />
+                  </View>
+                )}
               </View>
-              <View style={styles.riderInfo}>
-                <Text style={styles.riderName}>
-                  {rider.display_name} {rider.user === user?.id && <Text style={styles.youBadge}>(You)</Text>}
-                </Text>
-                <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
-              </View>
-              <View style={styles.readyIndicator}>
-                <Ionicons
-                  name={rider.is_ready ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={20}
-                  color={rider.is_ready ? '#4CAF50' : colors.outlineVariant}
-                />
-                <Text style={[styles.readyText, rider.is_ready && styles.readyTextActive]}>
-                  {rider.is_ready ? 'Ready' : 'Waiting'}
-                </Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
           {participants.length === 0 && (
             <Text style={styles.emptyText}>No riders yet</Text>
           )}
@@ -235,7 +247,7 @@ export default function RideSummaryScreen({ navigation, route }) {
                 color={allReady ? '#4CAF50' : colors.onSurfaceVariant}
               />
               <Text style={[styles.readyStatusText, allReady && styles.readyStatusTextActive]}>
-                {allReady ? 'All riders ready!' : `${readyCount}/${totalAccepted} riders ready`}
+                {noOtherRiders ? 'Ready to ride' : allReady ? 'All riders ready!' : `${readyCount}/${totalRiders} riders ready`}
               </Text>
             </View>
             <TouchableOpacity
