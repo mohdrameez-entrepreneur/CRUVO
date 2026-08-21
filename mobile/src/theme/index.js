@@ -1,0 +1,102 @@
+export const colors = {
+  background: '#121317',
+  surface: '#121317',
+  surfaceDim: '#121317',
+  surfaceBright: '#38393d',
+  surfaceContainerLowest: '#0d0e12',
+  surfaceContainerLow: '#1a1b1f',
+  surfaceContainer: '#1e1f23',
+  surfaceContainerHigh: '#292a2e',
+  surfaceContainerHighest: '#343539',
+  onSurface: '#e3e2e7',
+  onSurfaceVariant: '#d0c6ab',
+  inverseSurface: '#e3e2e7',
+  inverseOnSurface: '#2f3034',
+  outline: '#999077',
+  outlineVariant: '#4d4632',
+  surfaceTint: '#e9c400',
+  primary: '#fff5dc',
+  onPrimary: '#3a3000',
+  primaryContainer: '#ffd600',
+  onPrimaryContainer: '#705d00',
+  inversePrimary: '#705d00',
+  secondary: '#c8c6c8',
+  onSecondary: '#303032',
+  secondaryContainer: '#474649',
+  onSecondaryContainer: '#b7b4b7',
+  tertiary: '#f7f5f7',
+  onTertiary: '#303032',
+  tertiaryContainer: '#dbd8db',
+  onTertiaryContainer: '#5f5e60',
+  error: '#ffb4ab',
+  onError: '#690005',
+  errorContainer: '#93000a',
+  onErrorContainer: '#ffdad6',
+  white: '#ffffff',
+  black: '#000000',
+};
+
+export const spacing = {
+  unit: 4,
+  stackSm: 8,
+  stackMd: 16,
+  stackLg: 32,
+  gutter: 16,
+  marginMobile: 20,
+  marginDesktop: 40,
+  touchTargetMin: 48,
+};
+
+export const borderRadius = {
+  sm: 2,
+  DEFAULT: 4,
+  md: 6,
+  lg: 8,
+  xl: 12,
+  full: 9999,
+};
+
+export const typography = {
+  displayLg: {
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 40,
+    lineHeight: 48,
+    letterSpacing: -0.8,
+  },
+  headlineLg: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  headlineLgMobile: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+  },
+  titleMd: {
+    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  bodyLg: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 18,
+    lineHeight: 28,
+  },
+  bodyMd: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  labelTechnical: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 14,
+    lineHeight: 16,
+    letterSpacing: 0.7,
+  },
+  labelSm: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 14,
+  },
+};
