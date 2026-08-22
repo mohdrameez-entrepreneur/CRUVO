@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { profileAPI } from '../api';
+import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
@@ -192,17 +193,23 @@ export default function ProfileEditScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>EDIT PROFILE</Text>
-        <TouchableOpacity style={styles.topBarButton} onPress={handleSave} disabled={loading}>
-          <Text style={styles.saveText}>{loading ? '...' : 'SAVE'}</Text>
-        </TouchableOpacity>
-      </View>
+      <NavBar
+        title="EDIT PROFILE"
+        showBack
+        onBack={() => navigation.goBack()}
+        rightAction={
+          <TouchableOpacity
+            style={styles.saveBtn}
+            onPress={handleSave}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.saveBtnText}>{loading ? '...' : 'SAVE'}</Text>
+          </TouchableOpacity>
+        }
+      />
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 80 }]}>
         {renderSectionHeader('PROFILE PHOTO')}
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} disabled={uploadingAvatar}>
@@ -291,7 +298,10 @@ export default function ProfileEditScreen({ navigation }) {
       </ScrollView>
 
       <Modal visible={modal !== null} transparent animationType="fade" onRequestClose={closeAccountModal}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{modal === 'username' ? 'CHANGE USERNAME' : 'CHANGE EMAIL'}</Text>
             <Text style={styles.modalSubtitle}>Enter your password to confirm this change.</Text>
@@ -343,7 +353,7 @@ export default function ProfileEditScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -400,14 +410,18 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
   chipText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 12 },
-  chipTextActive: { color: colors.onPrimaryContainer },
-  saveButton: {
-    backgroundColor: colors.primaryContainer, height: spacing.touchTargetMin,
-    borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
-    marginTop: spacing.stackLg,
+  saveBtn: {
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: spacing.stackMd,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
   },
-  saveButtonDisabled: { opacity: 0.6 },
-  saveButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
+  saveBtnText: {
+    ...typography.labelTechnical,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(12),
+    fontWeight: '800',
+  },
   modalOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',

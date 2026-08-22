@@ -6,6 +6,7 @@ import { colors, spacing, typography, borderRadius, scale, moderateScale } from 
 import { ridesAPI } from '../api';
 import LocationPicker from '../components/LocationPicker';
 import AlertCard from '../components/AlertCard';
+import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function formatDate(d) {
@@ -140,15 +141,18 @@ export default function CreateRideScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>CRUVO</Text>
-        <View style={styles.topBarButton} />
-      </View>
+      <NavBar
+        title="PLAN RIDE"
+        showBack
+        onBack={() => navigation.goBack()}
+      />
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Create a Ride</Text>
         <Text style={styles.subtitle}>Plan your route and invite riders</Text>
 

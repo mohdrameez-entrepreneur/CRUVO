@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { ridesAPI, invitationsAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import NavBar from '../components/NavBar';
+import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InvitationCard({ invitation, onAccept, onDecline, loading }) {
@@ -138,6 +140,9 @@ export default function RidesListScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [respondingId, setRespondingId] = useState(null);
+  const [pendingDeleteRide, setPendingDeleteRide] = useState(null);
+  const [pendingDeclineInvite, setPendingDeclineInvite] = useState(null);
+  const [deletingRide, setDeletingRide] = useState(false);
 
   const loadAll = async () => {
     try {
@@ -178,29 +183,23 @@ export default function RidesListScreen({ navigation }) {
     }
   };
 
-  const handleDecline = async (invitation) => {
-    Alert.alert(
-      'Decline Invitation',
-      `Decline ride "${invitation.ride_name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            setRespondingId(invitation.id);
-            try {
-              await invitationsAPI.respond(invitation.id, 'decline');
-              setInvitations(prev => prev.filter(i => i.id !== invitation.id));
-            } catch (err) {
-              Alert.alert('Error', 'Failed to decline invitation');
-            } finally {
-              setRespondingId(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleDecline = (invitation) => {
+    setPendingDeclineInvite(invitation);
+  };
+
+  const handleConfirmDecline = async () => {
+    if (!pendingDeclineInvite) return;
+    const invId = pendingDeclineInvite.id;
+    setRespondingId(invId);
+    try {
+      await invitationsAPI.respond(invId, 'decline');
+      setInvitations(prev => prev.filter(i => i.id !== invId));
+      setPendingDeclineInvite(null);
+    } catch (err) {
+      setPendingDeclineInvite(null);
+    } finally {
+      setRespondingId(null);
+    }
   };
 
   const handleRidePress = (ride) => {
@@ -212,42 +211,40 @@ export default function RidesListScreen({ navigation }) {
   };
 
   const handleDeleteRide = (ride) => {
-    Alert.alert(
-      'Delete Ride',
-      `Are you sure you want to delete "${ride.name}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await ridesAPI.delete(ride.id);
-              setRides(prev => prev.filter(r => r.id !== ride.id));
-            } catch (err) {
-              const msg = err.response?.data?.error || 'Failed to delete ride';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ]
-    );
+    setPendingDeleteRide(ride);
+  };
+
+  const handleConfirmDeleteRide = async () => {
+    if (!pendingDeleteRide) return;
+    setDeletingRide(true);
+    try {
+      await ridesAPI.delete(pendingDeleteRide.id);
+      setRides(prev => prev.filter(r => r.id !== pendingDeleteRide.id));
+      setPendingDeleteRide(null);
+    } catch (err) {
+      setPendingDeleteRide(null);
+    } finally {
+      setDeletingRide(false);
+    }
   };
 
   const hasInvitations = invitations.length > 0;
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <View style={styles.topBarButton} />
-        <Text style={styles.topBarTitle}>RIDES</Text>
-        <TouchableOpacity
-          style={styles.topBarButton}
-          onPress={() => navigation.navigate('CreateRide')}
-        >
-          <Ionicons name="add" size={28} color={colors.primaryContainer} />
-        </TouchableOpacity>
-      </View>
+      <NavBar
+        title="YOUR RIDES"
+        badge={rides.length ? `${rides.length} RIDES` : undefined}
+        rightAction={
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('CreateRide')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={22} color={colors.onPrimaryContainer} />
+          </TouchableOpacity>
+        }
+      />
 
       {loading ? (
         <View style={styles.emptyState}>
@@ -319,20 +316,51 @@ export default function RidesListScreen({ navigation }) {
           }
         />
       )}
+
+      {/* Delete Ride Glass Modal */}
+      <GlassModal
+        visible={Boolean(pendingDeleteRide)}
+        type="danger"
+        icon="trash-outline"
+        badge="PERMANENT ACTION"
+        title="Delete Ride?"
+        message={`Are you sure you want to delete "${pendingDeleteRide?.name}"? This action cannot be reversed.`}
+        confirmText="DELETE RIDE"
+        cancelText="CANCEL"
+        isLoading={deletingRide}
+        onConfirm={handleConfirmDeleteRide}
+        onCancel={() => setPendingDeleteRide(null)}
+      />
+
+      {/* Decline Invitation Glass Modal */}
+      <GlassModal
+        visible={Boolean(pendingDeclineInvite)}
+        type="warning"
+        icon="close-circle-outline"
+        badge="INVITATION"
+        title="Decline Ride Invite?"
+        message={`Are you sure you want to decline the invitation to join "${pendingDeclineInvite?.ride_name}"?`}
+        confirmText="DECLINE"
+        cancelText="KEEP INVITE"
+        isLoading={Boolean(respondingId)}
+        onConfirm={handleConfirmDecline}
+        onCancel={() => setPendingDeclineInvite(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
-    borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
+  addBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
-  list: { padding: spacing.marginMobile, paddingBottom: 100 },
+  list: { padding: spacing.marginMobile, paddingBottom: 110 },
 
   inviteSection: { marginBottom: spacing.stackLg },
   inviteSectionHeader: {

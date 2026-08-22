@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { discoveryAPI, ridesAPI } from '../api';
 import UserAvatar from '../components/UserAvatar';
+import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function RiderCard({ rider, onToggle, isInvited }) {
@@ -111,18 +112,24 @@ export default function InviteRidersScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <View style={styles.topBarCenter}>
-          <Text style={styles.topBarTitle}>INVITE RIDERS</Text>
-          {rideName ? <Text style={styles.topBarSub}>{rideName}</Text> : null}
-        </View>
-        <TouchableOpacity style={styles.topBarButton} onPress={handleDone} disabled={starting}>
-          <Text style={[styles.doneText, starting && { opacity: 0.5 }]}>{starting ? 'STARTING...' : 'DONE'}</Text>
-        </TouchableOpacity>
-      </View>
+      <NavBar
+        title="INVITE RIDERS"
+        subtitle={rideName || undefined}
+        showBack
+        onBack={() => navigation.goBack()}
+        rightAction={
+          <TouchableOpacity
+            style={styles.doneBtn}
+            onPress={handleDone}
+            disabled={starting}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.doneBtnText, starting && { opacity: 0.5 }]}>
+              {starting ? '...' : 'DONE'}
+            </Text>
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.onSurfaceVariant} />
@@ -170,16 +177,18 @@ export default function InviteRidersScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
-    borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
+  doneBtn: {
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: spacing.stackMd,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
   },
-  topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  topBarCenter: { alignItems: 'center' },
-  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 18, textTransform: 'uppercase', letterSpacing: -0.5 },
-  topBarSub: { ...typography.labelSm, color: colors.onSurfaceVariant },
-  doneText: { ...typography.labelTechnical, color: colors.primaryContainer },
+  doneBtnText: {
+    ...typography.labelTechnical,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(12),
+    fontWeight: '800',
+  },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center', margin: spacing.marginMobile,
     backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,

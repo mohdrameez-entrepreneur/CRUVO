@@ -497,10 +497,18 @@ def fetch_route_view(request, ride_id):
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
 
-        route = data['routes'][0]
-        polyline = route['legs'][0]['points']
-        distance_m = route['summary']['lengthInMeters']
-        duration_s = route['summary']['travelTimeInSeconds']
+        routes = data.get('routes', [])
+        if not routes:
+            return Response({'error': 'No route found between coordinates'}, status=status.HTTP_404_NOT_FOUND)
+
+        route = routes[0]
+        legs = route.get('legs', [])
+        if not legs or 'points' not in legs[0]:
+            return Response({'error': 'Route points missing in provider response'}, status=status.HTTP_502_BAD_GATEWAY)
+
+        polyline = legs[0]['points']
+        distance_m = route.get('summary', {}).get('lengthInMeters', 0)
+        duration_s = route.get('summary', {}).get('travelTimeInSeconds', 0)
 
         ride.route_polyline = json.dumps(polyline)
         ride.route_distance_m = distance_m

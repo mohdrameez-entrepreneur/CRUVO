@@ -8,6 +8,7 @@ import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
 import useLocation from '../hooks/useLocation';
 import useRideSocket from '../hooks/useRideSocket';
+import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
@@ -51,6 +52,8 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [clearingFlag, setClearingFlag] = useState(false);
   const [flagNotification, setFlagNotification] = useState(null);
   const [rideEndedBy, setRideEndedBy] = useState(null);
+  const [showEndRideModal, setShowEndRideModal] = useState(false);
+  const [showClearFlagModal, setShowClearFlagModal] = useState(false);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
   const fallbackInterval = useRef(null);
@@ -227,10 +230,12 @@ export default function ActiveRideScreen({ navigation, route }) {
   };
 
   const endRide = () => {
-    Alert.alert('End Ride', 'Mark this ride as completed?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'End Ride', style: 'destructive', onPress: completeRide },
-    ]);
+    setShowEndRideModal(true);
+  };
+
+  const handleConfirmEndRide = async () => {
+    setShowEndRideModal(false);
+    await completeRide();
   };
 
   const handleViewSummary = () => {
@@ -240,14 +245,7 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   const handleFlagPress = () => {
     if (myFlag) {
-      Alert.alert(
-        `${myFlag.stop_type} Stop Active`,
-        'You have an active flag. Clear it to continue riding?',
-        [
-          { text: 'Keep Flagged', style: 'cancel' },
-          { text: 'Clear Flag', onPress: handleClearFlag },
-        ]
-      );
+      setShowClearFlagModal(true);
     } else {
       setShowFlagModal(true);
     }
@@ -309,6 +307,21 @@ export default function ActiveRideScreen({ navigation, route }) {
     return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
   };
 
+  const participants = ride?.participants || [];
+  const isCreator = Boolean(user && ride?.creator === user.id);
+  const flagIcon = myFlag ? (FLAG_ICONS[myFlag.stop_type] || 'flag') : 'flag';
+  const flagLabel = myFlag ? myFlag.stop_type : null;
+
+  const enrichedPositions = useMemo(() => {
+    const pMap = {};
+    participants.forEach(p => { pMap[p.user] = p; });
+    return positions.map(pos => ({
+      ...pos,
+      initials: pMap[pos.user]?.initials || '??',
+      display_name: pMap[pos.user]?.display_name || '',
+    }));
+  }, [positions, participants]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -326,21 +339,6 @@ export default function ActiveRideScreen({ navigation, route }) {
       </View>
     );
   }
-
-  const participants = ride.participants || [];
-  const isCreator = user && ride.creator === user.id;
-  const flagIcon = myFlag ? (FLAG_ICONS[myFlag.stop_type] || 'flag') : 'flag';
-  const flagLabel = myFlag ? myFlag.stop_type : null;
-
-  const enrichedPositions = useMemo(() => {
-    const pMap = {};
-    participants.forEach(p => { pMap[p.user] = p; });
-    return positions.map(pos => ({
-      ...pos,
-      initials: pMap[pos.user]?.initials || '??',
-      display_name: pMap[pos.user]?.display_name || '',
-    }));
-  }, [positions, participants]);
 
   return (
     <View style={styles.container}>
@@ -552,6 +550,37 @@ export default function ActiveRideScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Glassmorphic End Ride Modal */}
+      <GlassModal
+        visible={showEndRideModal}
+        type="danger"
+        icon="stop-circle-outline"
+        badge="LEAD ACTION"
+        title="End Active Ride?"
+        message={`Are you sure you want to end "${ride?.name}"? All riders will be transitioned to the ride summary.`}
+        confirmText="END RIDE"
+        cancelText="KEEP RIDING"
+        onConfirm={handleConfirmEndRide}
+        onCancel={() => setShowEndRideModal(false)}
+      />
+
+      {/* Glassmorphic Clear Flag Modal */}
+      <GlassModal
+        visible={showClearFlagModal}
+        type="warning"
+        icon="flag"
+        badge={`${myFlag?.stop_type || 'FLAG'} STOP ACTIVE`}
+        title="Clear Stop Flag?"
+        message="You currently have a broadcasted stop flag. Clear it to notify squad members that you are ready to roll?"
+        confirmText="CLEAR FLAG"
+        cancelText="KEEP FLAGGED"
+        onConfirm={() => {
+          setShowClearFlagModal(false);
+          handleClearFlag();
+        }}
+        onCancel={() => setShowClearFlagModal(false)}
+      />
     </View>
   );
 }

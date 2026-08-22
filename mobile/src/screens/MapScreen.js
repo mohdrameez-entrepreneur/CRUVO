@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
+import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
 import { ridesAPI } from '../api';
+import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MapScreen({ navigation }) {
@@ -31,9 +32,7 @@ export default function MapScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.topBar, { paddingTop: insets.top }]}>
-          <Text style={styles.topBarTitle}>CRUVO</Text>
-        </View>
+        <NavBar title="LIVE RADAR" subtitle="ACTIVE RIDE TRACKING" />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primaryContainer} />
           <Text style={styles.loadingText}>Checking for active rides...</Text>
@@ -49,12 +48,10 @@ export default function MapScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <Text style={styles.topBarTitle}>CRUVO</Text>
-      </View>
-      <View style={styles.centerContent}>
+      <NavBar title="LIVE RADAR" subtitle="ACTIVE RIDE TRACKING" />
+      <View style={[styles.centerContent, { paddingBottom: insets.bottom + 80 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name="map-outline" size={64} color={colors.onSurfaceVariant} />
+          <Ionicons name="map-outline" size={56} color={colors.primaryContainer} />
         </View>
         <Text style={styles.title}>No Active Ride</Text>
         <Text style={styles.subtitle}>Start a ride to see live tracking on the map</Text>
@@ -73,19 +70,15 @@ export default function MapScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
-    borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
-  },
-  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
   centerContent: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.marginMobile, gap: spacing.stackMd,
   },
   iconContainer: {
-    width: 120, height: 120, borderRadius: 60,
-    backgroundColor: colors.surfaceContainerLow,
+    width: 110, height: 110, borderRadius: 55,
+    backgroundColor: 'rgba(255, 214, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.25)',
     justifyContent: 'center', alignItems: 'center',
     marginBottom: spacing.stackSm,
   },

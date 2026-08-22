@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import NavBar from '../components/NavBar';
+import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InfoRow({ icon, label, value }) {
@@ -20,27 +22,28 @@ function InfoRow({ icon, label, value }) {
 export default function SettingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { profile, user, logout } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: async () => {
-        await logout();
-      }},
-    ]);
+  const handleConfirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      setShowLogoutModal(false);
+    } catch {} finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>SETTINGS</Text>
-        <View style={styles.topBarButton} />
-      </View>
+      <NavBar
+        title="SETTINGS"
+        showBack
+        onBack={() => navigation.goBack()}
+      />
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 80 }]}>
         <View style={styles.profileSection}>
           {profile?.avatar_url ? (
             <Image source={{ uri: profile.avatar_url }} style={styles.avatarLarge} />
@@ -82,11 +85,45 @@ export default function SettingsScreen({ navigation }) {
           <InfoRow icon="calendar-outline" label="Joined" value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : ''} />
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>LEGAL & PRIVACY</Text>
+          <TouchableOpacity
+            style={styles.policyRow}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.policyLeft}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primaryContainer} />
+              <Text style={styles.policyText}>Privacy Policy & Data Terms</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceVariant} />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => setShowLogoutModal(true)}
+          activeOpacity={0.8}
+        >
           <Ionicons name="log-out-outline" size={20} color="#F44336" />
           <Text style={styles.logoutText}>LOG OUT</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Glassmorphic Logout Modal */}
+      <GlassModal
+        visible={showLogoutModal}
+        type="danger"
+        icon="log-out-outline"
+        badge="SECURITY SESSION"
+        title="Log Out of CRUVO?"
+        message="Are you sure you want to end your current session? You can log back in anytime with your credentials."
+        confirmText="LOG OUT"
+        cancelText="CANCEL"
+        isLoading={loggingOut}
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </View>
   );
 }
@@ -123,6 +160,22 @@ const styles = StyleSheet.create({
   infoText: { flex: 1 },
   infoLabel: { ...typography.labelSm, color: colors.onSurfaceVariant },
   infoValue: { ...typography.bodyMd, color: colors.onSurface },
+  policyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.stackSm + 2,
+  },
+  policyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm + 4,
+  },
+  policyText: {
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    fontWeight: '600',
+  },
   logoutButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
     borderWidth: 1, borderColor: '#F44336', borderRadius: borderRadius.lg, height: spacing.touchTargetMin,

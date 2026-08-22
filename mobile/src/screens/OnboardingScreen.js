@@ -40,9 +40,15 @@ export default function OnboardingScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
+        <View style={styles.footerLinks}>
+          <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+            <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+          </TouchableOpacity>
+          <Text style={styles.footerDot}>·</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -140,5 +146,21 @@ const styles = StyleSheet.create({
     ...typography.bodyMd,
     color: colors.onSurfaceVariant,
     textAlign: 'center',
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.stackSm,
+  },
+  privacyLinkText: {
+    ...typography.bodyMd,
+    color: colors.outline,
+    fontSize: moderateScale(13),
+    textDecorationLine: 'underline',
+  },
+  footerDot: {
+    color: colors.outlineVariant,
+    fontSize: moderateScale(14),
   },
 });

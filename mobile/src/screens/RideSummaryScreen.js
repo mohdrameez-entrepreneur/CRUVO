@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
 import AlertCard from '../components/AlertCard';
+import NavBar from '../components/NavBar';
+import GlassModal from '../components/GlassModal';
 import useRideLobby from '../hooks/useRideLobby';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,6 +26,9 @@ export default function RideSummaryScreen({ navigation, route }) {
   const [starting, setStarting] = useState(false);
   const [fetchingRoute, setFetchingRoute] = useState(false);
   const [errorBanner, setErrorBanner] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const onReadyUpdate = useCallback((data) => {
     setRide(prev => {
@@ -72,26 +77,22 @@ export default function RideSummaryScreen({ navigation, route }) {
 
   const handleDelete = () => {
     if (!ride) return;
-    Alert.alert(
-      'Delete Ride',
-      `Are you sure you want to delete "${ride.name}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await ridesAPI.delete(ride.id);
-              navigation.navigate('Main', { screen: 'Rides' });
-            } catch (err) {
-              const msg = err.response?.data?.error || 'Failed to delete ride';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ]
-    );
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await ridesAPI.delete(ride.id);
+      setShowDeleteModal(false);
+      navigation.navigate('Main', { screen: 'Rides' });
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to delete ride';
+      setErrorBanner(msg);
+      setShowDeleteModal(false);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleToggleReady = async () => {
@@ -189,15 +190,17 @@ export default function RideSummaryScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.primaryContainer} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>CRUVO</Text>
-        <View style={styles.topBarButton} />
-      </View>
+      <NavBar
+        title="RIDE LOBBY"
+        showBack
+        onBack={() => navigation.goBack()}
+        badge={ride?.status || 'SCHEDULED'}
+      />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 220 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {errorBanner && (
           <AlertCard
             type="error"
@@ -294,66 +297,110 @@ export default function RideSummaryScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
-        {isScheduled && !isCreator && myParticipant?.status === 'ACCEPTED' && (
-          <TouchableOpacity
-            style={[styles.readyButton, myReady && styles.readyButtonActive]}
-            onPress={handleToggleReady}
-            disabled={togglingReady}
-            activeOpacity={0.8}
-          >
-            {togglingReady ? (
-              <ActivityIndicator size="small" color={myReady ? colors.onPrimaryContainer : colors.primaryContainer} />
-            ) : (
-              <Ionicons name={myReady ? 'checkmark-circle' : 'radio-button-off'} size={20} color={myReady ? colors.onPrimaryContainer : colors.primaryContainer} />
-            )}
-            <Text style={[styles.readyButtonText, myReady && styles.readyButtonTextActive]}>
-              {myReady ? 'READY' : 'MARK READY'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {isScheduled && isCreator && (
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {isCreator ? (
           <>
-            <View style={styles.readyStatus}>
-              <Ionicons
-                name={allReady ? 'checkmark-circle' : 'time-outline'}
-                size={16}
-                color={allReady ? '#4CAF50' : colors.onSurfaceVariant}
-              />
-              <Text style={[styles.readyStatusText, allReady && styles.readyStatusTextActive]}>
-                {noOtherRiders ? 'Ready to ride' : allReady ? 'All riders ready!' : `${readyCount}/${totalRiders} riders ready`}
-              </Text>
+            {isScheduled && (
+              <>
+                <View style={styles.readyStatus}>
+                  <Ionicons
+                    name={allReady ? 'checkmark-circle' : 'time-outline'}
+                    size={15}
+                    color={allReady ? '#4CAF50' : colors.onSurfaceVariant}
+                  />
+                  <Text style={[styles.readyStatusText, allReady && styles.readyStatusTextActive]}>
+                    {noOtherRiders ? 'Ready to roll' : allReady ? 'All riders ready!' : `${readyCount}/${totalRiders} riders ready`}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.startButton, !allReady && styles.startButtonDisabled]}
+                  onPress={() => setShowStartModal(true)}
+                  disabled={!allReady || starting}
+                  activeOpacity={0.8}
+                >
+                  {starting ? (
+                    <ActivityIndicator size="small" color={colors.onPrimaryContainer} />
+                  ) : (
+                    <Ionicons name="play" size={18} color={colors.onPrimaryContainer} />
+                  )}
+                  <Text style={styles.startButtonText}>
+                    {allReady ? 'START RIDE' : 'WAITING FOR RIDERS'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <View style={styles.creatorActionRow}>
+              <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
+                <Ionicons name="trash-outline" size={16} color={colors.error} />
+                <Text style={styles.deleteText}>DELETE</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')} activeOpacity={0.8}>
+                <Text style={styles.doneText}>DONE</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.startButton, !allReady && styles.startButtonDisabled]}
-              onPress={handleStartRide}
-              disabled={!allReady || starting}
-              activeOpacity={0.8}
-            >
-              {starting ? (
-                <ActivityIndicator size="small" color={colors.onPrimaryContainer} />
-              ) : (
-                <Ionicons name="play" size={20} color={colors.onPrimaryContainer} />
-              )}
-              <Text style={styles.startButtonText}>
-                {allReady ? 'START RIDE' : 'WAITING FOR RIDERS'}
-              </Text>
-            </TouchableOpacity>
           </>
-        )}
+        ) : (
+          <View style={styles.creatorActionRow}>
+            {isScheduled && myParticipant?.status === 'ACCEPTED' && (
+              <TouchableOpacity
+                style={[styles.readyButton, myReady && styles.readyButtonActive]}
+                onPress={handleToggleReady}
+                disabled={togglingReady}
+                activeOpacity={0.8}
+              >
+                {togglingReady ? (
+                  <ActivityIndicator size="small" color={myReady ? colors.onPrimaryContainer : colors.primaryContainer} />
+                ) : (
+                  <Ionicons name={myReady ? 'checkmark-circle' : 'radio-button-off'} size={18} color={myReady ? colors.onPrimaryContainer : colors.primaryContainer} />
+                )}
+                <Text style={[styles.readyButtonText, myReady && styles.readyButtonTextActive]}>
+                  {myReady ? 'READY' : 'MARK READY'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
-        {isCreator && (
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
-            <Ionicons name="trash-outline" size={18} color={colors.error} />
-            <Text style={styles.deleteText}>DELETE RIDE</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')} activeOpacity={0.8}>
+              <Text style={styles.doneText}>DONE</Text>
+            </TouchableOpacity>
+          </View>
         )}
-
-        <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')} activeOpacity={0.8}>
-          <Text style={styles.doneText}>Done</Text>
-        </TouchableOpacity>
       </View>
+
+      {/* Delete Ride Glass Modal */}
+      <GlassModal
+        visible={showDeleteModal}
+        type="danger"
+        icon="trash-outline"
+        badge="IRREVERSIBLE ACTION"
+        title="Delete Ride?"
+        message={`Are you sure you want to delete "${ride?.name}"? All route metadata and invites will be permanently removed.`}
+        confirmText="DELETE RIDE"
+        cancelText="KEEP RIDE"
+        isLoading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
+
+      {/* Start Ride Glass Modal */}
+      <GlassModal
+        visible={showStartModal}
+        type="primary"
+        icon="bicycle"
+        badge={`${readyCount}/${totalRiders} RIDERS READY`}
+        title="Launch Active Ride?"
+        message={`Ready to hit the road? Starting "${ride?.name}" will initiate live GPS broadcasting for all squad members.`}
+        confirmText="START RIDING"
+        cancelText="CANCEL"
+        isLoading={starting}
+        onConfirm={async () => {
+          setShowStartModal(false);
+          await handleStartRide();
+        }}
+        onCancel={() => setShowStartModal(false)}
+      />
     </View>
   );
 }
@@ -419,45 +466,122 @@ const styles = StyleSheet.create({
   readyText: { ...typography.labelSm, color: colors.onSurfaceVariant },
   readyTextActive: { color: '#4CAF50' },
   bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: spacing.marginMobile, paddingBottom: 34, gap: spacing.stackSm,
-    backgroundColor: colors.surfaceContainerLowest, borderTopWidth: 1, borderTopColor: colors.outlineVariant,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.marginMobile,
+    paddingTop: spacing.stackSm + 4,
+    gap: spacing.stackSm,
+    backgroundColor: 'rgba(22, 24, 29, 0.96)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  creatorActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm + 4,
   },
   readyButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
-    height: 52, borderRadius: borderRadius.lg,
-    borderWidth: 2, borderColor: colors.primaryContainer,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.stackSm,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: colors.primaryContainer,
   },
   readyButtonActive: {
-    backgroundColor: '#4CAF50', borderColor: '#4CAF50',
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
   },
-  readyButtonText: { ...typography.titleMd, color: colors.primaryContainer },
-  readyButtonTextActive: { color: colors.white },
+  readyButtonText: {
+    ...typography.titleMd,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(13),
+    fontWeight: '700',
+  },
+  readyButtonTextActive: {
+    color: colors.white,
+  },
   readyStatus: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 2,
   },
-  readyStatusText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
-  readyStatusTextActive: { color: '#4CAF50' },
+  readyStatusText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(11),
+  },
+  readyStatusTextActive: {
+    color: '#4CAF50',
+  },
   startButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
-    height: 52, borderRadius: borderRadius.lg, backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.stackSm,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#4CAF50',
   },
   startButtonDisabled: {
     backgroundColor: colors.surfaceContainerHigh,
   },
-  startButtonText: { ...typography.titleMd, color: colors.white },
+  startButtonText: {
+    ...typography.titleMd,
+    color: colors.white,
+    fontSize: moderateScale(13),
+    fontWeight: '800',
+  },
   deleteButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
-    height: 48, borderRadius: borderRadius.lg,
-    borderWidth: 1, borderColor: colors.error,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.stackSm,
+    height: 46,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 67, 54, 0.4)',
+    backgroundColor: 'rgba(244, 67, 54, 0.08)',
   },
-  deleteText: { ...typography.labelTechnical, color: colors.error, fontSize: 13 },
+  deleteText: {
+    ...typography.labelTechnical,
+    color: colors.error,
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+  },
   doneButton: {
-    backgroundColor: colors.primaryContainer, height: spacing.touchTargetMin, borderRadius: borderRadius.lg,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
+    flex: 1.5,
+    backgroundColor: colors.primaryContainer,
+    height: 46,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  doneText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
+  doneText: {
+    ...typography.titleMd,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(13),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd },
   emptyText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
 });

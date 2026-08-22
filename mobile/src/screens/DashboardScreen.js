@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { ridesAPI } from '../api';
+import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function getGreeting(hour) {
@@ -55,8 +56,10 @@ function RideCard({ ride }) {
           )}
         </View>
         <View style={styles.rideRoute}>
-          <Ionicons name="location" size={16} color={colors.primaryContainer} />
-          <Text style={styles.rideRouteText}>{ride.origin_name} to {ride.destination_name}</Text>
+          <Ionicons name="navigate-circle-outline" size={16} color={colors.primaryContainer} />
+          <Text style={styles.rideRouteText} numberOfLines={1} ellipsizeMode="tail">
+            {ride.origin_name || 'Origin'} → {ride.destination_name || 'Destination'}
+          </Text>
         </View>
       </View>
     </View>
@@ -89,19 +92,22 @@ export default function DashboardScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.navigate('Settings')}>
-          <Ionicons name="person-circle-outline" size={26} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>CRUVO</Text>
-        <View style={styles.topBarButton}>
-          <Ionicons name="settings-outline" size={24} color={colors.onSurfaceVariant} />
-        </View>
-      </View>
+      <NavBar
+        title="CRUVO"
+        leftAction={
+          <TouchableOpacity
+            style={styles.navProfileBtn}
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-circle-outline" size={24} color={colors.primaryContainer} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 110 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryContainer} />}
       >
         <View style={styles.greetingSection}>
@@ -179,13 +185,16 @@ export default function DashboardScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
-    borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
+  navProfileBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  topBarButton: { width: scale(48), height: scale(48), justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: moderateScale(24), textTransform: 'uppercase', letterSpacing: -0.8 },
   content: { flex: 1 },
   contentContainer: { padding: spacing.marginMobile, paddingBottom: moderateScale(100) },
   greetingSection: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackMd, marginBottom: spacing.stackLg },
@@ -234,10 +243,21 @@ const styles = StyleSheet.create({
   rideDetailRow: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(4) },
   rideDetailText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   rideRoute: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
-    marginTop: spacing.stackSm, paddingTop: spacing.stackSm, borderTopWidth: 1, borderTopColor: colors.outlineVariant,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm,
+    marginTop: spacing.stackSm,
+    paddingTop: spacing.stackSm,
+    borderTopWidth: 1,
+    borderTopColor: colors.outlineVariant,
+    overflow: 'hidden',
   },
-  rideRouteText: { ...typography.labelTechnical, color: colors.onSurface },
+  rideRouteText: {
+    flex: 1,
+    ...typography.labelTechnical,
+    color: colors.onSurface,
+    fontSize: moderateScale(11),
+  },
   emptyState: {
     borderWidth: 1, borderColor: colors.outlineVariant, borderStyle: 'dashed', borderRadius: borderRadius.xl,
     padding: spacing.stackLg, alignItems: 'center', gap: spacing.stackSm,

@@ -1,10 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Dimensions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
+import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
 import { discoveryAPI } from '../api';
 import UserAvatar from '../components/UserAvatar';
+import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
@@ -23,68 +40,142 @@ function FilterChip({ label, icon, active, onPress }) {
 }
 
 function FilterModal({ visible, filters, onApply, onClear, onClose }) {
+  const insets = useSafeAreaInsets();
   const [local, setLocal] = useState(filters);
 
-  useEffect(() => { setLocal(filters); }, [visible]);
-
-  if (!visible) return null;
+  useEffect(() => {
+    setLocal(filters);
+  }, [visible, filters]);
 
   const toggle = (key, value) => {
     setLocal(prev => ({ ...prev, [key]: prev[key] === value ? '' : value }));
   };
 
+  const activeCount = Object.values(local).filter(Boolean).length;
+
   return (
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>FILTERS</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalBackdrop} />
+        </TouchableWithoutFeedback>
+
+        <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderLeft}>
+              <Text style={styles.modalTitle}>SEARCH FILTERS</Text>
+              {activeCount > 0 && (
+                <View style={styles.modalBadge}>
+                  <Text style={styles.modalBadgeText}>{activeCount} ACTIVE</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity style={styles.closeIconBtn} onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="close" size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Scrollable Filters Content */}
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Riding Style */}
+            <Text style={styles.filterLabel}>RIDING STYLE</Text>
+            <View style={styles.chipRow}>
+              {RIDING_STYLES.map(s => (
+                <FilterChip
+                  key={s}
+                  label={s}
+                  active={local.style === s}
+                  onPress={() => toggle('style', s)}
+                />
+              ))}
+            </View>
+
+            {/* Experience Level */}
+            <Text style={styles.filterLabel}>EXPERIENCE LEVEL</Text>
+            <View style={styles.chipRow}>
+              {EXPERIENCE_LEVELS.map(e => (
+                <FilterChip
+                  key={e}
+                  label={e}
+                  active={local.experience === e}
+                  onPress={() => toggle('experience', e)}
+                />
+              ))}
+            </View>
+
+            {/* Location */}
+            <Text style={styles.filterLabel}>LOCATION CITY</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="location-outline" size={18} color={colors.onSurfaceVariant} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Mumbai, Delhi, Bengaluru..."
+                placeholderTextColor={colors.outline}
+                value={local.location}
+                onChangeText={v => setLocal(prev => ({ ...prev, location: v }))}
+              />
+              {local.location ? (
+                <TouchableOpacity onPress={() => setLocal(prev => ({ ...prev, location: '' }))}>
+                  <Ionicons name="close-circle" size={16} color={colors.outline} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Bike Make / Model */}
+            <Text style={styles.filterLabel}>BIKE MAKE & MODEL</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="bicycle-outline" size={18} color={colors.onSurfaceVariant} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Royal Enfield, BMW, Ducati..."
+                placeholderTextColor={colors.outline}
+                value={local.bike}
+                onChangeText={v => setLocal(prev => ({ ...prev, bike: v }))}
+              />
+              {local.bike ? (
+                <TouchableOpacity onPress={() => setLocal(prev => ({ ...prev, bike: '' }))}>
+                  <Ionicons name="close-circle" size={16} color={colors.outline} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </ScrollView>
+
+          {/* Fixed Non-Overlapping Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.clearBtn}
+              onPress={() => {
+                onClear();
+                onClose();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearBtnText}>CLEAR ALL</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.applyBtn}
+              onPress={() => {
+                onApply(local);
+                onClose();
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.applyBtnText}>APPLY FILTERS</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <Text style={styles.filterLabel}>RIDING STYLE</Text>
-        <View style={styles.filterGroup}>
-          {RIDING_STYLES.map(s => (
-            <FilterChip key={s} label={s} active={local.style === s} onPress={() => toggle('style', s)} />
-          ))}
-        </View>
-
-        <Text style={styles.filterLabel}>EXPERIENCE</Text>
-        <View style={styles.filterGroup}>
-          {EXPERIENCE_LEVELS.map(e => (
-            <FilterChip key={e} label={e} active={local.experience === e} onPress={() => toggle('experience', e)} />
-          ))}
-        </View>
-
-        <Text style={styles.filterLabel}>LOCATION</Text>
-        <TextInput
-          style={styles.modalInput}
-          placeholder="e.g. Delhi, Mumbai..."
-          placeholderTextColor={colors.outline}
-          value={local.location}
-          onChangeText={v => setLocal(prev => ({ ...prev, location: v }))}
-        />
-
-        <Text style={styles.filterLabel}>BIKE</Text>
-        <TextInput
-          style={styles.modalInput}
-          placeholder="e.g. Royal Enfield, BMW..."
-          placeholderTextColor={colors.outline}
-          value={local.bike}
-          onChangeText={v => setLocal(prev => ({ ...prev, bike: v }))}
-        />
-
-        <View style={styles.modalActions}>
-          <TouchableOpacity style={styles.clearBtn} onPress={() => { onClear(); onClose(); }}>
-            <Text style={styles.clearBtnText}>CLEAR ALL</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.applyBtn} onPress={() => { onApply(local); onClose(); }}>
-            <Text style={styles.applyBtnText}>APPLY</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -98,18 +189,32 @@ function RiderCard({ rider }) {
           name={p?.display_name}
           initials={p?.initials}
           id={rider.id}
-          size={44}
+          size={48}
         />
         <View style={styles.riderInfo}>
-          <Text style={styles.riderName}>{p?.display_name}</Text>
-          <Text style={styles.riderBike}>{[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'No bike info'}</Text>
-          <Text style={styles.riderLocation}>{p?.location_city || 'Unknown location'}</Text>
+          <Text style={styles.riderName}>{p?.display_name || 'Rider'}</Text>
+          <Text style={styles.riderBike}>
+            {[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'Motorcycle enthusiast'}
+          </Text>
+          <Text style={styles.riderLocation}>
+            <Ionicons name="location-outline" size={12} color={colors.outline} /> {p?.location_city || 'Worldwide'}
+          </Text>
         </View>
       </View>
-      <View style={styles.riderTags}>
-        {p?.riding_style ? <View style={styles.tag}><Text style={styles.tagText}>{p.riding_style}</Text></View> : null}
-        {p?.experience_level ? <View style={styles.tag}><Text style={styles.tagText}>{p.experience_level}</Text></View> : null}
-      </View>
+      {(p?.riding_style || p?.experience_level) && (
+        <View style={styles.riderTags}>
+          {p?.riding_style ? (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>{p.riding_style}</Text>
+            </View>
+          ) : null}
+          {p?.experience_level ? (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>{p.experience_level}</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -132,12 +237,14 @@ export default function DiscoveryScreen({ navigation }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { searchRiders('', {}); }, []);
+  useEffect(() => {
+    searchRiders('', {});
+  }, []);
 
   const handleTextChange = (text) => {
     setQuery(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchRiders(text, filters), 400);
+    debounceRef.current = setTimeout(() => searchRiders(text, filters), 350);
   };
 
   const handleApplyFilters = (newFilters) => {
@@ -154,16 +261,13 @@ export default function DiscoveryScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.topBarButton}>
-          <Ionicons name="menu" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>CRUVO</Text>
-        <TouchableOpacity style={styles.topBarButton}>
-          <Ionicons name="settings-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <NavBar
+        title="EXPLORE"
+        subtitle="DISCOVER RIDERS & CREWS"
+        badge={riders.length > 0 ? `${riders.length} FOUND` : undefined}
+      />
 
+      {/* Search Input Section */}
       <View style={styles.searchSection}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={colors.onSurfaceVariant} />
@@ -183,51 +287,86 @@ export default function DiscoveryScreen({ navigation }) {
         </View>
       </View>
 
-      <View style={styles.filterSection}>
-        <TouchableOpacity
-          style={[styles.filterChip, styles.filterChipPrimary]}
-          onPress={() => setShowFilters(true)}
-          activeOpacity={0.7}
+      {/* Horizontal Active Filter Chips Section */}
+      <View style={styles.filterSectionWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
         >
-          <Ionicons name="options" size={14} color={colors.onPrimaryContainer} />
-          <Text style={[styles.filterChipText, styles.filterChipTextActive]}>
-            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-          </Text>
-        </TouchableOpacity>
-        {filters.style ? (
-          <FilterChip label={filters.style} active onPress={() => handleApplyFilters({ ...filters, style: '' })} />
-        ) : null}
-        {filters.experience ? (
-          <FilterChip label={filters.experience} active onPress={() => handleApplyFilters({ ...filters, experience: '' })} />
-        ) : null}
-        {filters.location ? (
-          <FilterChip label={filters.location} icon="location" active onPress={() => handleApplyFilters({ ...filters, location: '' })} />
-        ) : null}
-        {filters.bike ? (
-          <FilterChip label={filters.bike} active onPress={() => handleApplyFilters({ ...filters, bike: '' })} />
-        ) : null}
+          <TouchableOpacity
+            style={[styles.filterChip, styles.filterChipPrimary, activeFilterCount > 0 && styles.filterChipActive]}
+            onPress={() => setShowFilters(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="options"
+              size={15}
+              color={activeFilterCount > 0 ? colors.onPrimaryContainer : colors.primaryContainer}
+            />
+            <Text style={[styles.filterChipText, styles.filterChipTextActive]}>
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
+          </TouchableOpacity>
+
+          {filters.style ? (
+            <FilterChip
+              label={filters.style}
+              active
+              onPress={() => handleApplyFilters({ ...filters, style: '' })}
+            />
+          ) : null}
+
+          {filters.experience ? (
+            <FilterChip
+              label={filters.experience}
+              active
+              onPress={() => handleApplyFilters({ ...filters, experience: '' })}
+            />
+          ) : null}
+
+          {filters.location ? (
+            <FilterChip
+              label={filters.location}
+              icon="location"
+              active
+              onPress={() => handleApplyFilters({ ...filters, location: '' })}
+            />
+          ) : null}
+
+          {filters.bike ? (
+            <FilterChip
+              label={filters.bike}
+              active
+              onPress={() => handleApplyFilters({ ...filters, bike: '' })}
+            />
+          ) : null}
+        </ScrollView>
       </View>
 
+      {/* Riders List */}
       {loading ? (
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={colors.primaryContainer} />
-          <Text style={styles.emptyStateText}>Searching...</Text>
+          <Text style={styles.emptyStateText}>Searching riders...</Text>
         </View>
       ) : (
         <FlatList
           data={riders}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 110 }]}
           renderItem={({ item }) => <RiderCard rider={item} />}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={48} color={colors.outline} />
               <Text style={styles.emptyStateText}>No riders found</Text>
+              <Text style={styles.emptyStateSubtext}>Try refining or clearing your search filters</Text>
             </View>
           }
         />
       )}
 
+      {/* Clean Glassmorphic Filter Modal */}
       <FilterModal
         visible={showFilters}
         filters={filters}
@@ -240,93 +379,290 @@ export default function DiscoveryScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
-    borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
-  searchSection: { padding: spacing.marginMobile, paddingBottom: spacing.stackSm },
+  searchSection: {
+    paddingHorizontal: spacing.marginMobile,
+    paddingTop: spacing.stackSm + 4,
+    paddingBottom: spacing.stackSm,
+  },
   searchContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceContainerLow,
-    borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
-    height: spacing.touchTargetMin, paddingHorizontal: spacing.stackMd, gap: spacing.stackSm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg,
+    height: 48,
+    paddingHorizontal: spacing.stackMd,
+    gap: spacing.stackSm,
   },
-  searchInput: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
-  filterSection: {
-    flexDirection: 'row', paddingHorizontal: spacing.marginMobile, paddingBottom: spacing.stackMd,
-    gap: spacing.stackSm, flexWrap: 'wrap',
+  searchInput: {
+    flex: 1,
+    ...typography.bodyMd,
+    color: colors.onSurface,
+  },
+  filterSectionWrapper: {
+    paddingBottom: spacing.stackSm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  filterScroll: {
+    paddingHorizontal: spacing.marginMobile,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm,
   },
   filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
-    borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.stackMd,
+    paddingVertical: 7,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.surfaceContainerLow,
   },
   filterChipPrimary: {
-    backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer,
+    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    borderColor: 'rgba(255, 214, 0, 0.3)',
   },
   filterChipActive: {
-    backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primaryContainer,
   },
-  filterChipText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 12 },
-  filterChipTextActive: { color: colors.onPrimaryContainer },
-  listContent: { padding: spacing.marginMobile, paddingBottom: 100, gap: spacing.stackMd },
+  filterChipText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(11),
+  },
+  filterChipTextActive: {
+    color: colors.onPrimaryContainer,
+    fontWeight: '700',
+  },
+  listContent: {
+    padding: spacing.marginMobile,
+    gap: spacing.stackMd,
+  },
   riderCard: {
-    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.xl, padding: spacing.stackMd, gap: spacing.stackMd,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.xl,
+    padding: spacing.stackMd,
+    gap: spacing.stackSm + 4,
   },
-  riderHeader: { flexDirection: 'row', gap: spacing.stackMd },
-  riderAvatar: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surfaceContainerHigh,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.outlineVariant,
+  riderHeader: {
+    flexDirection: 'row',
+    gap: spacing.stackMd,
+    alignItems: 'center',
   },
-  riderInitials: { ...typography.labelTechnical, color: colors.primaryContainer },
-  riderInfo: { flex: 1, gap: 2 },
-  riderName: { ...typography.titleMd, color: colors.onSurface },
-  riderBike: { ...typography.bodyMd, color: colors.onSurfaceVariant },
-  riderLocation: { ...typography.labelSm, color: colors.outline },
-  riderTags: { flexDirection: 'row', gap: spacing.stackSm, flexWrap: 'wrap' },
+  riderInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  riderName: {
+    ...typography.titleMd,
+    color: colors.onSurface,
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+  },
+  riderBike: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(13),
+  },
+  riderLocation: {
+    ...typography.labelSm,
+    color: colors.outline,
+    fontSize: moderateScale(11),
+  },
+  riderTags: {
+    flexDirection: 'row',
+    gap: spacing.stackSm,
+    flexWrap: 'wrap',
+    marginTop: 2,
+  },
   tag: {
-    paddingHorizontal: spacing.stackSm, paddingVertical: 2,
-    borderRadius: borderRadius.sm, backgroundColor: 'rgba(255,214,0,0.1)',
-    borderWidth: 1, borderColor: 'rgba(255,214,0,0.2)',
+    paddingHorizontal: spacing.stackSm + 2,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+    backgroundColor: 'rgba(255, 214, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.25)',
   },
-  tagText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 11 },
-  emptyState: { alignItems: 'center', gap: spacing.stackMd, padding: spacing.stackLg * 2 },
-  emptyStateText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
-
+  tagText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(10),
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.stackSm,
+    padding: spacing.stackLg * 2,
+    marginTop: 20,
+  },
+  emptyStateText: {
+    ...typography.titleMd,
+    color: colors.onSurface,
+    fontSize: moderateScale(16),
+  },
+  emptyStateSubtext: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(13),
+    textAlign: 'center',
+  },
   modalOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end',
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
-  modalContent: {
-    backgroundColor: colors.surfaceContainer, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl,
-    padding: spacing.marginMobile, paddingBottom: 50, maxHeight: '80%',
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalCard: {
+    backgroundColor: 'rgba(22, 24, 29, 0.98)',
+    borderTopLeftRadius: borderRadius.xl + 4,
+    borderTopRightRadius: borderRadius.xl + 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    maxHeight: screenHeight * 0.82,
+    paddingTop: spacing.stackMd,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 20,
   },
   modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: spacing.stackLg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.marginMobile,
+    paddingBottom: spacing.stackMd,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
-  modalTitle: { ...typography.titleMd, color: colors.onSurface },
-  filterLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm, marginTop: spacing.stackMd },
-  filterGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm },
-  modalInput: {
-    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.lg, paddingHorizontal: spacing.stackMd, height: 48,
-    ...typography.bodyMd, color: colors.onSurface,
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  modalActions: { flexDirection: 'row', gap: spacing.stackMd, marginTop: spacing.stackLg },
+  modalTitle: {
+    ...typography.displayLg,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(16),
+    letterSpacing: -0.4,
+  },
+  modalBadge: {
+    backgroundColor: 'rgba(255, 214, 0, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.3)',
+  },
+  modalBadgeText: {
+    ...typography.labelTechnical,
+    fontSize: moderateScale(9),
+    color: colors.primaryContainer,
+  },
+  closeIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScroll: {
+    flexGrow: 0,
+  },
+  modalScrollContent: {
+    paddingHorizontal: spacing.marginMobile,
+    paddingTop: spacing.stackMd,
+    paddingBottom: spacing.stackLg,
+    gap: spacing.stackSm,
+  },
+  filterLabel: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(11),
+    letterSpacing: 0.8,
+    marginTop: spacing.stackSm,
+    marginBottom: 4,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.stackSm,
+    marginBottom: spacing.stackSm,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.stackMd,
+    height: 48,
+    gap: spacing.stackSm,
+    marginBottom: spacing.stackSm,
+  },
+  textInput: {
+    flex: 1,
+    ...typography.bodyMd,
+    color: colors.onSurface,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.stackMd,
+    paddingHorizontal: spacing.marginMobile,
+    paddingTop: spacing.stackMd,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(22, 24, 29, 0.98)',
+  },
   clearBtn: {
-    flex: 1, height: 48, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  clearBtnText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
+  clearBtnText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+  },
   applyBtn: {
-    flex: 1, height: 48, borderRadius: borderRadius.lg, backgroundColor: colors.primaryContainer,
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1.5,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  applyBtnText: { ...typography.labelTechnical, color: colors.onPrimaryContainer },
+  applyBtnText: {
+    ...typography.titleMd,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(13),
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
 });
