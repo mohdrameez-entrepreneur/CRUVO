@@ -27,7 +27,7 @@ cruvo-web/
 You can host this entire folder anywhere without needing any database or backend server:
 
 ### Option 1: GitHub Pages (Recommended - 100% Free)
-1. In your repository settings on GitHub (`mohdrameez-entrepreneur/Rider-App`), go to **Settings → Pages**.
+1. In your repository settings on GitHub (`mohdrameez-entrepreneur/CRUVO`), go to **Settings → Pages**.
 2. Set the source branch to `main` and folder to `/cruvo-web` (or deploy from a `gh-pages` branch).
 3. Your site will be live instantly with a direct APK download link!
 
