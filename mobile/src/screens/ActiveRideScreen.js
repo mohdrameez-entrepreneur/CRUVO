@@ -263,15 +263,6 @@ export default function ActiveRideScreen({ navigation, route }) {
         )}
       </View>
 
-      <View style={styles.sideControls}>
-        <TouchableOpacity style={styles.controlButton}
-          onPress={() => {
-            ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
-          }}>
-          <Ionicons name="refresh" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-      </View>
-
       <TouchableOpacity
         style={[styles.flagFab, myFlag && styles.flagFabActive]}
         onPress={handleFlagPress}
@@ -468,13 +459,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   endRideText: { ...typography.labelTechnical, color: colors.white },
-  sideControls: {
-    position: 'absolute', right: spacing.marginMobile, top: '50%', gap: spacing.stackSm,
-  },
-  controlButton: {
-    width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceContainer,
-    borderWidth: 1, borderColor: colors.outlineVariant, justifyContent: 'center', alignItems: 'center',
-  },
   flagFab: {
     position: 'absolute', bottom: 200, right: spacing.marginMobile,
     width: 64, height: 64, borderRadius: 32, backgroundColor: colors.error,
