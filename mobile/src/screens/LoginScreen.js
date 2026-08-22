@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import AlertCard from '../components/AlertCard';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -84,10 +85,13 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.subtitle}>Sign in to continue riding</Text>
 
         {errors.general && (
-          <View style={styles.generalError}>
-            <Ionicons name="alert-circle" size={18} color="#e53935" />
-            <Text style={styles.generalErrorText}>{errors.general}</Text>
-          </View>
+          <AlertCard
+            type="error"
+            title="Sign In Failed"
+            message={errors.general}
+            onDismiss={() => setErrors(prev => ({ ...prev, general: null }))}
+            style={{ marginBottom: spacing.stackMd }}
+          />
         )}
 
         <View ref={usernameRef} style={styles.inputGroup}>

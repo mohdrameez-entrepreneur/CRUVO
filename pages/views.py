@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -34,9 +35,15 @@ def login_view(request):
     form = LoginForm(request.POST or None)
     error = None
     if request.method == 'POST' and form.is_valid():
-        email = form.cleaned_data['email']
+        email_or_username = form.cleaned_data['email'].strip()
         password = form.cleaned_data['password']
-        user = authenticate(request, username=email, password=password)
+
+        user = authenticate(request, username=email_or_username, password=password)
+        if user is None:
+            matched_user = User.objects.filter(email__iexact=email_or_username).first()
+            if matched_user:
+                user = authenticate(request, username=matched_user.username, password=password)
+
         if user is not None:
             login(request, user)
             return redirect('pages:dashboard')

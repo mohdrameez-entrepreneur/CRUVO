@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { ridesAPI } from '../api';
 import LocationPicker from '../components/LocationPicker';
+import AlertCard from '../components/AlertCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function formatDate(d) {
@@ -23,6 +24,7 @@ export default function CreateRideScreen({ navigation }) {
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState(new Date());
@@ -30,11 +32,15 @@ export default function CreateRideScreen({ navigation }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const update = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    if (errorMessage) setErrorMessage(null);
+  };
 
   const handleCreate = async () => {
+    setErrorMessage(null);
     if (!form.name || !origin || !destination) {
-      Alert.alert('Error', 'Please fill in all fields and select locations');
+      setErrorMessage('Please provide a ride designation and select both origin and destination.');
       return;
     }
 
@@ -105,9 +111,9 @@ export default function CreateRideScreen({ navigation }) {
       const msg = err.response?.data;
       if (msg && typeof msg === 'object') {
         const firstError = Object.values(msg)[0];
-        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : String(firstError));
+        setErrorMessage(Array.isArray(firstError) ? firstError[0] : String(firstError));
       } else {
-        Alert.alert('Error', 'Failed to create ride');
+        setErrorMessage('Failed to create ride. Please check your connection and try again.');
       }
     } finally {
       setLoading(false);
@@ -145,6 +151,16 @@ export default function CreateRideScreen({ navigation }) {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.title}>Create a Ride</Text>
         <Text style={styles.subtitle}>Plan your route and invite riders</Text>
+
+        {errorMessage ? (
+          <AlertCard
+            type="error"
+            title="Unable to Create Ride"
+            message={errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+            style={{ marginBottom: spacing.stackMd }}
+          />
+        ) : null}
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>RIDE DESIGNATION</Text>

@@ -6,6 +6,7 @@ import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
+import AlertCard from '../components/AlertCard';
 import useRideLobby from '../hooks/useRideLobby';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +23,7 @@ export default function RideSummaryScreen({ navigation, route }) {
   const [togglingReady, setTogglingReady] = useState(false);
   const [starting, setStarting] = useState(false);
   const [fetchingRoute, setFetchingRoute] = useState(false);
+  const [errorBanner, setErrorBanner] = useState(null);
 
   const onReadyUpdate = useCallback((data) => {
     setRide(prev => {
@@ -104,7 +106,7 @@ export default function RideSummaryScreen({ navigation, route }) {
         return { ...prev, participants: updatedParticipants };
       });
     } catch (err) {
-      Alert.alert('Error', 'Failed to update ready status');
+      setErrorBanner('Failed to update ready status. Please check your connection.');
     } finally {
       setTogglingReady(false);
     }
@@ -112,13 +114,14 @@ export default function RideSummaryScreen({ navigation, route }) {
 
   const handleStartRide = async () => {
     setStarting(true);
+    setErrorBanner(null);
     try {
       const res = await ridesAPI.startRide(rideId);
       setRide(res.data);
       navigation.navigate('ActiveRide', { rideId });
     } catch (err) {
-      const msg = err.response?.data?.error || 'Failed to start ride';
-      Alert.alert('Error', msg);
+      const msg = err.response?.data?.error || 'Failed to start ride. Make sure all riders are ready.';
+      setErrorBanner(msg);
     } finally {
       setStarting(false);
     }
@@ -195,6 +198,15 @@ export default function RideSummaryScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {errorBanner && (
+          <AlertCard
+            type="error"
+            title="Action Failed"
+            message={errorBanner}
+            onDismiss={() => setErrorBanner(null)}
+            style={{ marginBottom: spacing.stackMd }}
+          />
+        )}
         <View style={styles.header}>
           <Ionicons name={ride.status === 'COMPLETED' ? 'checkmark-circle' : 'bicycle'} size={48} color={colors.primaryContainer} />
           <Text style={styles.headerTitle}>{ride.name}</Text>

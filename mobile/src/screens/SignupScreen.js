@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import AlertCard from '../components/AlertCard';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
@@ -129,10 +130,13 @@ export default function SignupScreen({ navigation }) {
         <Text style={styles.subtitle}>Join the ride community</Text>
 
         {errors.general && (
-          <View style={styles.generalError}>
-            <Ionicons name="alert-circle" size={18} color="#e53935" />
-            <Text style={styles.generalErrorText}>{errors.general}</Text>
-          </View>
+          <AlertCard
+            type="error"
+            title="Registration Failed"
+            message={errors.general}
+            onDismiss={() => setErrors(prev => ({ ...prev, general: null }))}
+            style={{ marginBottom: spacing.stackMd }}
+          />
         )}
 
         {FIELDS.map(f => renderInput(f))}

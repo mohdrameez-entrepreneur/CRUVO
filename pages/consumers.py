@@ -48,24 +48,48 @@ class RideConsumer(AsyncWebsocketConsumer):
                 pass
 
     async def receive(self, text_data):
-        data = json.loads(text_data)
+        try:
+            data = json.loads(text_data)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return
+
+        if not isinstance(data, dict):
+            return
+
         msg_type = data.get('type')
 
         if msg_type == 'position':
-            pos = await self.save_position(
-                data['lat'], data['lng'],
-                data.get('heading', 0), data.get('speed', 0)
-            )
+            try:
+                lat = float(data.get('lat'))
+                lng = float(data.get('lng'))
+                heading = float(data.get('heading', 0))
+                speed = float(data.get('speed', 0))
+            except (ValueError, TypeError):
+                return
+
+            if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+                return
+
+            pos = await self.save_position(lat, lng, heading, speed)
             await self.channel_layer.group_send(self.group_name, {
                 'type': 'position_update',
                 'position': pos,
             })
 
         elif msg_type == 'flag':
-            flag = await self.create_flag(
-                data['stop_type'], data['lat'], data['lng'],
-                data.get('location_name', '')
-            )
+            try:
+                lat = float(data.get('lat'))
+                lng = float(data.get('lng'))
+            except (ValueError, TypeError):
+                return
+
+            if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+                return
+
+            stop_type = str(data.get('stop_type', 'GENERAL'))
+            location_name = str(data.get('location_name', ''))[:100]
+
+            flag = await self.create_flag(stop_type, lat, lng, location_name)
             if flag:
                 await self.channel_layer.group_send(self.group_name, {
                     'type': 'flag_update',
@@ -76,10 +100,10 @@ class RideConsumer(AsyncWebsocketConsumer):
                     'type': 'flag_notification',
                     'user_id': self.user.id,
                     'user_name': user_name,
-                    'stop_type': data['stop_type'],
-                    'location_name': data.get('location_name', ''),
-                    'lat': data['lat'],
-                    'lng': data['lng'],
+                    'stop_type': stop_type,
+                    'location_name': location_name,
+                    'lat': lat,
+                    'lng': lng,
                 })
 
         elif msg_type == 'clear_flag':
@@ -158,7 +182,7 @@ class RideConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def check_participant(self):
-        return RideParticipant.objects.filter(
+        return Ride.objects.filter(id=self.ride_id, creator=self.user).exists() or RideParticipant.objects.filter(
             ride_id=self.ride_id,
             user=self.user,
             status='ACCEPTED',

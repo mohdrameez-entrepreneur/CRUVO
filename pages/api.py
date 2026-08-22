@@ -35,11 +35,15 @@ def register_view(request):
 def login_view(request):
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        user = authenticate(
-            request,
-            username=serializer.validated_data['username'],
-            password=serializer.validated_data['password'],
-        )
+        login_identifier = serializer.validated_data['username'].strip()
+        password = serializer.validated_data['password']
+
+        user = authenticate(request, username=login_identifier, password=password)
+        if not user:
+            matched_user = User.objects.filter(email__iexact=login_identifier).first()
+            if matched_user:
+                user = authenticate(request, username=matched_user.username, password=password)
+
         if user:
             token, _ = Token.objects.get_or_create(user=user)
             return Response({
@@ -136,6 +140,8 @@ def ride_detail_view(request, ride_id):
         return Response(RideSerializer(ride, context={'request': request}).data)
 
     if request.method == 'PATCH':
+        if ride.creator != request.user:
+            return Response({'error': 'Only the ride creator can edit this ride'}, status=status.HTTP_403_FORBIDDEN)
         new_status = request.data.get('status')
         old_status = ride.status
         serializer = RideCreateSerializer(ride, data=request.data, partial=True)
@@ -172,8 +178,13 @@ def ride_participants_view(request, ride_id):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
+        if not ride.is_public and ride.creator != request.user and not ride.participants.filter(user=request.user).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
         participants = ride.participants.select_related('user__profile').all()
         return Response(RideParticipantSerializer(participants, many=True).data)
+
+    if ride.creator != request.user:
+        return Response({'error': 'Only the ride creator can invite or manage participants'}, status=status.HTTP_403_FORBIDDEN)
 
     user_id = request.data.get('user_id')
     role = request.data.get('role', 'WINGMAN')
@@ -276,6 +287,10 @@ def flag_stops_view(request, ride_id):
         ride = Ride.objects.get(id=ride_id)
     except Ride.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+    is_participant = ride.creator == request.user or ride.participants.filter(user=request.user, status='ACCEPTED').exists()
+    if not is_participant:
+        return Response({'error': 'Only accepted participants can view or add flag stops'}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
         stops = ride.flag_stops.select_related('flagged_by__profile').all()
@@ -447,6 +462,9 @@ def get_positions_view(request, ride_id):
     except Ride.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+    if not ride.is_public and ride.creator != request.user and not ride.participants.filter(user=request.user, status='ACCEPTED').exists():
+        return Response({'error': 'Not authorized to view positions on this private ride'}, status=status.HTTP_403_FORBIDDEN)
+
     positions = RidePosition.objects.filter(ride=ride).select_related('user__profile')
     return Response(RidePositionSerializer(positions, many=True).data)
 
@@ -458,13 +476,16 @@ def fetch_route_view(request, ride_id):
     except Ride.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
+    if ride.creator != request.user and not ride.participants.filter(user=request.user, status='ACCEPTED').exists():
+        return Response({'error': 'Not authorized to fetch route for this ride'}, status=status.HTTP_403_FORBIDDEN)
+
     if not ride.origin_lat or not ride.destination_lat:
         return Response({'error': 'Origin and destination coordinates required'}, status=status.HTTP_400_BAD_REQUEST)
 
     import urllib.request, json
     from django.conf import settings
 
-    api_key = getattr(settings, 'TOMTOM_API_KEY', '54S1S2VigjyRLWIZiK8XRI8OsPPz30Sd')
+    api_key = getattr(settings, 'TOMTOM_API_KEY', '') or os.environ.get('TOMTOM_API_KEY', '54S1S2VigjyRLWIZiK8XRI8OsPPz30Sd')
     url = (
         f'https://api.tomtom.com/routing/1/calculateRoute/'
         f'{ride.origin_lat},{ride.origin_lng}:{ride.destination_lat},{ride.destination_lng}'

@@ -70,6 +70,12 @@ class RegisterSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({'password2': 'Passwords do not match.'})
+        from django.contrib.auth.password_validation import validate_password
+        try:
+            validate_password(attrs['password'])
+        except Exception as e:
+            messages = list(e.messages) if hasattr(e, 'messages') else [str(e)]
+            raise serializers.ValidationError({'password': messages})
         return attrs
 
     def create(self, validated_data):

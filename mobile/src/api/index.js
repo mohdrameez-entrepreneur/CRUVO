@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE = 'https://cruvo.onrender.com/api';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://cruvo.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE,

@@ -4,10 +4,10 @@
     "slug": "cruvo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/CRUVO LOGO.jpg",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/CRUVO LOGO.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#121317"
     },
@@ -25,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/CRUVO LOGO.jpg",
         "backgroundColor": "#121317"
       },
       "package": "com.cruvo.app",
