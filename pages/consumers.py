@@ -100,6 +100,14 @@ class RideConsumer(AsyncWebsocketConsumer):
             'ride_id': event['ride_id'],
         }))
 
+    async def ride_ended(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'ride_ended',
+            'ride_id': event['ride_id'],
+            'ended_by': event['ended_by'],
+            'ended_by_name': event['ended_by_name'],
+        }))
+
     async def position_update(self, event):
         await self.send(text_data=json.dumps({
             'type': 'position',

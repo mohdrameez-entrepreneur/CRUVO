@@ -48,6 +48,7 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [allFlags, setAllFlags] = useState([]);
   const [clearingFlag, setClearingFlag] = useState(false);
   const [flagNotification, setFlagNotification] = useState(null);
+  const [rideEndedBy, setRideEndedBy] = useState(null);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
   const fallbackInterval = useRef(null);
@@ -104,11 +105,21 @@ export default function ActiveRideScreen({ navigation, route }) {
     setTimeout(() => setFlagNotification(null), 4000);
   }, [user?.id]);
 
+  const handleRideEnded = useCallback((data) => {
+    if (data.ended_by === user?.id) return;
+    stopWatching();
+    clearInterval(fallbackInterval.current);
+    clearInterval(timerInterval.current);
+    setRideEndedBy(data.ended_by_name);
+    setRideFinished(true);
+  }, [user?.id]);
+
   const { connected, sendPosition, sendFlag, sendClearFlag } = useRideSocket(rideId, {
     onPositionsUpdate: handlePositionsUpdate,
     onFlag: handleFlag,
     onFlagCleared: handleFlagCleared,
     onFlagNotification: handleFlagNotification,
+    onRideEnded: handleRideEnded,
   });
 
   wsConnected.current = connected;
@@ -486,7 +497,9 @@ export default function ActiveRideScreen({ navigation, route }) {
             <View style={styles.completeIcon}>
               <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
             </View>
-            <Text style={styles.completeTitle}>Ride Complete!</Text>
+            <Text style={styles.completeTitle}>
+              {rideEndedBy ? `${rideEndedBy} ended the ride` : 'Ride Complete!'}
+            </Text>
             <Text style={styles.completeRideName}>{ride?.name}</Text>
 
             <View style={styles.completeStats}>

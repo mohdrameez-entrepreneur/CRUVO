@@ -136,9 +136,24 @@ def ride_detail_view(request, ride_id):
         return Response(RideSerializer(ride, context={'request': request}).data)
 
     if request.method == 'PATCH':
+        new_status = request.data.get('status')
+        old_status = ride.status
         serializer = RideCreateSerializer(ride, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            if new_status == 'COMPLETED' and old_status != 'COMPLETED':
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f'ride_{ride_id}',
+                    {
+                        'type': 'ride_ended',
+                        'ride_id': ride_id,
+                        'ended_by': request.user.id,
+                        'ended_by_name': request.user.profile.display_name,
+                    }
+                )
             return Response(RideSerializer(ride, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
