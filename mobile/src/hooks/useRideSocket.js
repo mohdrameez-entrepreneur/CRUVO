@@ -5,6 +5,7 @@ import { WS_BASE } from '../config';
 export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFlagCleared }) {
   const ws = useRef(null);
   const reconnectTimer = useRef(null);
+  const reconnectDelay = useRef(1000);
   const [connected, setConnected] = useState(false);
   const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared });
 
@@ -21,6 +22,7 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
 
     socket.onopen = () => {
       setConnected(true);
+      reconnectDelay.current = 1000;
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
         reconnectTimer.current = null;
@@ -52,7 +54,10 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
     socket.onclose = () => {
       setConnected(false);
       ws.current = null;
-      reconnectTimer.current = setTimeout(() => connect(), 3000);
+      reconnectTimer.current = setTimeout(() => {
+        reconnectDelay.current = Math.min(reconnectDelay.current * 1.5, 10000);
+        connect();
+      }, reconnectDelay.current);
     };
 
     socket.onerror = () => {

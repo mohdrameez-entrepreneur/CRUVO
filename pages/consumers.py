@@ -1,4 +1,5 @@
 import json
+from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import User
@@ -13,9 +14,11 @@ class RideConsumer(AsyncWebsocketConsumer):
         self.user = self.scope.get('user')
 
         if not self.user or self.user.is_anonymous:
-            token_key = self.scope.get('query_string', b'').decode()
-            token_key = token_key.replace('token=', '')
-            self.user = await self.get_user_from_token(token_key)
+            raw_qs = self.scope.get('query_string', b'').decode()
+            params = parse_qs(raw_qs)
+            token_key = params.get('token', [None])[0]
+            if token_key:
+                self.user = await self.get_user_from_token(token_key)
 
         if not self.user or self.user.is_anonymous:
             await self.close()

@@ -49,9 +49,26 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [clearingFlag, setClearingFlag] = useState(false);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
-  const timerInterval = useRef(null);
   const fallbackInterval = useRef(null);
+  const timerInterval = useRef(null);
   const wsConnected = useRef(false);
+  const currentSpeed = useRef(0);
+
+  const getPollingInterval = (speedMs) => {
+    const speedKmh = (speedMs || 0) * 3.6;
+    if (speedKmh < 1) return 10000;
+    if (speedKmh < 30) return 5000;
+    return 3000;
+  };
+
+  const startFallbackPolling = (interval) => {
+    clearInterval(fallbackInterval.current);
+    fallbackInterval.current = setInterval(() => {
+      if (!wsConnected.current) {
+        ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
+      }
+    }, interval);
+  };
 
   const handlePositionsUpdate = useCallback((data) => {
     if (typeof data === 'function') {
@@ -121,6 +138,9 @@ export default function ActiveRideScreen({ navigation, route }) {
     requestPermission().then(granted => {
       if (granted) {
         startWatching((coords) => {
+          const prevSpeed = currentSpeed.current;
+          currentSpeed.current = coords.speed || 0;
+
           if (wsConnected.current) {
             sendPosition(coords.latitude, coords.longitude, coords.heading || 0, coords.speed || 0);
           } else {
@@ -131,15 +151,17 @@ export default function ActiveRideScreen({ navigation, route }) {
               speed: coords.speed || 0,
             }).catch(() => {});
           }
+
+          const speedDelta = Math.abs(coords.speed - prevSpeed);
+          if (!wsConnected.current && speedDelta > 2) {
+            const newInterval = getPollingInterval(coords.speed);
+            startFallbackPolling(newInterval);
+          }
         });
       }
     });
 
-    fallbackInterval.current = setInterval(() => {
-      if (!wsConnected.current) {
-        ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
-      }
-    }, 5000);
+    startFallbackPolling(getPollingInterval(0));
 
     timerInterval.current = setInterval(() => setElapsed(prev => prev + 1), 1000);
 
