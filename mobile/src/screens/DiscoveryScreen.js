@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { discoveryAPI } from '../api';
 import UserAvatar from '../components/UserAvatar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
@@ -114,6 +115,7 @@ function RiderCard({ rider }) {
 }
 
 export default function DiscoveryScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -152,7 +154,7 @@ export default function DiscoveryScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton}>
           <Ionicons name="menu" size={24} color={colors.primary} />
         </TouchableOpacity>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts, HankenGrotesk_400Regular, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold, HankenGrotesk_800ExtraBold } from '@expo-google-fonts/hanken-grotesk';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
@@ -8,8 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/theme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 function WarmupToast() {
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(true);
   const opacity = useState(new Animated.Value(0))[0];
 
@@ -24,7 +27,7 @@ function WarmupToast() {
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.toast, { opacity }]}>
+    <Animated.View style={[styles.toast, { opacity, top: insets.top + 12 }]}>
       <View style={styles.toastIcon}>
         <Ionicons name="cloud-upload-outline" size={18} color={colors.primaryContainer} />
       </View>
@@ -50,17 +53,19 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <AuthProvider>
-      <StatusBar style="light" backgroundColor={colors.background} />
-      <AppNavigator />
-      <WarmupToast />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="light" backgroundColor={colors.background} />
+        <AppNavigator />
+        <WarmupToast />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   toast: {
-    position: 'absolute', top: 60, left: 16, right: 16,
+    position: 'absolute', left: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: 'rgba(30,31,35,0.95)', borderWidth: 1, borderColor: 'rgba(255,214,0,0.3)',
     borderRadius: 12, padding: 14,

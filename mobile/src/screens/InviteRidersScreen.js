@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { discoveryAPI, ridesAPI } from '../api';
 import UserAvatar from '../components/UserAvatar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function RiderCard({ rider, onToggle, isInvited }) {
   const p = rider.profile;
@@ -36,6 +37,7 @@ function RiderCard({ rider, onToggle, isInvited }) {
 }
 
 export default function InviteRidersScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { rideId, rideName, startOnDone } = route.params || {};
   const [riders, setRiders] = useState([]);
   const [invitedIds, setInvitedIds] = useState(new Set());
@@ -109,7 +111,7 @@ export default function InviteRidersScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>

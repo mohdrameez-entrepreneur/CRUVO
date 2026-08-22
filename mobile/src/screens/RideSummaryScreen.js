@@ -7,12 +7,14 @@ import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
 import useRideLobby from '../hooks/useRideLobby';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
 const ROLE_LABELS = { CREATOR: 'Lead Navigator', LEAD: 'Lead Navigator', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
 
 export default function RideSummaryScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { rideId } = route.params || {};
   const { user } = useAuth();
   const [ride, setRide] = useState(null);
@@ -127,7 +129,7 @@ export default function RideSummaryScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: insets.top }]}>
           <View style={styles.topBarButton} />
           <Text style={styles.topBarTitle}>CRUVO</Text>
           <View style={styles.topBarButton} />
@@ -143,7 +145,7 @@ export default function RideSummaryScreen({ navigation, route }) {
   if (!ride) {
     return (
       <View style={styles.container}>
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: insets.top }]}>
           <View style={styles.topBarButton} />
           <Text style={styles.topBarTitle}>CRUVO</Text>
           <View style={styles.topBarButton} />
@@ -184,7 +186,7 @@ export default function RideSummaryScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.primaryContainer} />
         </TouchableOpacity>

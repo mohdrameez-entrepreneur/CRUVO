@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MapScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [activeRide, setActiveRide] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +31,7 @@ export default function MapScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: insets.top }]}>
           <Text style={styles.topBarTitle}>CRUVO</Text>
         </View>
         <View style={styles.centerContent}>
@@ -47,7 +49,7 @@ export default function MapScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <Text style={styles.topBarTitle}>CRUVO</Text>
       </View>
       <View style={styles.centerContent}>

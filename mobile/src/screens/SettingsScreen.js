@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } fr
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InfoRow({ icon, label, value }) {
   return (
@@ -17,6 +18,7 @@ function InfoRow({ icon, label, value }) {
 }
 
 export default function SettingsScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { profile, user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -30,7 +32,7 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI, invitationsAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InvitationCard({ invitation, onAccept, onDecline, loading }) {
   const dateStr = new Date(invitation.ride_date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -130,6 +131,7 @@ function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
 }
 
 export default function RidesListScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [rides, setRides] = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -236,7 +238,7 @@ export default function RidesListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <View style={styles.topBarButton} />
         <Text style={styles.topBarTitle}>RIDES</Text>
         <TouchableOpacity

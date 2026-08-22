@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { ridesAPI } from '../api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function getGreeting(hour) {
   if (hour < 12) return 'Good morning';
@@ -63,6 +64,7 @@ function RideCard({ ride }) {
 }
 
 export default function DashboardScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [rides, setRides] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,7 +89,7 @@ export default function DashboardScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.navigate('Settings')}>
           <Ionicons name="person-circle-outline" size={26} color={colors.primary} />
         </TouchableOpacity>

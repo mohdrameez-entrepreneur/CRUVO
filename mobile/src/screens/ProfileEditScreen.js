@@ -5,11 +5,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { profileAPI } from '../api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
 
 export default function ProfileEditScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { profile, user, refreshProfile } = useAuth();
   const [form, setForm] = useState({
     display_name: '', bio: '', bike_make: '', bike_model: '',
@@ -190,7 +192,7 @@ export default function ProfileEditScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color={colors.onSurface} />
         </TouchableOpacity>

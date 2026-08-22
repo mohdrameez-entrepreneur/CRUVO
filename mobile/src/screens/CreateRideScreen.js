@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
 import LocationPicker from '../components/LocationPicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function formatDate(d) {
   return d.toISOString().split('T')[0];
@@ -15,6 +16,7 @@ function formatTime(d) {
 }
 
 export default function CreateRideScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
     name: '', is_public: false,
   });
@@ -132,7 +134,7 @@ export default function CreateRideScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
