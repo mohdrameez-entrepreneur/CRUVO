@@ -44,6 +44,7 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [flagType, setFlagType] = useState('FUEL');
   const [flagging, setFlagging] = useState(false);
   const [myFlag, setMyFlag] = useState(null);
+  const [allFlags, setAllFlags] = useState([]);
   const [clearingFlag, setClearingFlag] = useState(false);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
@@ -60,7 +61,9 @@ export default function ActiveRideScreen({ navigation, route }) {
       ]);
       setRide(rideRes.data);
       setPositions(posRes.data);
-      const mine = (flagsRes.data || []).find(f => f.flagged_by === user?.id && !f.resolved_at);
+      const flags = (flagsRes.data || []).filter(f => !f.resolved_at);
+      setAllFlags(flags);
+      const mine = flags.find(f => f.flagged_by === user?.id);
       setMyFlag(mine || null);
     } catch {}
   };
@@ -293,22 +296,36 @@ export default function ActiveRideScreen({ navigation, route }) {
           {participants.map((rider, i) => {
             const pos = positions.find(p => p.user === rider.user);
             const isRiderCreator = rider.user === ride.creator;
+            const riderFlag = allFlags.find(f => f.flagged_by === rider.user);
             return (
-              <View key={rider.id || i} style={styles.riderRow}>
-                <UserAvatar
-                  avatarUrl={rider.avatar_url}
-                  name={rider.display_name}
-                  initials={rider.initials}
-                  id={rider.user}
-                  size={40}
-                  style={isRiderCreator ? { borderWidth: 2, borderColor: colors.primaryContainer } : null}
-                />
+              <View key={rider.id || i} style={[styles.riderRow, riderFlag && styles.riderRowFlagged]}>
+                <View style={styles.avatarWrap}>
+                  <UserAvatar
+                    avatarUrl={rider.avatar_url}
+                    name={rider.display_name}
+                    initials={rider.initials}
+                    id={rider.user}
+                    size={40}
+                    style={isRiderCreator ? { borderWidth: 2, borderColor: colors.primaryContainer } : null}
+                  />
+                  {riderFlag && (
+                    <View style={styles.flagBadge}>
+                      <Ionicons name={FLAG_ICONS[riderFlag.stop_type] || 'flag'} size={12} color={colors.white} />
+                    </View>
+                  )}
+                </View>
                 <View style={styles.riderInfo}>
                   <Text style={styles.riderName}>
                     {rider.display_name} {isRiderCreator && <Text style={styles.youBadge}>Leader</Text>}
                     {!isRiderCreator && rider.user === user?.id && <Text style={styles.youBadge}>(You)</Text>}
                   </Text>
                   <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
+                  {riderFlag && (
+                    <View style={styles.flagTag}>
+                      <Ionicons name={FLAG_ICONS[riderFlag.stop_type] || 'flag'} size={12} color="#e53935" />
+                      <Text style={styles.flagTagText}>{riderFlag.stop_type}</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={styles.riderStatus}>
                   {pos ? (
@@ -490,6 +507,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.stackSm,
     borderBottomWidth: 1, borderBottomColor: colors.outlineVariant, gap: spacing.stackMd,
   },
+  riderRowFlagged: {
+    backgroundColor: 'rgba(229,57,53,0.08)', borderLeftWidth: 3, borderLeftColor: '#e53935',
+    paddingLeft: spacing.stackSm,
+  },
+  avatarWrap: { position: 'relative' },
+  flagBadge: {
+    position: 'absolute', bottom: -2, right: -2,
+    width: 20, height: 20, borderRadius: 10, backgroundColor: '#e53935',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: colors.surfaceContainerLowest,
+  },
   riderAvatar: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
@@ -500,6 +528,11 @@ const styles = StyleSheet.create({
   riderName: { ...typography.bodyMd, color: colors.onSurface },
   youBadge: { ...typography.labelSm, color: colors.primaryContainer },
   riderRole: { ...typography.labelSm, color: colors.onSurfaceVariant },
+  flagTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4,
+    backgroundColor: 'rgba(229,57,53,0.15)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start',
+  },
+  flagTagText: { ...typography.labelSm, color: '#e53935', fontSize: 10, textTransform: 'uppercase' },
   riderStatus: { alignItems: 'flex-end' },
   liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' },

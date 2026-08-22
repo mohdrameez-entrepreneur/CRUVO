@@ -108,7 +108,7 @@ def rides_view(request):
             participants__user=request.user,
             participants__status='ACCEPTED',
         ).order_by('-date', '-time')[:50]
-        return Response(RideSerializer(rides, many=True).data)
+        return Response(RideSerializer(rides, many=True, context={'request': request}).data)
 
     serializer = RideCreateSerializer(data=request.data)
     if serializer.is_valid():
@@ -116,7 +116,7 @@ def rides_view(request):
         RideParticipant.objects.create(
             ride=ride, user=request.user, role='CREATOR', status='ACCEPTED',
         )
-        return Response(RideSerializer(ride).data, status=status.HTTP_201_CREATED)
+        return Response(RideSerializer(ride, context={'request': request}).data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -133,13 +133,13 @@ def ride_detail_view(request, ride_id):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        return Response(RideSerializer(ride).data)
+        return Response(RideSerializer(ride, context={'request': request}).data)
 
     if request.method == 'PATCH':
         serializer = RideCreateSerializer(ride, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(RideSerializer(ride).data)
+            return Response(RideSerializer(ride, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     if ride.creator != request.user:
@@ -226,7 +226,7 @@ def start_ride_view(request, ride_id):
 
     ride.status = 'ACTIVE'
     ride.save()
-    return Response(RideSerializer(ride).data)
+    return Response(RideSerializer(ride, context={'request': request}).data)
 
 
 @api_view(['GET', 'POST'])
@@ -262,8 +262,8 @@ def ride_summary_view(request, ride_id):
     participants = ride.participants.select_related('user__profile').all()
     flag_stops = ride.flag_stops.all()
     return Response({
-        'ride': RideSerializer(ride).data,
-        'participants': RideParticipantSerializer(participants, many=True).data,
+        'ride': RideSerializer(ride, context={'request': request}).data,
+        'participants': RideParticipantSerializer(participants, many=True, context={'request': request}).data,
         'flag_stops': FlagStopSerializer(flag_stops, many=True).data,
         'stats': {
             'duration': None,
