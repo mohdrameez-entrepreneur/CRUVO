@@ -72,8 +72,12 @@ yarn-error.log*
 .expo/
 .expo-shared/
 .metro-health-check*
-android/
-ios/
+# Generated / Binaries
+*.apk
+*.aab
 
 # Documentation
 CODEBASE_EXPLAINER.md
+PRODUCTION_PLAN.md
+DESIGN.md
+CRUVO_ARCHITECTURE.md
