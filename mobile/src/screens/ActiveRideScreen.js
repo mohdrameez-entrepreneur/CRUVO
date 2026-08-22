@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
 import useLocation from '../hooks/useLocation';
+import useRideSocket from '../hooks/useRideSocket';
 
 const { width, height } = Dimensions.get('window');
 const ROLE_LABELS = { CREATOR: 'Lead', LEAD: 'Lead', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
@@ -48,19 +49,50 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [clearingFlag, setClearingFlag] = useState(false);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
-  const posInterval = useRef(null);
   const timerInterval = useRef(null);
+  const fallbackInterval = useRef(null);
+  const wsConnected = useRef(false);
+
+  const handlePositionsUpdate = useCallback((data) => {
+    if (typeof data === 'function') {
+      setPositions(data);
+    } else {
+      setPositions(data);
+    }
+  }, []);
+
+  const handleFlag = useCallback((flag) => {
+    setAllFlags(prev => {
+      const exists = prev.find(f => f.id === flag.id);
+      if (exists) return prev;
+      const enriched = { ...flag, flagged_by: flag.user };
+      const next = [...prev, enriched];
+      if (flag.user === user?.id) setMyFlag(enriched);
+      return next;
+    });
+  }, [user?.id]);
+
+  const handleFlagCleared = useCallback((userId) => {
+    setAllFlags(prev => prev.filter(f => f.user !== userId));
+    if (userId === user?.id) setMyFlag(null);
+  }, [user?.id]);
+
+  const { connected, sendPosition, sendFlag, sendClearFlag } = useRideSocket(rideId, {
+    onPositionsUpdate: handlePositionsUpdate,
+    onFlag: handleFlag,
+    onFlagCleared: handleFlagCleared,
+  });
+
+  wsConnected.current = connected;
 
   const loadRideAndFlags = async () => {
     if (!rideId) return;
     try {
-      const [rideRes, posRes, flagsRes] = await Promise.all([
+      const [rideRes, flagsRes] = await Promise.all([
         ridesAPI.get(rideId),
-        ridesAPI.getPositions(rideId).catch(() => ({ data: [] })),
         ridesAPI.getFlagStops(rideId).catch(() => ({ data: [] })),
       ]);
       setRide(rideRes.data);
-      setPositions(posRes.data);
       const flags = (flagsRes.data || []).filter(f => !f.resolved_at);
       setAllFlags(flags);
       const mine = flags.find(f => f.flagged_by === user?.id);
@@ -89,25 +121,31 @@ export default function ActiveRideScreen({ navigation, route }) {
     requestPermission().then(granted => {
       if (granted) {
         startWatching((coords) => {
-          ridesAPI.updatePosition(rideId, {
-            lat: coords.latitude,
-            lng: coords.longitude,
-            heading: coords.heading || 0,
-            speed: coords.speed || 0,
-          }).catch(() => {});
+          if (wsConnected.current) {
+            sendPosition(coords.latitude, coords.longitude, coords.heading || 0, coords.speed || 0);
+          } else {
+            ridesAPI.updatePosition(rideId, {
+              lat: coords.latitude,
+              lng: coords.longitude,
+              heading: coords.heading || 0,
+              speed: coords.speed || 0,
+            }).catch(() => {});
+          }
         });
       }
     });
 
-    posInterval.current = setInterval(() => {
-      ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
-    }, 3000);
+    fallbackInterval.current = setInterval(() => {
+      if (!wsConnected.current) {
+        ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
+      }
+    }, 5000);
 
     timerInterval.current = setInterval(() => setElapsed(prev => prev + 1), 1000);
 
     return () => {
       stopWatching();
-      clearInterval(posInterval.current);
+      clearInterval(fallbackInterval.current);
       clearInterval(timerInterval.current);
     };
   }, [rideId]);
@@ -136,7 +174,7 @@ export default function ActiveRideScreen({ navigation, route }) {
     try {
       await ridesAPI.update(rideId, { status: 'COMPLETED' });
       stopWatching();
-      clearInterval(posInterval.current);
+      clearInterval(fallbackInterval.current);
       clearInterval(timerInterval.current);
       setRideFinished(true);
     } catch {}
@@ -176,16 +214,21 @@ export default function ActiveRideScreen({ navigation, route }) {
     }
     setFlagging(true);
     try {
-      await ridesAPI.createFlagStop(rideId, {
-        stop_type: flagType,
-        lat: location.latitude,
-        lng: location.longitude,
-        location_name: `${flagType} stop`,
-      });
-      setShowFlagModal(false);
-      const flagsRes = await ridesAPI.getFlagStops(rideId);
-      const mine = (flagsRes.data || []).find(f => f.flagged_by === user?.id && !f.resolved_at);
-      setMyFlag(mine || null);
+      if (connected) {
+        sendFlag(flagType, location.latitude, location.longitude, `${flagType} stop`);
+        setShowFlagModal(false);
+      } else {
+        await ridesAPI.createFlagStop(rideId, {
+          stop_type: flagType,
+          lat: location.latitude,
+          lng: location.longitude,
+          location_name: `${flagType} stop`,
+        });
+        setShowFlagModal(false);
+        const flagsRes = await ridesAPI.getFlagStops(rideId);
+        const mine = (flagsRes.data || []).find(f => f.flagged_by === user?.id && !f.resolved_at);
+        setMyFlag(mine || null);
+      }
     } catch {
       Alert.alert('Error', 'Failed to flag stop');
     } finally {
@@ -197,7 +240,11 @@ export default function ActiveRideScreen({ navigation, route }) {
     if (!myFlag) return;
     setClearingFlag(true);
     try {
-      await ridesAPI.update(rideId, {});
+      if (connected) {
+        sendClearFlag();
+      } else {
+        await ridesAPI.update(rideId, {});
+      }
       setMyFlag(null);
     } catch {
       Alert.alert('Error', 'Failed to clear flag');
@@ -254,6 +301,7 @@ export default function ActiveRideScreen({ navigation, route }) {
           <Text style={styles.headerTitle}>{ride.name}</Text>
           <Text style={styles.headerSubtitle}>
             {positions.length} RIDER{positions.length !== 1 ? 'S' : ''} LIVE · {formatTime(elapsed)}
+            {connected ? '' : ' · OFFLINE'}
           </Text>
         </View>
         {isCreator && (
@@ -334,7 +382,6 @@ export default function ActiveRideScreen({ navigation, route }) {
         </ScrollView>
       </View>
 
-      {/* Flag Stop Modal */}
       <Modal visible={showFlagModal} transparent animationType="fade" statusBarTranslucent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -387,7 +434,6 @@ export default function ActiveRideScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Ride Complete Modal */}
       <Modal visible={rideFinished} transparent animationType="fade" statusBarTranslucent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -460,9 +506,9 @@ const styles = StyleSheet.create({
   },
   endRideText: { ...typography.labelTechnical, color: colors.white },
   flagFab: {
-    position: 'absolute', bottom: 200, right: spacing.marginMobile,
+    position: 'absolute', bottom: 220, right: spacing.marginMobile,
     width: 64, height: 64, borderRadius: 32, backgroundColor: colors.error,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center', zIndex: 50,
     shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 8,
   },
   flagFabActive: {
