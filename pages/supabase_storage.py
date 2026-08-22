@@ -1,11 +1,14 @@
 import os
 import uuid
 import logging
+import threading
 import requests
 from django.core.files.storage import Storage
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+_bucket_lock = threading.Lock()
 
 
 class SupabaseStorage(Storage):
@@ -20,24 +23,27 @@ class SupabaseStorage(Storage):
     def _ensure_bucket(self, url, key, bucket):
         if self._bucket_created or not key:
             return
-        try:
-            resp = requests.post(
-                f'{url}/storage/v1/bucket',
-                headers={
-                    'Authorization': f'Bearer {key}',
-                    'Content-Type': 'application/json',
-                },
-                json={'id': bucket, 'name': bucket, 'public': True},
-                timeout=10,
-            )
-            if resp.status_code in (200, 201, 409):
-                self._bucket_created = True
-                if resp.status_code != 409:
-                    logger.info(f'Supabase bucket "{bucket}" created')
-            else:
-                logger.warning(f'Supabase bucket create: {resp.status_code} {resp.text}')
-        except Exception as e:
-            logger.warning(f'Supabase bucket create failed: {e}')
+        with _bucket_lock:
+            if self._bucket_created:
+                return
+            try:
+                resp = requests.post(
+                    f'{url}/storage/v1/bucket',
+                    headers={
+                        'Authorization': f'Bearer {key}',
+                        'Content-Type': 'application/json',
+                    },
+                    json={'id': bucket, 'name': bucket, 'public': True},
+                    timeout=10,
+                )
+                if resp.status_code in (200, 201, 409):
+                    SupabaseStorage._bucket_created = True
+                    if resp.status_code != 409:
+                        logger.info(f'Supabase bucket "{bucket}" created')
+                else:
+                    logger.warning(f'Supabase bucket create: {resp.status_code} {resp.text}')
+            except Exception as e:
+                logger.warning(f'Supabase bucket create failed: {e}')
 
     def save(self, name, content, max_length=None):
         url, key, bucket = self._get_config()
@@ -49,9 +55,10 @@ class SupabaseStorage(Storage):
             content.open()
             data = content.read()
             content.close()
+            content_type = getattr(content, 'content_type', None) or 'application/octet-stream'
             headers = {
                 'Authorization': f'Bearer {key}',
-                'Content-Type': getattr(content, 'content_type', 'application/octet-stream'),
+                'Content-Type': content_type,
                 'x-upsert': 'true',
             }
             try:
@@ -73,7 +80,9 @@ class SupabaseStorage(Storage):
         if not name:
             return ''
         url, key, bucket = self._get_config()
-        return f'{url}/storage/v1/object/public/{bucket}/{name}'
+        if url:
+            return f'{url}/storage/v1/object/public/{bucket}/{name}'
+        return f'{settings.MEDIA_URL}{name}'
 
     def exists(self, name):
         return False

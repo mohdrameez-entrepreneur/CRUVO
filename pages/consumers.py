@@ -166,7 +166,7 @@ class RideConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_position(self, lat, lng, heading, speed):
-        obj, _ = RidePosition.objects.update_or_create(
+        RidePosition.objects.update_or_create(
             ride_id=self.ride_id, user=self.user,
             defaults={'lat': lat, 'lng': lng, 'heading': heading, 'speed': speed},
         )
@@ -176,7 +176,7 @@ class RideConsumer(AsyncWebsocketConsumer):
             'lng': lng,
             'heading': heading,
             'speed': speed,
-            'initials': self.user.profile.initials(),
+            'initials': self._get_initials_sync(self.user),
         }
 
     @database_sync_to_async
@@ -191,12 +191,12 @@ class RideConsumer(AsyncWebsocketConsumer):
                 'lng': p.lng,
                 'heading': p.heading,
                 'speed': p.speed,
-                'initials': self._get_initials(p.user),
+                'initials': self._get_initials_sync(p.user),
             }
             for p in positions
         ]
 
-    def _get_initials(self, user):
+    def _get_initials_sync(self, user):
         try:
             return user.profile.initials()
         except Exception:
@@ -211,7 +211,10 @@ class RideConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def create_flag(self, stop_type, lat, lng, location_name):
-        ride = Ride.objects.get(id=self.ride_id)
+        try:
+            ride = Ride.objects.get(id=self.ride_id)
+        except Ride.DoesNotExist:
+            return None
         existing = FlagStop.objects.filter(
             ride=ride, flagged_by=self.user, resolved_at__isnull=True
         ).first()
