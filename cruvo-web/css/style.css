@@ -1025,6 +1025,7 @@ h1, h2, h3, h4, h5 {
 
 .footer-links {
   display: flex;
+  align-items: center;
   gap: 24px;
 }
 
@@ -1035,6 +1036,23 @@ h1, h2, h3, h4, h5 {
 }
 
 .footer-link:hover {
+  color: var(--primary);
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.social-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.social-link:hover .social-icon {
+  transform: translateY(-2px);
   color: var(--primary);
 }
 
