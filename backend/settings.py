@@ -163,7 +163,7 @@ STATICFILES_DIRS = [
 ]
 STORAGES = {
     'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'BACKEND': 'pages.supabase_storage.SupabaseStorage',
     },
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
@@ -174,6 +174,11 @@ STORAGES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 BASE_URL = os.environ.get('BASE_URL', 'https://cruvo.onrender.com')
+
+# Supabase Storage
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://gskjxtxmdidxyzavamby.supabase.co')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+SUPABASE_BUCKET = os.environ.get('SUPABASE_BUCKET', 'avatars')
 
 # Auth redirects
 LOGIN_URL = 'pages:login'
