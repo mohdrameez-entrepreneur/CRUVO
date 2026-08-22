@@ -200,6 +200,20 @@ def toggle_ready_view(request, ride_id):
     total_non_creator = non_creator.count()
     ready_count = non_creator.filter(is_ready=True).count()
 
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'ride_{ride_id}',
+        {
+            'type': 'ready_update',
+            'user_id': request.user.id,
+            'is_ready': participant.is_ready,
+            'ready_count': ready_count,
+            'total_riders': total_non_creator,
+        }
+    )
+
     return Response({
         'is_ready': participant.is_ready,
         'all_ready': all_ready,
@@ -226,6 +240,18 @@ def start_ride_view(request, ride_id):
 
     ride.status = 'ACTIVE'
     ride.save()
+
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'ride_{ride_id}',
+        {
+            'type': 'ride_started',
+            'ride_id': ride_id,
+        }
+    )
+
     return Response(RideSerializer(ride, context={'request': request}).data)
 
 

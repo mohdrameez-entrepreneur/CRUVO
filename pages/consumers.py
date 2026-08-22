@@ -75,6 +75,21 @@ class RideConsumer(AsyncWebsocketConsumer):
                     'user_id': self.user.id,
                 })
 
+    async def ready_update(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'ready_update',
+            'user_id': event['user_id'],
+            'is_ready': event['is_ready'],
+            'ready_count': event['ready_count'],
+            'total_riders': event['total_riders'],
+        }))
+
+    async def ride_started(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'ride_started',
+            'ride_id': event['ride_id'],
+        }))
+
     async def position_update(self, event):
         await self.send(text_data=json.dumps({
             'type': 'position',

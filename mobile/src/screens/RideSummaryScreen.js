@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
@@ -6,6 +6,7 @@ import { ridesAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
+import useRideLobby from '../hooks/useRideLobby';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +20,23 @@ export default function RideSummaryScreen({ navigation, route }) {
   const [togglingReady, setTogglingReady] = useState(false);
   const [starting, setStarting] = useState(false);
   const [fetchingRoute, setFetchingRoute] = useState(false);
+
+  const onReadyUpdate = useCallback((data) => {
+    setRide(prev => {
+      if (!prev) return prev;
+      const updatedParticipants = prev.participants.map(p =>
+        p.user === data.user_id ? { ...p, is_ready: data.is_ready } : p
+      );
+      return { ...prev, participants: updatedParticipants };
+    });
+  }, []);
+
+  const onRideStarted = useCallback((data) => {
+    console.log('[RideSummary] Ride started via WS, redirecting...');
+    navigation.replace('ActiveRide', { rideId: data.ride_id || rideId });
+  }, [navigation, rideId]);
+
+  useRideLobby(rideId, { onReadyUpdate, onRideStarted });
 
   const loadRide = async () => {
     if (!rideId) return;
