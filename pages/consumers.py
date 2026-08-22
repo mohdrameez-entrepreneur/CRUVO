@@ -11,6 +11,7 @@ class RideConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.ride_id = self.scope['url_route']['kwargs']['ride_id']
         self.group_name = f'ride_{self.ride_id}'
+        self._joined_group = False
         self.user = self.scope.get('user')
 
         if not self.user or self.user.is_anonymous:
@@ -21,15 +22,16 @@ class RideConsumer(AsyncWebsocketConsumer):
                 self.user = await self.get_user_from_token(token_key)
 
         if not self.user or self.user.is_anonymous:
-            await self.close()
+            await self.close(code=4001)
             return
 
         is_participant = await self.check_participant()
         if not is_participant:
-            await self.close()
+            await self.close(code=4003)
             return
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        self._joined_group = True
         await self.accept()
 
         positions = await self.get_all_positions()
@@ -39,8 +41,11 @@ class RideConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        if hasattr(self, 'group_name'):
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        if self._joined_group and hasattr(self, 'group_name'):
+            try:
+                await self.channel_layer.group_discard(self.group_name, self.channel_name)
+            except Exception:
+                pass
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -171,6 +176,7 @@ class RideConsumer(AsyncWebsocketConsumer):
             'lng': lng,
             'heading': heading,
             'speed': speed,
+            'initials': self.user.profile.initials(),
         }
 
     @database_sync_to_async
@@ -185,9 +191,16 @@ class RideConsumer(AsyncWebsocketConsumer):
                 'lng': p.lng,
                 'heading': p.heading,
                 'speed': p.speed,
+                'initials': self._get_initials(p.user),
             }
             for p in positions
         ]
+
+    def _get_initials(self, user):
+        try:
+            return user.profile.initials()
+        except Exception:
+            return user.username[:2].upper() if user.username else '??'
 
     @database_sync_to_async
     def get_display_name(self):

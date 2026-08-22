@@ -4,10 +4,9 @@ import { WebView } from 'react-native-webview';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-function buildHtml({ center, zoom, markers, polyline, riderPositions, followUser }) {
+function buildHtml({ center, zoom, markers, polyline, followUser }) {
   const markersJson = JSON.stringify(markers || []);
   const polylineJson = JSON.stringify(polyline || []);
-  const ridersJson = JSON.stringify(riderPositions || []);
 
   return `<!DOCTYPE html>
 <html>
@@ -74,13 +73,15 @@ var userRing = document.getElementById('user-ring');
 var userHeading = document.getElementById('user-heading');
 
 var firstUserPos = true;
+var riderMarkers = {};
+var COLORS = ['#ffd600','#4CAF50','#FF9800','#2196F3','#E91E63','#9C27B0','#00BCD4','#FF5722'];
 
 window.addEventListener('message', function(e) {
   try {
     var msg = JSON.parse(e.data);
+
     if (msg.type === 'userLocation' && msg.lat && msg.lng) {
       var lngLat = [msg.lng, msg.lat];
-
       if (firstUserPos) {
         firstUserPos = false;
         userMarker.style.display = 'block';
@@ -93,14 +94,33 @@ window.addEventListener('message', function(e) {
         userHeading.style.display = 'block';
         map.easeTo({ center: lngLat, zoom: 17, pitch: 45, bearing: msg.heading || 0, duration: 1000 });
       }
-
       if (msg.heading !== undefined && msg.heading !== null) {
         userHeading.style.transform = 'translate(-50%,-100%) rotate(' + (-msg.heading) + 'deg)';
       }
     }
 
-    if (msg.type === 'flyTo' && msg.lat && msg.lng) {
-      map.flyTo({ center: [msg.lng, msg.lat], zoom: 17, pitch: 45, bearing: msg.heading || 0, speed: 1.2 });
+    if (msg.type === 'updateRiders') {
+      var riders = msg.riders || [];
+      var seen = {};
+      riders.forEach(function(r, i) {
+        seen[r.user] = true;
+        if (riderMarkers[r.user]) {
+          riderMarkers[r.user].setLngLat([r.lng, r.lat]);
+        } else {
+          var color = COLORS[i % COLORS.length];
+          var el = document.createElement('div');
+          el.style.cssText = 'width:38px;height:38px;border-radius:19px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#121317;font-size:11px;font-weight:700;font-family:monospace;box-shadow:0 2px 8px rgba(0,0,0,0.5);transition:transform 0.3s ease;';
+          el.textContent = r.initials || '??';
+          var marker = new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(map);
+          riderMarkers[r.user] = marker;
+        }
+      });
+      Object.keys(riderMarkers).forEach(function(uid) {
+        if (!seen[uid]) {
+          riderMarkers[uid].remove();
+          delete riderMarkers[uid];
+        }
+      });
     }
   } catch(err) {}
 });
@@ -146,16 +166,6 @@ map.on('load', function() {
     el.innerHTML = m.type === 'origin' ? '&#9654;' : '&#9873;';
     new maplibregl.Marker({ element: el }).setLngLat([m.lng, m.lat]).addTo(map);
   });
-
-  var riders = ${ridersJson};
-  var COLORS = ['#ffd600','#4CAF50','#FF9800','#2196F3','#E91E63','#9C27B0','#00BCD4','#FF5722'];
-  riders.forEach(function(r, i) {
-    var color = COLORS[i % COLORS.length];
-    var el = document.createElement('div');
-    el.style.cssText = 'width:38px;height:38px;border-radius:19px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#121317;font-size:11px;font-weight:700;font-family:monospace;box-shadow:0 2px 8px rgba(0,0,0,0.5);';
-    el.textContent = r.initials;
-    new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(map);
-  });
 });
 </script>
 </body>
@@ -165,6 +175,7 @@ map.on('load', function() {
 export default function FreeMap({ ride, positions = [], myUserId, userLocation, heading, followMyLocation = false, style }) {
   const webViewRef = useRef(null);
   const lastLocationRef = useRef(null);
+  const lastRidersJson = useRef('');
 
   const center = useMemo(() => {
     if (userLocation && followMyLocation) {
@@ -175,7 +186,7 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
     }
     if (ride?.origin_lat) return [ride.origin_lat, ride.origin_lng];
     return [19.076, 72.8777];
-  }, [ride, userLocation, followMyLocation]);
+  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng, userLocation, followMyLocation]);
 
   const zoom = useMemo(() => {
     if (followMyLocation && userLocation) return 17;
@@ -189,14 +200,14 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
       return 13;
     }
     return 13;
-  }, [ride, userLocation, followMyLocation]);
+  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng, userLocation, followMyLocation]);
 
   const markers = useMemo(() => {
     const m = [];
     if (ride?.origin_lat) m.push({ lat: ride.origin_lat, lng: ride.origin_lng, type: 'origin' });
     if (ride?.destination_lat) m.push({ lat: ride.destination_lat, lng: ride.destination_lng, type: 'dest' });
     return m;
-  }, [ride]);
+  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng]);
 
   const polyline = useMemo(() => {
     if (!ride?.route_polyline) {
@@ -209,15 +220,11 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
       const pts = typeof ride.route_polyline === 'string' ? JSON.parse(ride.route_polyline) : ride.route_polyline;
       return pts.map(p => [p.latitude || p.lat, p.longitude || p.lng || p.lon]);
     } catch { return []; }
-  }, [ride]);
-
-  const riderPositions = useMemo(() => {
-    return (positions || []).map(p => ({ lat: p.lat, lng: p.lng, initials: p.initials || '??' }));
-  }, [positions]);
+  }, [ride?.id, ride?.route_polyline, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng]);
 
   const html = useMemo(
-    () => buildHtml({ center, zoom, markers, polyline, riderPositions, followUser: followMyLocation }),
-    [center, zoom, markers, polyline, riderPositions, followMyLocation]
+    () => buildHtml({ center, zoom, markers, polyline, followUser: followMyLocation }),
+    [center, zoom, markers, polyline, followMyLocation]
   );
 
   const sendMessage = useCallback((msg) => {
@@ -240,6 +247,15 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
       }
     }
   }, [userLocation, heading, followMyLocation, sendMessage]);
+
+  useEffect(() => {
+    const riders = (positions || []).map(p => ({ user: p.user, lat: p.lat, lng: p.lng, initials: p.initials || '??' }));
+    const json = JSON.stringify(riders);
+    if (json !== lastRidersJson.current) {
+      lastRidersJson.current = json;
+      sendMessage({ type: 'updateRiders', riders });
+    }
+  }, [positions, sendMessage]);
 
   return (
     <View style={[styles.container, style]}>

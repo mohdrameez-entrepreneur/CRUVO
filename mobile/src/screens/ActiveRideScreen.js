@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
@@ -116,7 +116,7 @@ export default function ActiveRideScreen({ navigation, route }) {
     setRideFinished(true);
   }, [user?.id]);
 
-  const { connected, sendPosition, sendFlag, sendClearFlag } = useRideSocket(rideId, {
+  const { connected, wsError, sendPosition, sendFlag, sendClearFlag } = useRideSocket(rideId, {
     onPositionsUpdate: handlePositionsUpdate,
     onFlag: handleFlag,
     onFlagCleared: handleFlagCleared,
@@ -332,12 +332,22 @@ export default function ActiveRideScreen({ navigation, route }) {
   const flagIcon = myFlag ? (FLAG_ICONS[myFlag.stop_type] || 'flag') : 'flag';
   const flagLabel = myFlag ? myFlag.stop_type : null;
 
+  const enrichedPositions = useMemo(() => {
+    const pMap = {};
+    participants.forEach(p => { pMap[p.user] = p; });
+    return positions.map(pos => ({
+      ...pos,
+      initials: pMap[pos.user]?.initials || '??',
+      display_name: pMap[pos.user]?.display_name || '',
+    }));
+  }, [positions, participants]);
+
   return (
     <View style={styles.container}>
       <View style={styles.mapWrap}>
         <FreeMap
           ride={ride}
-          positions={positions}
+          positions={enrichedPositions}
           myUserId={user?.id}
           userLocation={location}
           heading={location?.heading}
@@ -350,7 +360,7 @@ export default function ActiveRideScreen({ navigation, route }) {
           <Text style={styles.headerTitle}>{ride.name}</Text>
           <Text style={styles.headerSubtitle}>
             {positions.length} RIDER{positions.length !== 1 ? 'S' : ''} LIVE · {formatTime(elapsed)}
-            {connected ? '' : ' · OFFLINE'}
+            {wsError ? ` · ${wsError}` : (connected ? '' : ' · OFFLINE')}
           </Text>
         </View>
         {isCreator && (

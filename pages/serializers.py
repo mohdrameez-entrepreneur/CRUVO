@@ -28,7 +28,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.avatar.url)
-            return f"{settings.MEDIA_URL}{obj.avatar}"
+            from django.conf import settings
+            return f"{settings.BASE_URL or 'https://cruvo.onrender.com'}{settings.MEDIA_URL}{obj.avatar}"
         return None
 
 
@@ -126,7 +127,8 @@ class RideParticipantSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.user.profile.avatar.url)
-            return obj.user.profile.avatar.url
+            from django.conf import settings
+            return f"{settings.BASE_URL}{settings.MEDIA_URL}{obj.user.profile.avatar}"
         return None
 
     def get_bike_info(self, obj):
@@ -244,5 +246,6 @@ class RidePositionSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request:
                 return request.build_absolute_uri(obj.user.profile.avatar.url)
-            return obj.user.profile.avatar.url
+            from django.conf import settings
+            return f"{settings.BASE_URL}{settings.MEDIA_URL}{obj.user.profile.avatar}"
         return None

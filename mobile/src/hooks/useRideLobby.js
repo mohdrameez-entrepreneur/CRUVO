@@ -46,21 +46,29 @@ export default function useRideLobby(rideId, { onReadyUpdate, onRideStarted }) {
 
     socket.onmessage = (event) => {
       if (gen !== genRef.current) return;
-      const data = JSON.parse(event.data);
-      console.log('[WS-Lobby] Received:', data.type);
-      if (data.type === 'ready_update') {
-        listenersRef.current.onReadyUpdate?.(data);
-      } else if (data.type === 'ride_started') {
-        stoppedRef.current = true;
-        listenersRef.current.onRideStarted?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[WS-Lobby] Received:', data.type);
+        if (data.type === 'ready_update') {
+          listenersRef.current.onReadyUpdate?.(data);
+        } else if (data.type === 'ride_started') {
+          stoppedRef.current = true;
+          listenersRef.current.onRideStarted?.(data);
+        }
+      } catch (err) {
+        console.log('[WS-Lobby] Parse error:', err.message);
       }
     };
 
     socket.onclose = (event) => {
-      console.log('[WS-Lobby] Disconnected');
+      console.log('[WS-Lobby] Disconnected, code:', event.code);
       setConnected(false);
       if (gen !== genRef.current || stoppedRef.current) return;
       ws.current = null;
+      if (event.code === 4001 || event.code === 4003) {
+        console.log('[WS-Lobby] Auth rejected, not reconnecting');
+        return;
+      }
       if (mountedRef.current && event.code !== 1000) {
         const delay = reconnectDelay.current;
         reconnectDelay.current = Math.min(reconnectDelay.current * 1.5, 5000);

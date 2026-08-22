@@ -173,6 +173,7 @@ STORAGES = {
 # Media files (uploaded content)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+BASE_URL = os.environ.get('BASE_URL', 'https://cruvo.onrender.com')
 
 # Auth redirects
 LOGIN_URL = 'pages:login'

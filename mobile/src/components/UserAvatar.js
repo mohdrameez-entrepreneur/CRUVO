@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { colors, typography, borderRadius } from '../theme';
 
@@ -12,12 +12,25 @@ function getColorFromId(id) {
   return AVATAR_COLORS[Math.abs(num) % AVATAR_COLORS.length];
 }
 
+function getInitialsFromName(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.substring(0, 2).toUpperCase();
+}
+
 export default function UserAvatar({ avatarUrl, name, initials, id, size = 44, style }) {
   const displayInitials = initials || getInitialsFromName(name);
   const bgColor = getColorFromId(id);
   const [imgError, setImgError] = useState(false);
 
-  if (avatarUrl && !imgError) {
+  const hasValidUrl = avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http');
+
+  useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl]);
+
+  if (hasValidUrl && !imgError) {
     return (
       <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }, style]}>
         <Image
@@ -34,13 +47,6 @@ export default function UserAvatar({ avatarUrl, name, initials, id, size = 44, s
       <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{displayInitials}</Text>
     </View>
   );
-}
-
-function getInitialsFromName(name) {
-  if (!name) return '??';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.substring(0, 2).toUpperCase();
 }
 
 const styles = StyleSheet.create({

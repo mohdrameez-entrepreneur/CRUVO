@@ -4,10 +4,10 @@
     "slug": "cruvo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/CRUVO LOGO.jpg",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/CRUVO LOGO.jpg",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#121317"
     },
