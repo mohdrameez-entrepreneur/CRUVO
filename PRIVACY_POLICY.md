@@ -76,4 +76,4 @@ We share information with other users and third-party services to make the App f
 ## 6. Contact Us
 
 If you have any questions or concerns regarding this Privacy Policy, please contact us at:
-- **Email**: rr6688535@gmail.com
+- **Email**: cruvobs@gmail.com
