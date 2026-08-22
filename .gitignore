@@ -75,6 +75,7 @@ yarn-error.log*
 # Generated / Binaries
 *.apk
 *.aab
+!cruvo-web/downloads/*.zip
 
 # Documentation
 CODEBASE_EXPLAINER.md
