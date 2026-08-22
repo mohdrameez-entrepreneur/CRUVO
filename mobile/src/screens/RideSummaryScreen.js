@@ -177,7 +177,7 @@ export default function RideSummaryScreen({ navigation, route }) {
 
   const stats = [
     { label: 'Date', value: new Date(ride.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), icon: 'calendar' },
-    { label: 'Distance', value: ride.distance_km ? `${ride.distance_km} km` : 'TBD', icon: 'route' },
+    { label: 'Distance', value: ride.distance_km ? `${ride.distance_km} km` : 'TBD', icon: 'navigate' },
     { label: 'Duration', value: formatDuration(ride.route_duration_s), icon: 'time' },
     { label: 'Riders', value: noOtherRiders ? 'Solo' : `${readyCount}/${totalRiders}`, icon: 'people' },
   ];

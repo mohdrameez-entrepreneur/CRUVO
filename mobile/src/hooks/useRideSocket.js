@@ -8,17 +8,18 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
   const reconnectDelay = useRef(1000);
   const [connected, setConnected] = useState(false);
   const mountedRef = useRef(true);
+  const genRef = useRef(0);
   const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onRideEnded });
 
   listenersRef.current = { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onRideEnded };
 
   const connect = useCallback(async () => {
-    if (!rideId || !mountedRef.current) return;
+    if (!rideId) return;
+    const gen = ++genRef.current;
+    if (!mountedRef.current || gen !== genRef.current) return;
+
     const token = await SecureStore.getItemAsync('auth_token');
-    if (!token) {
-      console.log('[WS] No auth token found');
-      return;
-    }
+    if (!token || !mountedRef.current || gen !== genRef.current) return;
 
     if (ws.current) {
       try { ws.current.close(); } catch {}
@@ -28,9 +29,11 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
     const url = `${WS_BASE}/ride/${rideId}/?token=${token}`;
     console.log('[WS] Connecting to', url.replace(token, '***'));
     const socket = new WebSocket(url);
+    if (gen !== genRef.current) { try { socket.close(); } catch {} return; }
     ws.current = socket;
 
     socket.onopen = () => {
+      if (gen !== genRef.current) { try { socket.close(); } catch {} return; }
       console.log('[WS] Connected');
       setConnected(true);
       reconnectDelay.current = 1000;
@@ -41,6 +44,7 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
     };
 
     socket.onmessage = (event) => {
+      if (gen !== genRef.current) return;
       const data = JSON.parse(event.data);
       console.log('[WS] Received:', data.type);
 
@@ -70,8 +74,9 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
     socket.onclose = (event) => {
       console.log('[WS] Disconnected, code:', event.code, 'reason:', event.reason);
       setConnected(false);
+      if (gen !== genRef.current) return;
       ws.current = null;
-      if (mountedRef.current) {
+      if (mountedRef.current && event.code !== 1000) {
         const delay = reconnectDelay.current;
         reconnectDelay.current = Math.min(reconnectDelay.current * 1.5, 5000);
         console.log('[WS] Reconnecting in', delay, 'ms');
@@ -90,9 +95,11 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
     connect();
     return () => {
       mountedRef.current = false;
+      genRef.current++;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       if (ws.current) {
-        try { ws.current.close(); } catch {}
+        try { ws.current.close(1000); } catch {}
+        ws.current = null;
       }
     };
   }, [connect]);
