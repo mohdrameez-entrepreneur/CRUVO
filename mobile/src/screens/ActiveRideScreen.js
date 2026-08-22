@@ -248,7 +248,9 @@ export default function ActiveRideScreen({ navigation, route }) {
         });
         setShowFlagModal(false);
         const flagsRes = await ridesAPI.getFlagStops(rideId);
-        const mine = (flagsRes.data || []).find(f => f.flagged_by === user?.id && !f.resolved_at);
+        const flags = (flagsRes.data || []).filter(f => !f.resolved_at);
+        setAllFlags(flags);
+        const mine = flags.find(f => f.flagged_by === user?.id);
         setMyFlag(mine || null);
       }
     } catch {
@@ -265,9 +267,10 @@ export default function ActiveRideScreen({ navigation, route }) {
       if (connected) {
         sendClearFlag();
       } else {
-        await ridesAPI.update(rideId, {});
+        await ridesAPI.clearFlag(rideId);
       }
       setMyFlag(null);
+      setAllFlags(prev => prev.filter(f => f.flagged_by !== user?.id));
     } catch {
       Alert.alert('Error', 'Failed to clear flag');
     } finally {

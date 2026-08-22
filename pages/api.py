@@ -247,6 +247,20 @@ def flag_stops_view(request, ride_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['POST'])
+def clear_flag_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    from django.utils import timezone
+    updated = FlagStop.objects.filter(
+        ride=ride, flagged_by=request.user, resolved_at__isnull=True
+    ).update(resolved_at=timezone.now())
+    return Response({'cleared': updated > 0})
+
+
 @api_view(['GET'])
 def ride_summary_view(request, ride_id):
     try:

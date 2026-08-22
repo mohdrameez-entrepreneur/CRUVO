@@ -7,20 +7,31 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
   const reconnectTimer = useRef(null);
   const reconnectDelay = useRef(1000);
   const [connected, setConnected] = useState(false);
+  const mountedRef = useRef(true);
   const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared });
 
   listenersRef.current = { onPositionsUpdate, onFlag, onFlagCleared };
 
   const connect = useCallback(async () => {
-    if (!rideId) return;
+    if (!rideId || !mountedRef.current) return;
     const token = await SecureStore.getItemAsync('auth_token');
-    if (!token) return;
+    if (!token) {
+      console.log('[WS] No auth token found');
+      return;
+    }
+
+    if (ws.current) {
+      try { ws.current.close(); } catch {}
+      ws.current = null;
+    }
 
     const url = `${WS_BASE}/ride/${rideId}/?token=${token}`;
+    console.log('[WS] Connecting to', url.replace(token, '***'));
     const socket = new WebSocket(url);
     ws.current = socket;
 
     socket.onopen = () => {
+      console.log('[WS] Connected');
       setConnected(true);
       reconnectDelay.current = 1000;
       if (reconnectTimer.current) {
@@ -31,6 +42,7 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log('[WS] Received:', data.type);
 
       if (data.type === 'positions_init') {
         listenersRef.current.onPositionsUpdate?.(data.positions);
@@ -51,25 +63,33 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
       }
     };
 
-    socket.onclose = () => {
+    socket.onclose = (event) => {
+      console.log('[WS] Disconnected, code:', event.code, 'reason:', event.reason);
       setConnected(false);
       ws.current = null;
-      reconnectTimer.current = setTimeout(() => {
-        reconnectDelay.current = Math.min(reconnectDelay.current * 1.5, 10000);
-        connect();
-      }, reconnectDelay.current);
+      if (mountedRef.current) {
+        const delay = reconnectDelay.current;
+        reconnectDelay.current = Math.min(reconnectDelay.current * 1.5, 5000);
+        console.log('[WS] Reconnecting in', delay, 'ms');
+        reconnectTimer.current = setTimeout(() => connect(), delay);
+      }
     };
 
-    socket.onerror = () => {
+    socket.onerror = (error) => {
+      console.log('[WS] Error:', error.message || 'unknown');
       socket.close();
     };
   }, [rideId]);
 
   useEffect(() => {
+    mountedRef.current = true;
     connect();
     return () => {
+      mountedRef.current = false;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      if (ws.current) ws.current.close();
+      if (ws.current) {
+        try { ws.current.close(); } catch {}
+      }
     };
   }, [connect]);
 

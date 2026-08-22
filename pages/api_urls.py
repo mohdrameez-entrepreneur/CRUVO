@@ -16,6 +16,7 @@ urlpatterns = [
     path('rides/<int:ride_id>/toggle-ready/', api.toggle_ready_view, name='toggle-ready'),
     path('rides/<int:ride_id>/start-ride/', api.start_ride_view, name='start-ride'),
     path('rides/<int:ride_id>/flag-stops/', api.flag_stops_view, name='ride-flag-stops'),
+    path('rides/<int:ride_id>/clear-flag/', api.clear_flag_view, name='ride-clear-flag'),
     path('rides/<int:ride_id>/summary/', api.ride_summary_view, name='ride-summary'),
     path('invitations/', api.invitations_view, name='invitations'),
     path('invitations/<int:participant_id>/respond/', api.respond_invitation_view, name='respond-invitation'),
