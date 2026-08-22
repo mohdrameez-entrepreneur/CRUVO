@@ -269,6 +269,26 @@ def flag_stops_view(request, ride_id):
     serializer = FlagStopSerializer(data={**request.data, 'ride': ride_id})
     if serializer.is_valid():
         serializer.save(flagged_by=request.user)
+
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        stop_type = serializer.validated_data.get('stop_type', 'stop')
+        location_name = serializer.validated_data.get('location_name', '')
+        lat = serializer.validated_data.get('lat', 0)
+        lng = serializer.validated_data.get('lng', 0)
+        async_to_sync(channel_layer.group_send)(
+            f'ride_{ride_id}',
+            {
+                'type': 'flag_notification',
+                'user_id': request.user.id,
+                'user_name': request.user.profile.display_name,
+                'stop_type': stop_type,
+                'location_name': location_name,
+                'lat': lat,
+                'lng': lng,
+            }
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

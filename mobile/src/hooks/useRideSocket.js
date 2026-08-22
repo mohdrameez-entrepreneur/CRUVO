@@ -2,15 +2,15 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { WS_BASE } from '../config';
 
-export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFlagCleared }) {
+export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification }) {
   const ws = useRef(null);
   const reconnectTimer = useRef(null);
   const reconnectDelay = useRef(1000);
   const [connected, setConnected] = useState(false);
   const mountedRef = useRef(true);
-  const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared });
+  const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification });
 
-  listenersRef.current = { onPositionsUpdate, onFlag, onFlagCleared };
+  listenersRef.current = { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification };
 
   const connect = useCallback(async () => {
     if (!rideId || !mountedRef.current) return;
@@ -60,6 +60,8 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
         listenersRef.current.onFlag?.(data.flag);
       } else if (data.type === 'clear_flag') {
         listenersRef.current.onFlagCleared?.(data.user_id);
+      } else if (data.type === 'flag_notification') {
+        listenersRef.current.onFlagNotification?.(data);
       }
     };
 

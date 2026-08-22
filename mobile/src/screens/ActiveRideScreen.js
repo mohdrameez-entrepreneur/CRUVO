@@ -47,6 +47,7 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [myFlag, setMyFlag] = useState(null);
   const [allFlags, setAllFlags] = useState([]);
   const [clearingFlag, setClearingFlag] = useState(false);
+  const [flagNotification, setFlagNotification] = useState(null);
   const autoEndTriggered = useRef(false);
   const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
   const fallbackInterval = useRef(null);
@@ -94,10 +95,20 @@ export default function ActiveRideScreen({ navigation, route }) {
     if (userId === user?.id) setMyFlag(null);
   }, [user?.id]);
 
+  const FLAG_LABELS = { FUEL: 'Fuel', FOOD: 'Food', BREAK: 'Break', GENERAL: 'General', ISSUE: 'Issue' };
+
+  const handleFlagNotification = useCallback((data) => {
+    if (data.user_id === user?.id) return;
+    const label = FLAG_LABELS[data.stop_type] || data.stop_type;
+    setFlagNotification({ userName: data.user_name, stopType: label, locationName: data.location_name });
+    setTimeout(() => setFlagNotification(null), 4000);
+  }, [user?.id]);
+
   const { connected, sendPosition, sendFlag, sendClearFlag } = useRideSocket(rideId, {
     onPositionsUpdate: handlePositionsUpdate,
     onFlag: handleFlag,
     onFlagCleared: handleFlagCleared,
+    onFlagNotification: handleFlagNotification,
   });
 
   wsConnected.current = connected;
@@ -335,6 +346,16 @@ export default function ActiveRideScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
       </View>
+
+      {flagNotification && (
+        <View style={styles.flagBanner}>
+          <Ionicons name="flag" size={18} color={colors.white} />
+          <Text style={styles.flagBannerText}>
+            <Text style={styles.flagBannerName}>{flagNotification.userName}</Text> flagged a {flagNotification.stopType} stop
+            {flagNotification.locationName ? ` — ${flagNotification.locationName}` : ''}
+          </Text>
+        </View>
+      )}
 
       <TouchableOpacity
         style={[styles.flagFab, myFlag && styles.flagFabActive]}
@@ -593,6 +614,16 @@ const styles = StyleSheet.create({
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' },
   liveText: { ...typography.labelTechnical, color: '#4CAF50', fontSize: 10 },
   offlineText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 10 },
+  flagBanner: {
+    position: 'absolute', top: 110, left: 16, right: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#e53935', borderRadius: borderRadius.lg,
+    paddingHorizontal: 16, paddingVertical: 12,
+    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8, elevation: 8,
+    zIndex: 60,
+  },
+  flagBannerText: { ...typography.bodyMd, color: colors.white, flex: 1 },
+  flagBannerName: { ...typography.bodyMd, color: colors.white, fontWeight: '700' },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center',
     padding: spacing.stackLg,

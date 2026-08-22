@@ -66,6 +66,16 @@ class RideConsumer(AsyncWebsocketConsumer):
                     'type': 'flag_update',
                     'flag': flag,
                 })
+                user_name = await self.get_display_name()
+                await self.channel_layer.group_send(self.group_name, {
+                    'type': 'flag_notification',
+                    'user_id': self.user.id,
+                    'user_name': user_name,
+                    'stop_type': data['stop_type'],
+                    'location_name': data.get('location_name', ''),
+                    'lat': data['lat'],
+                    'lng': data['lng'],
+                })
 
         elif msg_type == 'clear_flag':
             cleared = await self.clear_flag()
@@ -114,6 +124,17 @@ class RideConsumer(AsyncWebsocketConsumer):
             'user_id': event['user_id'],
         }))
 
+    async def flag_notification(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'flag_notification',
+            'user_id': event['user_id'],
+            'user_name': event['user_name'],
+            'stop_type': event['stop_type'],
+            'location_name': event['location_name'],
+            'lat': event['lat'],
+            'lng': event['lng'],
+        }))
+
     @database_sync_to_async
     def get_user_from_token(self, key):
         try:
@@ -159,6 +180,13 @@ class RideConsumer(AsyncWebsocketConsumer):
             }
             for p in positions
         ]
+
+    @database_sync_to_async
+    def get_display_name(self):
+        try:
+            return self.user.profile.display_name
+        except Exception:
+            return self.user.username
 
     @database_sync_to_async
     def create_flag(self, stop_type, lat, lng, location_name):
