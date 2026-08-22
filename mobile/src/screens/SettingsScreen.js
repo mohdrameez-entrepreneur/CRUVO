@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   topBar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, height: spacing.touchTargetMin,
+    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
     borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
   },
   topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },

@@ -8,6 +8,7 @@ import FreeMap from '../components/FreeMap';
 import UserAvatar from '../components/UserAvatar';
 import useLocation from '../hooks/useLocation';
 import useRideSocket from '../hooks/useRideSocket';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 const ROLE_LABELS = { CREATOR: 'Lead', LEAD: 'Lead', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
@@ -32,6 +33,7 @@ function getDistanceMeters(lat1, lng1, lat2, lng2) {
 }
 
 export default function ActiveRideScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { rideId } = route.params || {};
   const { user } = useAuth();
   const [ride, setRide] = useState(null);
@@ -343,7 +345,7 @@ export default function ActiveRideScreen({ navigation, route }) {
         />
       </View>
 
-      <View style={styles.floatingHeader}>
+      <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{ride.name}</Text>
           <Text style={styles.headerSubtitle}>
@@ -376,7 +378,7 @@ export default function ActiveRideScreen({ navigation, route }) {
         {flagLabel && <Text style={styles.flagFabLabel}>{flagLabel}</Text>}
       </TouchableOpacity>
 
-      <View style={[styles.bottomPanel, panelExpanded && styles.bottomPanelExpanded]}>
+      <View style={[styles.bottomPanel, panelExpanded && styles.bottomPanelExpanded, { paddingBottom: insets.bottom + 10 }]}>
         <TouchableOpacity style={styles.panelHandle} onPress={() => setPanelExpanded(!panelExpanded)}>
           <View style={styles.handleBar} />
         </TouchableOpacity>

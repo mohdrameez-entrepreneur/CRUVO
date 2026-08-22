@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   topBar: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, height: spacing.touchTargetMin,
+    paddingHorizontal: spacing.marginMobile, minHeight: spacing.touchTargetMin, paddingTop: 0,
     borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
   },
   topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
