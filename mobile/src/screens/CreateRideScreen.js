@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Switch, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors, spacing, typography, borderRadius } from '../theme';
+import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { ridesAPI } from '../api';
 import LocationPicker from '../components/LocationPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

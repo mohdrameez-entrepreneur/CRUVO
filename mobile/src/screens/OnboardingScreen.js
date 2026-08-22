@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '../theme';
+import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -82,27 +82,27 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.stackLg,
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: moderateScale(40),
+    height: moderateScale(4),
+    borderRadius: moderateScale(2),
     backgroundColor: colors.outlineVariant,
     alignSelf: 'center',
     marginBottom: spacing.stackMd,
   },
   stepIndicator: {
     flexDirection: 'row',
-    gap: 8,
+    gap: moderateScale(8),
     marginBottom: spacing.stackMd,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
     backgroundColor: colors.outlineVariant,
   },
   dotActive: {
     backgroundColor: colors.primaryContainer,
-    width: 24,
+    width: moderateScale(24),
   },
   headline: {
     ...typography.headlineLgMobile,

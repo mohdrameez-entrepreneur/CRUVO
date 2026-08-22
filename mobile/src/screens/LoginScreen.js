@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '../theme';
+import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
@@ -171,8 +171,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.marginMobile, paddingTop: spacing.stackLg, paddingBottom: spacing.stackMd,
   },
-  backButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
+  backButton: { width: scale(48), height: scale(48), justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: moderateScale(24), textTransform: 'uppercase', letterSpacing: -0.8 },
   content: { flex: 1 },
   contentContainer: { paddingHorizontal: spacing.marginMobile, paddingBottom: spacing.stackLg },
   title: { ...typography.headlineLgMobile, color: colors.onSurface, marginBottom: spacing.stackSm },
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: spacing.stackSm },
   input: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   eyeButton: { padding: spacing.stackSm },
-  errorText: { ...typography.labelSm, color: '#e53935', marginTop: 6, marginLeft: 4 },
+  errorText: { ...typography.labelSm, color: '#e53935', marginTop: moderateScale(6), marginLeft: moderateScale(4) },
   generalError: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
     backgroundColor: 'rgba(229,57,53,0.1)', borderWidth: 1, borderColor: 'rgba(229,57,53,0.3)',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '../theme';
+import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { ridesAPI } from '../api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -184,10 +184,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.marginMobile, height: spacing.touchTargetMin,
     borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
   },
-  topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: 24, textTransform: 'uppercase', letterSpacing: -0.8 },
+  topBarButton: { width: scale(48), height: scale(48), justifyContent: 'center', alignItems: 'center' },
+  topBarTitle: { ...typography.displayLg, color: colors.primaryContainer, fontSize: moderateScale(24), textTransform: 'uppercase', letterSpacing: -0.8 },
   content: { flex: 1 },
-  contentContainer: { padding: spacing.marginMobile, paddingBottom: 100 },
+  contentContainer: { padding: spacing.marginMobile, paddingBottom: moderateScale(100) },
   greetingSection: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackMd, marginBottom: spacing.stackLg },
   avatarContainer: { borderRadius: 9999, overflow: 'hidden', borderWidth: 2, borderColor: colors.outlineVariant },
   avatarImage: { width: '100%', height: '100%' },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   greetingText: { flex: 1 },
   greetingName: { ...typography.titleMd, color: colors.onSurface },
   greetingSubtitle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryContainer },
+  statusDot: { width: scale(8), height: scale(8), borderRadius: 4, backgroundColor: colors.primaryContainer },
   greetingReady: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   ctaGrid: { gap: spacing.stackMd, marginBottom: spacing.stackLg },
   primaryCta: {
@@ -204,11 +204,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.outlineVariant, gap: spacing.stackMd,
     shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
   },
-  ctaIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' },
+  ctaIconContainer: { width: scale(48), height: scale(48), borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' },
   ctaTitle: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase', letterSpacing: 1 },
   ctaSubtitle: { ...typography.bodyMd, color: colors.onPrimaryContainer, opacity: 0.8 },
   secondaryCta: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 64,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: moderateScale(64),
     borderWidth: 2, borderColor: colors.outlineVariant, borderRadius: borderRadius.xl, gap: spacing.stackSm,
   },
   ctaSecondaryText: { ...typography.labelTechnical, color: colors.onSurface },
@@ -222,16 +222,16 @@ const styles = StyleSheet.create({
   },
   rideCardGrid: { ...StyleSheet.absoluteFillObject, opacity: 0.03, backgroundColor: colors.outline },
   rideCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 },
-  rideCardInfo: { gap: 2 },
-  rideCardTime: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 12 },
+  rideCardInfo: { gap: moderateScale(2) },
+  rideCardTime: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: moderateScale(12) },
   rideCardName: { ...typography.titleMd, color: colors.onSurface },
   rideStatusBadge: {
-    backgroundColor: 'rgba(255,214,0,0.15)', paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: 'rgba(255,214,0,0.15)', paddingHorizontal: moderateScale(8), paddingVertical: moderateScale(4),
     borderRadius: borderRadius.sm, borderWidth: 1, borderColor: 'rgba(255,214,0,0.3)',
   },
-  rideStatusText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 10 },
+  rideStatusText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: moderateScale(10) },
   rideCardDetails: { gap: spacing.stackSm, zIndex: 1 },
-  rideDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rideDetailRow: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(4) },
   rideDetailText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   rideRoute: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,

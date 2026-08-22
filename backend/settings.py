@@ -171,7 +171,7 @@ STORAGES = {
 }
 
 # Media files (uploaded content)
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Auth redirects

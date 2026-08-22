@@ -1,3 +1,16 @@
+import { Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const BASE_WIDTH = 375;
+const BASE_HEIGHT = 812;
+
+export const scale = (size) => (SCREEN_WIDTH / BASE_WIDTH) * size;
+export const verticalScale = (size) => (SCREEN_HEIGHT / BASE_HEIGHT) * size;
+export const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
+
+export const screenWidth = SCREEN_WIDTH;
+export const screenHeight = SCREEN_HEIGHT;
+
 export const colors = {
   background: '#121317',
   surface: '#121317',
@@ -37,66 +50,66 @@ export const colors = {
 };
 
 export const spacing = {
-  unit: 4,
-  stackSm: 8,
-  stackMd: 16,
-  stackLg: 32,
-  gutter: 16,
-  marginMobile: 20,
-  marginDesktop: 40,
-  touchTargetMin: 48,
+  unit: moderateScale(4),
+  stackSm: moderateScale(8),
+  stackMd: moderateScale(16),
+  stackLg: moderateScale(32),
+  gutter: moderateScale(16),
+  marginMobile: moderateScale(20),
+  marginDesktop: moderateScale(40),
+  touchTargetMin: moderateScale(48),
 };
 
 export const borderRadius = {
-  sm: 2,
-  DEFAULT: 4,
-  md: 6,
-  lg: 8,
-  xl: 12,
+  sm: moderateScale(2),
+  DEFAULT: moderateScale(4),
+  md: moderateScale(6),
+  lg: moderateScale(8),
+  xl: moderateScale(12),
   full: 9999,
 };
 
 export const typography = {
   displayLg: {
     fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 40,
-    lineHeight: 48,
+    fontSize: moderateScale(40),
+    lineHeight: moderateScale(48),
     letterSpacing: -0.8,
   },
   headlineLg: {
     fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: moderateScale(28),
+    lineHeight: moderateScale(34),
   },
   headlineLgMobile: {
     fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: moderateScale(24),
+    lineHeight: moderateScale(30),
   },
   titleMd: {
     fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: moderateScale(20),
+    lineHeight: moderateScale(26),
   },
   bodyLg: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: moderateScale(18),
+    lineHeight: moderateScale(28),
   },
   bodyMd: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: moderateScale(16),
+    lineHeight: moderateScale(24),
   },
   labelTechnical: {
     fontFamily: 'JetBrainsMono_500Medium',
-    fontSize: 14,
-    lineHeight: 16,
+    fontSize: moderateScale(14),
+    lineHeight: moderateScale(16),
     letterSpacing: 0.7,
   },
   labelSm: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-    lineHeight: 14,
+    fontSize: moderateScale(12),
+    lineHeight: moderateScale(14),
   },
 };

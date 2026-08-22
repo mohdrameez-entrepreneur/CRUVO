@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { colors, typography, borderRadius } from '../theme';
 
@@ -15,13 +15,15 @@ function getColorFromId(id) {
 export default function UserAvatar({ avatarUrl, name, initials, id, size = 44, style }) {
   const displayInitials = initials || getInitialsFromName(name);
   const bgColor = getColorFromId(id);
+  const [imgError, setImgError] = useState(false);
 
-  if (avatarUrl) {
+  if (avatarUrl && !imgError) {
     return (
       <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }, style]}>
         <Image
           source={{ uri: avatarUrl }}
           style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
+          onError={() => setImgError(true)}
         />
       </View>
     );

@@ -4,10 +4,10 @@
     "slug": "cruvo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/CRUVO LOGO.jpg",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/CRUVO LOGO.jpg",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#121317"
     },
@@ -25,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/CRUVO LOGO.jpg",
+        "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#121317"
       },
       "package": "com.cruvo.app",
@@ -37,13 +37,11 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "web": {
-      "favicon": "./assets/CRUVO LOGO.jpg"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
@@ -55,12 +53,6 @@
         }
       ],
       "@react-native-community/datetimepicker"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "c508d09a-d425-4b2a-ba18-75c16ec87f32"
-      }
-    },
-    "owner": "essenziatdigital"
+    ]
   }
 }
