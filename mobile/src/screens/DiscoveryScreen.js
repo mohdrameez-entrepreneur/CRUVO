@@ -330,9 +330,9 @@ export default function DiscoveryScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      searchRiders(query, filters);
+      searchRiders('', {});
       checkFriendNotifications();
-    }, [query, filters, searchRiders, checkFriendNotifications])
+    }, [searchRiders, checkFriendNotifications])
   );
 
   const handleSendFriendRequest = async (userId) => {
