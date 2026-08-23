@@ -619,13 +619,44 @@ def respond_friend_request_view(request, friendship_id):
     action = request.data.get('action', '')
     if action == 'accept':
         friendship.status = 'ACCEPTED'
+        friendship.save()
+        return Response(FriendshipSerializer(friendship, context={'request': request}).data)
     elif action == 'decline':
         friendship.status = 'DECLINED'
+        friendship.save()
+        return Response(FriendshipSerializer(friendship, context={'request': request}).data)
+    elif action == 'remove':
+        friendship.delete()
+        return Response({'success': True, 'status': 'NONE'})
     else:
-        return Response({'error': 'Action must be "accept" or "decline"'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Action must be "accept", "decline", or "remove"'}, status=status.HTTP_400_BAD_REQUEST)
 
-    friendship.save()
-    return Response(FriendshipSerializer(friendship, context={'request': request}).data)
+
+@api_view(['POST', 'DELETE'])
+def remove_friend_view(request, friendship_id=None):
+    from django.db.models import Q
+    target_id = friendship_id or request.data.get('user_id') or request.data.get('friendship_id')
+    if not target_id:
+        return Response({'error': 'friendship_id or user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    friendship = Friendship.objects.filter(
+        (Q(sender=request.user, receiver_id=target_id) | Q(receiver=request.user, sender_id=target_id)) |
+        (Q(id=target_id) & (Q(sender=request.user) | Q(receiver=request.user)))
+    ).first()
+
+    if friendship:
+        friendship.delete()
+
+    return Response({'success': True, 'status': 'NONE', 'message': 'Friend removed successfully'})
+
+
+@api_view(['GET'])
+def user_profile_summary_view(request, user_id):
+    try:
+        target_user = User.objects.select_related('profile').get(id=user_id)
+        return Response(RiderDiscoverySerializer(target_user, context={'request': request}).data)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET'])

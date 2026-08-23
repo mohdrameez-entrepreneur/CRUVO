@@ -9,13 +9,13 @@ const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
 
 const FIELDS = [
-  { key: 'username', icon: 'at-outline', placeholder: 'Choose a unique username' },
-  { key: 'display_name', icon: 'person-outline', placeholder: 'Your name' },
-  { key: 'email', icon: 'mail-outline', placeholder: 'rider@cruvo.app', keyboardType: 'email-address' },
-  { key: 'password', icon: 'lock-closed-outline', placeholder: 'Create password', secure: true },
-  { key: 'password2', icon: 'lock-closed-outline', placeholder: 'Confirm password', secure: true },
-  { key: 'bike_make', icon: 'motorcycle-outline', placeholder: 'e.g. Royal Enfield' },
-  { key: 'bike_model', icon: 'bicycle-outline', placeholder: 'e.g. Himalayan 450' },
+  { key: 'username', label: 'USERNAME', icon: 'at-outline', placeholder: 'Choose a unique username' },
+  { key: 'display_name', label: 'DISPLAY NAME', icon: 'person-outline', placeholder: 'Your name' },
+  { key: 'email', label: 'EMAIL ADDRESS', icon: 'mail-outline', placeholder: 'rider@cruvo.app', keyboardType: 'email-address' },
+  { key: 'password', label: 'PASSWORD', icon: 'lock-closed-outline', placeholder: 'Create password (min 8 chars)', secure: true },
+  { key: 'password2', label: 'CONFIRM PASSWORD', icon: 'lock-closed-outline', placeholder: 'Re-enter password', secure: true },
+  { key: 'bike_make', label: 'BIKE BRAND / MANUFACTURER (OPTIONAL)', icon: 'speedometer-outline', placeholder: 'e.g. Royal Enfield, Yamaha, KTM, Honda' },
+  { key: 'bike_model', label: 'BIKE MODEL (OPTIONAL)', icon: 'bicycle-outline', placeholder: 'e.g. Himalayan 450, MT-15, Duke 390' },
 ];
 
 export default function SignupScreen({ navigation }) {
@@ -91,7 +91,7 @@ export default function SignupScreen({ navigation }) {
   const renderInput = (field) => (
     <View key={field.key} ref={el => { fieldRefs.current[field.key] = { current: el }; }} style={styles.inputGroup}>
       <Text style={[styles.label, errors[field.key] && styles.labelError]}>
-        {field.key.replace(/_/g, ' ').toUpperCase()}
+        {field.label || field.key.replace(/_/g, ' ').toUpperCase()}
       </Text>
       <View style={[styles.inputContainer, errors[field.key] && styles.inputError]}>
         <Ionicons name={field.icon} size={20} color={errors[field.key] ? '#e53935' : colors.onSurfaceVariant} style={styles.inputIcon} />

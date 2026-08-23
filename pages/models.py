@@ -29,6 +29,8 @@ class Profile(models.Model):
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True, default='')
+    is_email_public = models.BooleanField(default=False)
+    is_phone_public = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

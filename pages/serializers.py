@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.conf import settings
-from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition, Friendship
+from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition, Friendship, are_friends
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user_id', 'username', 'email', 'display_name', 'avatar', 'avatar_url', 'bio', 'bike_make', 'bike_model',
             'riding_style', 'experience_level', 'location_city', 'location_lat',
-            'location_lng', 'phone', 'created_at', 'initials',
+            'location_lng', 'phone', 'is_email_public', 'is_phone_public', 'created_at', 'initials',
         ]
         read_only_fields = ['id', 'created_at', 'avatar_url', 'username', 'email', 'user_id']
 
@@ -36,6 +36,42 @@ class ProfileSerializer(serializers.ModelSerializer):
             except Exception:
                 return None
         return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            # Unauthenticated: mask all contact info
+            data['email'] = None
+            data['phone'] = None
+            data['is_email_public'] = None
+            data['is_phone_public'] = None
+            return data
+
+        requesting_user = request.user
+        is_owner = requesting_user.id == instance.user_id
+
+        if is_owner:
+            # Owner always sees their own data including privacy flag states
+            return data
+
+        # Non-owner: check confirmed friendship
+        is_friend = are_friends(requesting_user, instance.user)
+
+        # Email: only reveal if marked public AND requester is a confirmed friend
+        if not (instance.is_email_public and is_friend):
+            data['email'] = None
+
+        # Phone: only reveal if marked public AND requester is a confirmed friend
+        if not (instance.is_phone_public and is_friend):
+            data['phone'] = None
+
+        # Never expose raw privacy toggle states to non-owners
+        data['is_email_public'] = None
+        data['is_phone_public'] = None
+
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):

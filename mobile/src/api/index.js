@@ -53,6 +53,7 @@ export const authAPI = {
 
 export const profileAPI = {
   get: () => api.get('/profile/'),
+  getUserSummary: (userId) => api.get(`/users/${userId}/summary/`),
   update: (data) => api.patch('/profile/', data),
   changeUsername: (data) => api.post('/profile/change-username/', data),
   changeEmail: (data) => api.post('/profile/change-email/', data),
@@ -84,6 +85,7 @@ export const ridesAPI = {
 export const friendsAPI = {
   sendRequest: (userId) => api.post('/friends/request/', { user_id: userId }),
   respondRequest: (friendshipId, action) => api.post(`/friends/${friendshipId}/respond/`, { action }),
+  removeFriend: (id) => api.post('/friends/remove/', { user_id: id, friendship_id: id }),
   getFriends: () => api.get('/friends/'),
   getRequests: () => api.get('/friends/requests/'),
 };

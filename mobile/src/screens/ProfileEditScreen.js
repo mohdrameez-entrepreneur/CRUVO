@@ -18,6 +18,7 @@ export default function ProfileEditScreen({ navigation }) {
   const [form, setForm] = useState({
     display_name: '', bio: '', bike_make: '', bike_model: '',
     riding_style: '', experience_level: '', location_city: '', phone: '',
+    is_email_public: false, is_phone_public: false,
   });
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -26,20 +27,48 @@ export default function ProfileEditScreen({ navigation }) {
   const [modalPassword, setModalPassword] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Load fresh profile from API on mount so cached stale data never overwrites the form
   useEffect(() => {
-    if (profile) {
-      setForm({
-        display_name: profile.display_name || '',
-        bio: profile.bio || '',
-        bike_make: profile.bike_make || '',
-        bike_model: profile.bike_model || '',
-        riding_style: profile.riding_style || '',
-        experience_level: profile.experience_level || '',
-        location_city: profile.location_city || '',
-        phone: profile.phone || '',
-      });
-    }
-  }, [profile]);
+    let cancelled = false;
+    const loadFresh = async () => {
+      try {
+        const res = await profileAPI.get();
+        if (!cancelled && res.data) {
+          const p = res.data;
+          setForm({
+            display_name: p.display_name || '',
+            bio: p.bio || '',
+            bike_make: p.bike_make || '',
+            bike_model: p.bike_model || '',
+            riding_style: p.riding_style || '',
+            experience_level: p.experience_level || '',
+            location_city: p.location_city || '',
+            phone: p.phone || '',
+            is_email_public: p.is_email_public === true,
+            is_phone_public: p.is_phone_public === true,
+          });
+        }
+      } catch {
+        // Fallback to context profile if API fails
+        if (!cancelled && profile) {
+          setForm({
+            display_name: profile.display_name || '',
+            bio: profile.bio || '',
+            bike_make: profile.bike_make || '',
+            bike_model: profile.bike_model || '',
+            riding_style: profile.riding_style || '',
+            experience_level: profile.experience_level || '',
+            location_city: profile.location_city || '',
+            phone: profile.phone || '',
+            is_email_public: profile.is_email_public === true,
+            is_phone_public: profile.is_phone_public === true,
+          });
+        }
+      }
+    };
+    loadFresh();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -148,7 +177,16 @@ export default function ProfileEditScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      await profileAPI.update(form);
+      // Explicitly cast boolean flags so they are never undefined/null in payload
+      const payload = {
+        ...form,
+        is_email_public: form.is_email_public === true,
+        is_phone_public: form.is_phone_public === true,
+      };
+      const res = await profileAPI.update(payload);
+      console.log('[ProfileEdit] PATCH response:', JSON.stringify(res.data));
+      // Refresh context (and SecureStore cache) BEFORE navigating away
+      // so the form re-mount gets the fresh profile data
       await refreshProfile();
       navigation.goBack();
     } catch (err) {
@@ -188,6 +226,43 @@ export default function ProfileEditScreen({ navigation }) {
           multiline={options.multiline}
           numberOfLines={options.multiline ? 3 : 1}
         />
+      </View>
+    </View>
+  );
+
+  const renderPrivacySelector = (key, label) => (
+    <View style={styles.privacyToggleGroup}>
+      <Text style={styles.privacyLabel}>{label}</Text>
+      <View style={styles.privacySegmentRow}>
+        <TouchableOpacity
+          style={[styles.privacySegment, !form[key] && styles.privacySegmentActive]}
+          onPress={() => update(key, false)}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="lock-closed"
+            size={12}
+            color={!form[key] ? colors.onPrimaryContainer : colors.onSurfaceVariant}
+          />
+          <Text style={[styles.privacySegmentText, !form[key] && styles.privacySegmentTextActive]}>
+            KEEP PRIVATE
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.privacySegment, form[key] && styles.privacySegmentActive]}
+          onPress={() => update(key, true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="people-outline"
+            size={12}
+            color={form[key] ? colors.onPrimaryContainer : colors.onSurfaceVariant}
+          />
+          <Text style={[styles.privacySegmentText, form[key] && styles.privacySegmentTextActive]}>
+            FRIENDS ONLY
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -238,6 +313,7 @@ export default function ProfileEditScreen({ navigation }) {
             <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
         </View>
+
         <View style={styles.inputGroup}>
           <Text style={styles.label}>EMAIL</Text>
           <TouchableOpacity style={styles.inputContainer} onPress={() => openAccountModal('email')} activeOpacity={0.8}>
@@ -245,12 +321,18 @@ export default function ProfileEditScreen({ navigation }) {
             <Text style={[styles.input]} numberOfLines={1}>{profile?.email || 'Set email'}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
+          {renderPrivacySelector('is_email_public', 'WHO CAN SEE YOUR EMAIL?')}
         </View>
 
         {renderSectionHeader('PERSONAL DETAILS')}
         {renderInput('person-outline', 'display_name', 'Your name')}
         {renderInput('document-text-outline', 'bio', 'Tell other riders about yourself', { multiline: true })}
-        {renderInput('call-outline', 'phone', '+1 234 567 890', { keyboardType: 'phone-pad' })}
+        
+        <View style={styles.inputGroup}>
+          {renderInput('call-outline', 'phone', '+1 234 567 890', { keyboardType: 'phone-pad' })}
+          {renderPrivacySelector('is_phone_public', 'WHO CAN SEE YOUR PHONE?')}
+        </View>
+
         {renderInput('location-outline', 'location_city', 'e.g. Mumbai, India')}
 
         {renderSectionHeader('YOUR BIKE')}
@@ -452,4 +534,51 @@ const styles = StyleSheet.create({
   },
   modalCancelText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
   modalConfirmText: { ...typography.labelTechnical, color: colors.onPrimaryContainer },
+  privacyToggleGroup: {
+    marginTop: spacing.stackSm,
+    marginBottom: spacing.stackSm,
+  },
+  privacyLabel: {
+    ...typography.labelSm,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(10),
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  privacySegmentRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg,
+    padding: 3,
+    gap: 4,
+  },
+  privacySegment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    borderRadius: borderRadius.md,
+  },
+  privacySegmentActive: {
+    backgroundColor: colors.primaryContainer,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  privacySegmentText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+  },
+  privacySegmentTextActive: {
+    color: colors.onPrimaryContainer,
+    fontWeight: '800',
+  },
 });

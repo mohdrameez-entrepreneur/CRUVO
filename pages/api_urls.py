@@ -27,6 +27,9 @@ urlpatterns = [
     path('rides/<int:ride_id>/join/', api.join_public_ride_view, name='join-public-ride'),
     path('friends/request/', api.friend_request_view, name='friend-request'),
     path('friends/<int:friendship_id>/respond/', api.respond_friend_request_view, name='respond-friend-request'),
+    path('friends/remove/', api.remove_friend_view, name='remove-friend-body'),
+    path('friends/<int:friendship_id>/remove/', api.remove_friend_view, name='remove-friend'),
     path('friends/', api.list_friends_view, name='list-friends'),
     path('friends/requests/', api.list_friend_requests_view, name='list-friend-requests'),
+    path('users/<int:user_id>/summary/', api.user_profile_summary_view, name='user-profile-summary'),
 ]

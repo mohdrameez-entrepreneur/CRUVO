@@ -42,8 +42,8 @@ export default function CreateRideScreen({ navigation }) {
 
   const handleCreate = async () => {
     setErrorMessage(null);
-    if (!form.name || !origin || !destination) {
-      setErrorMessage('Please provide a ride designation and select both origin and destination.');
+    if (!origin || !destination) {
+      setErrorMessage('Please select both starting point and destination.');
       return;
     }
 
@@ -51,10 +51,14 @@ export default function CreateRideScreen({ navigation }) {
     const dateStr = isScheduled ? formatDate(scheduledDate) : formatDate(now);
     const timeStr = isScheduled ? formatTime(scheduledTime) : formatTime(now);
 
+    const destCleanName = destination?.name ? destination.name.split(',')[0].trim() : 'Destination';
+    const defaultRideName = `Ride to ${destCleanName}`;
+    const rideName = (form.name && form.name.trim()) ? form.name.trim() : defaultRideName;
+
     setLoading(true);
     try {
       const payload = {
-        name: form.name,
+        name: rideName,
         origin_name: origin.name,
         origin_lat: origin.lat,
         origin_lng: origin.lng,
@@ -103,7 +107,7 @@ export default function CreateRideScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <NavBar
-        title="PLAN RIDE"
+        title="NEW RIDE"
         showBack
         onBack={() => navigation.goBack()}
       />
@@ -128,12 +132,12 @@ export default function CreateRideScreen({ navigation }) {
         ) : null}
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>RIDE DESIGNATION</Text>
+          <Text style={styles.label}>RIDE NAME (OPTIONAL)</Text>
           <View style={styles.inputContainer}>
             <Ionicons name="flag-outline" size={20} color={colors.onSurfaceVariant} />
             <TextInput
               style={styles.input}
-              placeholder="Sunday Morning Ride"
+              placeholder={destination?.name ? `e.g. Ride to ${destination.name.split(',')[0].trim()}` : "e.g. Sunday Morning Ride, Squad Cruise"}
               placeholderTextColor={colors.outline}
               value={form.name}
               onChangeText={(v) => update('name', v)}

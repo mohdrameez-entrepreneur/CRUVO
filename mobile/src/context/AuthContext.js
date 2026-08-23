@@ -79,6 +79,8 @@ export function AuthProvider({ children }) {
     const res = await profileAPI.get();
     setProfile(res.data);
     setUser(prev => prev ? { ...prev, username: res.data.username, email: res.data.email } : prev);
+    // Persist updated profile so cache stays in sync (privacy flags, etc.)
+    await SecureStore.setItemAsync('cached_profile', JSON.stringify(res.data));
   };
 
   return (

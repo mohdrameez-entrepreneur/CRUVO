@@ -17,8 +17,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
 import { discoveryAPI, friendsAPI } from '../api';
+import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import NavBar from '../components/NavBar';
+import ProfileSummaryModal from '../components/ProfileSummaryModal';
+import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -48,7 +51,7 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
   }, [visible, filters]);
 
   const toggle = (key, value) => {
-    setLocal(prev => ({ ...prev, [key]: prev[key] === value ? '' : value }));
+    setLocal(prev => ({ ...prev, [key]: value }));
   };
 
   const activeCount = Object.values(local).filter(Boolean).length;
@@ -94,7 +97,7 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
                   key={s}
                   label={s}
                   active={local.style === s}
-                  onPress={() => toggle('style', s)}
+                  onPress={() => toggle('style', local.style === s ? '' : s)}
                 />
               ))}
             </View>
@@ -107,7 +110,7 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
                   key={e}
                   label={e}
                   active={local.experience === e}
-                  onPress={() => toggle('experience', e)}
+                  onPress={() => toggle('experience', local.experience === e ? '' : e)}
                 />
               ))}
             </View>
@@ -118,39 +121,31 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
               <Ionicons name="location-outline" size={18} color={colors.onSurfaceVariant} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Mumbai, Delhi, Bengaluru..."
+                placeholder="e.g. Mumbai, Bangalore, Pune"
                 placeholderTextColor={colors.outline}
                 value={local.location}
-                onChangeText={v => setLocal(prev => ({ ...prev, location: v }))}
+                onChangeText={v => toggle('location', v)}
+                autoCapitalize="words"
               />
-              {local.location ? (
-                <TouchableOpacity onPress={() => setLocal(prev => ({ ...prev, location: '' }))}>
-                  <Ionicons name="close-circle" size={16} color={colors.outline} />
-                </TouchableOpacity>
-              ) : null}
             </View>
 
             {/* Bike Make / Model */}
-            <Text style={styles.filterLabel}>BIKE MAKE & MODEL</Text>
+            <Text style={styles.filterLabel}>BIKE MAKE / MODEL</Text>
             <View style={styles.inputContainer}>
               <Ionicons name="bicycle-outline" size={18} color={colors.onSurfaceVariant} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Royal Enfield, BMW, Ducati..."
+                placeholder="e.g. Himalayan, KTM, Yamaha"
                 placeholderTextColor={colors.outline}
                 value={local.bike}
-                onChangeText={v => setLocal(prev => ({ ...prev, bike: v }))}
+                onChangeText={v => toggle('bike', v)}
+                autoCapitalize="words"
               />
-              {local.bike ? (
-                <TouchableOpacity onPress={() => setLocal(prev => ({ ...prev, bike: '' }))}>
-                  <Ionicons name="close-circle" size={16} color={colors.outline} />
-                </TouchableOpacity>
-              ) : null}
             </View>
           </ScrollView>
 
-          {/* Fixed Non-Overlapping Action Buttons */}
-          <View style={styles.modalActions}>
+          {/* Footer Action Buttons */}
+          <View style={styles.modalFooter}>
             <TouchableOpacity
               style={styles.clearBtn}
               onPress={() => {
@@ -179,13 +174,17 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
   );
 }
 
-function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
+function RiderCard({ rider, onSelectRider, onSendRequest, onRespondRequest, onRequestRemoveFriend, actionLoading }) {
   const p = rider.profile;
   const status = rider.friendship_status || 'NONE';
   const isReceivedPending = status === 'RECEIVED_PENDING';
 
   return (
-    <View style={[styles.riderCard, isReceivedPending && styles.riderCardPending]}>
+    <TouchableOpacity
+      style={[styles.riderCard, isReceivedPending && styles.riderCardPending]}
+      onPress={() => onSelectRider(rider)}
+      activeOpacity={0.9}
+    >
       <View style={styles.riderHeader}>
         <UserAvatar
           avatarUrl={p?.avatar_url}
@@ -196,7 +195,7 @@ function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
         />
         <View style={styles.riderInfo}>
           <Text style={styles.riderName} numberOfLines={1} ellipsizeMode="tail">
-            {p?.display_name || 'Rider'}
+            {p?.display_name || rider.username || 'Rider'}
           </Text>
           <Text style={styles.riderBike} numberOfLines={1} ellipsizeMode="tail">
             {[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'Motorcycle enthusiast'}
@@ -206,14 +205,21 @@ function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
           </Text>
         </View>
 
-        {/* Friend Action Button / Status (when not pending response) */}
         {!isReceivedPending && (
           <View style={styles.actionWrap}>
             {status === 'ACCEPTED' ? (
-              <View style={styles.friendsBadge}>
+              <TouchableOpacity
+                style={styles.friendsBadge}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onRequestRemoveFriend(rider);
+                }}
+                disabled={actionLoading === rider.id}
+                activeOpacity={0.8}
+              >
                 <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
                 <Text style={styles.friendsText}>FRIENDS</Text>
-              </View>
+              </TouchableOpacity>
             ) : status === 'SENT_PENDING' ? (
               <View style={styles.pendingBadge}>
                 <Ionicons name="time-outline" size={14} color={colors.primaryContainer} />
@@ -279,18 +285,21 @@ function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
           ) : null}
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export default function DiscoveryScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ style: '', experience: '', bike: '', location: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [selectedRider, setSelectedRider] = useState(null);
+  const [riderToRemove, setRiderToRemove] = useState(null);
   const [notificationToast, setNotificationToast] = useState(null);
   const debounceRef = useRef(null);
 
@@ -332,6 +341,13 @@ export default function DiscoveryScreen({ navigation }) {
         friendship_status: 'SENT_PENDING',
         friendship_id: res.data.id,
       } : r));
+      if (selectedRider && selectedRider.id === userId) {
+        setSelectedRider(prev => prev ? {
+          ...prev,
+          friendship_status: 'SENT_PENDING',
+          friendship_id: res.data.id,
+        } : null);
+      }
     } catch (err) {
       console.warn('Friend request failed:', err);
     } finally {
@@ -353,6 +369,14 @@ export default function DiscoveryScreen({ navigation }) {
         is_friend: newStatus === 'ACCEPTED',
       } : r));
 
+      if (selectedRider && selectedRider.friendship_id === friendshipId) {
+        setSelectedRider(prev => prev ? {
+          ...prev,
+          friendship_status: newStatus,
+          is_friend: newStatus === 'ACCEPTED',
+        } : null);
+      }
+
       if (action === 'accept' && targetRider) {
         setNotificationToast(`You are now friends with ${targetRider.profile?.display_name || targetRider.username}!`);
       }
@@ -360,6 +384,29 @@ export default function DiscoveryScreen({ navigation }) {
       console.warn('Respond friend request failed:', err);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleRemoveFriend = async (friendshipId) => {
+    try {
+      await friendsAPI.removeFriend(friendshipId);
+      setRiders(prev => prev.map(r => (r.friendship_id === friendshipId || r.id === friendshipId) ? {
+        ...r,
+        friendship_status: 'NONE',
+        is_friend: false,
+        friendship_id: null,
+      } : r));
+      if (selectedRider && (selectedRider.friendship_id === friendshipId || selectedRider.id === friendshipId)) {
+        setSelectedRider(prev => prev ? {
+          ...prev,
+          friendship_status: 'NONE',
+          is_friend: false,
+          friendship_id: null,
+        } : null);
+      }
+      setNotificationToast('Friend removed');
+    } catch (err) {
+      console.warn('Remove friend failed:', err);
     }
   };
 
@@ -490,8 +537,10 @@ export default function DiscoveryScreen({ navigation }) {
           renderItem={({ item }) => (
             <RiderCard
               rider={item}
+              onSelectRider={setSelectedRider}
               onSendRequest={handleSendFriendRequest}
               onRespondRequest={handleRespondFriendRequest}
+              onRequestRemoveFriend={setRiderToRemove}
               actionLoading={actionLoading}
             />
           )}
@@ -512,6 +561,39 @@ export default function DiscoveryScreen({ navigation }) {
         onApply={handleApplyFilters}
         onClear={handleClearFilters}
         onClose={() => setShowFilters(false)}
+      />
+
+      {/* Profile Summary Modal */}
+      <ProfileSummaryModal
+        visible={Boolean(selectedRider)}
+        rider={selectedRider}
+        currentUserId={user?.id}
+        onClose={() => setSelectedRider(null)}
+        onSendRequest={handleSendFriendRequest}
+        onRespondRequest={handleRespondFriendRequest}
+        onRemoveFriend={handleRemoveFriend}
+        onEditProfile={() => navigation.navigate('ProfileEdit')}
+        actionLoading={actionLoading}
+      />
+
+      {/* Reusable DRY Remove Friend Confirmation Modal */}
+      <GlassModal
+        visible={Boolean(riderToRemove)}
+        type="danger"
+        icon="person-remove-outline"
+        badge="REMOVE FRIEND"
+        title={`Remove ${riderToRemove?.profile?.display_name || riderToRemove?.username || 'this rider'}?`}
+        message="Are you sure you want to remove this rider from your friends? You will no longer be able to invite each other to private rides."
+        confirmText="REMOVE FRIEND"
+        cancelText="KEEP FRIEND"
+        onConfirm={() => {
+          if (riderToRemove) {
+            const targetId = riderToRemove.friendship_id || riderToRemove.id;
+            handleRemoveFriend(targetId);
+            setRiderToRemove(null);
+          }
+        }}
+        onCancel={() => setRiderToRemove(null)}
       />
     </View>
   );

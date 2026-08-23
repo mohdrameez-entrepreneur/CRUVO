@@ -115,13 +115,16 @@ export default function DashboardScreen({ navigation }) {
         setFriendNotification({
           type: 'incoming',
           text: `You received a friend request from ${latest.sender_name || 'a rider'}!`,
+          persistent: true, // stays until user taps or refreshes
         });
       } else if (accepted.length > 0) {
         const latest = accepted[0];
         setFriendNotification({
           type: 'accepted',
-          text: `${latest.receiver_name} accepted your friend request!`,
+          text: `${latest.receiver_name} accepted your friend request! 🎉`,
         });
+        // Auto-dismiss accepted notifications after 6 seconds
+        setTimeout(() => setFriendNotification(null), 6000);
       } else {
         setFriendNotification(null);
       }
