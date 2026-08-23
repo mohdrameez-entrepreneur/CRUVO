@@ -698,8 +698,8 @@ def app_version_view(request):
     return Response({
         'latest_version': '2.0.0',
         'min_required_version': '2.0.0',
-        'download_url': 'https://cruvo.onrender.com',
-        'website_url': 'https://cruvo.onrender.com',
+        'download_url': 'https://cruvoride.vercel.app',
+        'website_url': 'https://cruvoride.vercel.app',
         'release_date': '2026-08-24',
         'whats_new': [
             {

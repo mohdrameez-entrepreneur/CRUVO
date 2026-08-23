@@ -22,8 +22,8 @@ export default function UpdateRequiredModal({
   visible,
   currentVersion = '1.0.0',
   requiredVersion = '2.0.0',
-  downloadUrl = 'https://cruvo.onrender.com',
-  websiteUrl = 'https://cruvo.onrender.com',
+  downloadUrl = 'https://cruvoride.vercel.app',
+  websiteUrl = 'https://cruvoride.vercel.app',
   updateSteps = DEFAULT_STEPS,
 }) {
   const handleDownload = () => {
