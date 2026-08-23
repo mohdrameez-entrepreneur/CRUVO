@@ -7,6 +7,7 @@ import { ridesAPI } from '../api';
 import LocationPicker from '../components/LocationPicker';
 import AlertCard from '../components/AlertCard';
 import NavBar from '../components/NavBar';
+import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function formatDate(d) {
@@ -26,6 +27,7 @@ export default function CreateRideScreen({ navigation }) {
   const [destination, setDestination] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [createdRideModal, setCreatedRideModal] = useState(null);
 
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState(new Date());
@@ -66,48 +68,7 @@ export default function CreateRideScreen({ navigation }) {
       const res = await ridesAPI.create(payload);
       const newRide = res.data;
 
-      if (isScheduled) {
-        Alert.alert(
-          'Ride Scheduled',
-          `"${newRide.name}" has been scheduled!`,
-          [
-            {
-              text: 'Invite Riders',
-              onPress: () => navigation.replace('InviteRiders', { rideId: newRide.id, rideName: newRide.name }),
-            },
-            {
-              text: 'View Ride',
-              onPress: () => navigation.replace('RideSummary', { rideId: newRide.id }),
-            },
-          ],
-        );
-      } else {
-        Alert.alert(
-          'Ride Created',
-          `"${newRide.name}" is ready!`,
-          [
-            {
-              text: 'Invite Friends',
-              onPress: () => navigation.replace('InviteRiders', {
-                rideId: newRide.id,
-                rideName: newRide.name,
-                startOnDone: true,
-              }),
-            },
-            {
-              text: 'Start Ride',
-              onPress: async () => {
-                try {
-                  await ridesAPI.startRide(newRide.id);
-                  navigation.replace('ActiveRide', { rideId: newRide.id });
-                } catch {
-                  navigation.replace('RideSummary', { rideId: newRide.id });
-                }
-              },
-            },
-          ],
-        );
-      }
+      setCreatedRideModal({ ride: newRide, isScheduled });
     } catch (err) {
       const msg = err.response?.data;
       if (msg && typeof msg === 'object') {
@@ -291,6 +252,52 @@ export default function CreateRideScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {createdRideModal && (
+        <GlassModal
+          visible={Boolean(createdRideModal)}
+          type="success"
+          icon={createdRideModal.isScheduled ? "calendar" : "navigate"}
+          badge={createdRideModal.isScheduled ? "SCHEDULED" : "READY TO ROLL"}
+          title={createdRideModal.isScheduled ? "Ride Scheduled!" : "Ride Created!"}
+          message={
+            createdRideModal.isScheduled
+              ? `"${createdRideModal.ride.name}" has been scheduled successfully.`
+              : `"${createdRideModal.ride.name}" is ready! Invite your squad or hit the road now.`
+          }
+          confirmText={createdRideModal.isScheduled ? "INVITE RIDERS" : "START RIDE NOW"}
+          cancelText={createdRideModal.isScheduled ? "VIEW RIDE" : "INVITE FRIENDS"}
+          onConfirm={async () => {
+            const ride = createdRideModal.ride;
+            const scheduled = createdRideModal.isScheduled;
+            setCreatedRideModal(null);
+            if (scheduled) {
+              navigation.replace('InviteRiders', { rideId: ride.id, rideName: ride.name });
+            } else {
+              try {
+                await ridesAPI.startRide(ride.id);
+                navigation.replace('ActiveRide', { rideId: ride.id });
+              } catch {
+                navigation.replace('RideSummary', { rideId: ride.id });
+              }
+            }
+          }}
+          onCancel={() => {
+            const ride = createdRideModal.ride;
+            const scheduled = createdRideModal.isScheduled;
+            setCreatedRideModal(null);
+            if (scheduled) {
+              navigation.replace('RideSummary', { rideId: ride.id });
+            } else {
+              navigation.replace('InviteRiders', {
+                rideId: ride.id,
+                rideName: ride.name,
+                startOnDone: true,
+              });
+            }
+          }}
+        />
+      )}
     </View>
   );
 }

@@ -7,12 +7,12 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from datetime import date
 
-from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition
+from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition, Friendship, are_friends
 from .serializers import (
     RegisterSerializer, LoginSerializer, ProfileSerializer,
     RideSerializer, RideCreateSerializer, RideParticipantSerializer,
     FlagStopSerializer, RiderDiscoverySerializer, UserSerializer,
-    InvitationSerializer, RidePositionSerializer,
+    InvitationSerializer, RidePositionSerializer, FriendshipSerializer,
 )
 
 
@@ -181,7 +181,7 @@ def ride_participants_view(request, ride_id):
         if not ride.is_public and ride.creator != request.user and not ride.participants.filter(user=request.user).exists():
             return Response(status=status.HTTP_404_NOT_FOUND)
         participants = ride.participants.select_related('user__profile').all()
-        return Response(RideParticipantSerializer(participants, many=True).data)
+        return Response(RideParticipantSerializer(participants, many=True, context={'request': request}).data)
 
     if ride.creator != request.user:
         return Response({'error': 'Only the ride creator can invite or manage participants'}, status=status.HTTP_403_FORBIDDEN)
@@ -193,15 +193,18 @@ def ride_participants_view(request, ride_id):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    if not ride.is_public and not are_friends(request.user, user):
+        return Response({'error': 'Only accepted friends can be invited to private rides'}, status=status.HTTP_400_BAD_REQUEST)
+
     existing = RideParticipant.objects.filter(ride=ride, user=user).first()
     if existing:
         if existing.status == 'INVITED':
             existing.delete()
             return Response({'action': 'removed'}, status=status.HTTP_200_OK)
-        return Response(RideParticipantSerializer(existing).data, status=status.HTTP_200_OK)
+        return Response(RideParticipantSerializer(existing, context={'request': request}).data, status=status.HTTP_200_OK)
 
     participant = RideParticipant.objects.create(ride=ride, user=user, role=role, status='INVITED')
-    return Response(RideParticipantSerializer(participant).data, status=status.HTTP_201_CREATED)
+    return Response(RideParticipantSerializer(participant, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -395,7 +398,7 @@ def discovery_view(request):
         users = users.filter(profile__location_city__icontains=location)
 
     users = users[:20]
-    return Response(RiderDiscoverySerializer(users, many=True).data)
+    return Response(RiderDiscoverySerializer(users, many=True, context={'request': request}).data)
 
 
 @api_view(['GET'])
@@ -404,7 +407,7 @@ def invitations_view(request):
         user=request.user,
         status='INVITED',
     ).select_related('ride', 'ride__creator', 'ride__creator__profile', 'user__profile')
-    return Response(InvitationSerializer(invitations, many=True).data)
+    return Response(InvitationSerializer(invitations, many=True, context={'request': request}).data)
 
 
 @api_view(['POST'])
@@ -423,7 +426,7 @@ def respond_invitation_view(request, participant_id):
         return Response({'error': 'Action must be "accept" or "decline"'}, status=status.HTTP_400_BAD_REQUEST)
 
     participant.save()
-    return Response(InvitationSerializer(participant).data)
+    return Response(InvitationSerializer(participant, context={'request': request}).data)
 
 
 @api_view(['POST'])
@@ -466,7 +469,7 @@ def get_positions_view(request, ride_id):
         return Response({'error': 'Not authorized to view positions on this private ride'}, status=status.HTTP_403_FORBIDDEN)
 
     positions = RidePosition.objects.filter(ride=ride).select_related('user__profile')
-    return Response(RidePositionSerializer(positions, many=True).data)
+    return Response(RidePositionSerializer(positions, many=True, context={'request': request}).data)
 
 
 @api_view(['POST'])
@@ -523,3 +526,116 @@ def fetch_route_view(request, ride_id):
         })
     except Exception as e:
         return Response({'error': f'Route fetch failed: {str(e)}'}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+@api_view(['POST'])
+def join_public_ride_view(request, ride_id):
+    try:
+        ride = Ride.objects.get(id=ride_id)
+    except Ride.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if not ride.is_public:
+        return Response({'error': 'Cannot join a private ride directly. You must be invited by a friend.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    existing = RideParticipant.objects.filter(ride=ride, user=request.user).first()
+    if existing:
+        if existing.status != 'ACCEPTED':
+            existing.status = 'ACCEPTED'
+            existing.save()
+        return Response(RideParticipantSerializer(existing, context={'request': request}).data)
+
+    participant = RideParticipant.objects.create(
+        ride=ride, user=request.user, role='WINGMAN', status='ACCEPTED'
+    )
+    return Response(RideParticipantSerializer(participant, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def friend_request_view(request):
+    user_id = request.data.get('user_id')
+    if not user_id:
+        return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+    if int(user_id) == request.user.id:
+        return Response({'error': 'Cannot add yourself as a friend'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        target_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    existing = Friendship.objects.filter(
+        Q(sender=request.user, receiver=target_user) | Q(sender=target_user, receiver=request.user)
+    ).first()
+
+    if existing:
+        if existing.sender == target_user and existing.status == 'PENDING':
+            existing.status = 'ACCEPTED'
+            existing.save()
+        elif existing.status == 'DECLINED':
+            existing.status = 'PENDING'
+            existing.sender = request.user
+            existing.receiver = target_user
+            existing.save()
+        return Response(FriendshipSerializer(existing, context={'request': request}).data, status=status.HTTP_200_OK)
+
+    friendship = Friendship.objects.create(
+        sender=request.user, receiver=target_user, status='PENDING'
+    )
+    return Response(FriendshipSerializer(friendship, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def respond_friend_request_view(request, friendship_id):
+    try:
+        friendship = Friendship.objects.get(id=friendship_id)
+    except Friendship.DoesNotExist:
+        return Response({'error': 'Friend request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if friendship.receiver != request.user and friendship.sender != request.user:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+    action = request.data.get('action', '')
+    if action == 'accept':
+        friendship.status = 'ACCEPTED'
+    elif action == 'decline':
+        friendship.status = 'DECLINED'
+    else:
+        return Response({'error': 'Action must be "accept" or "decline"'}, status=status.HTTP_400_BAD_REQUEST)
+
+    friendship.save()
+    return Response(FriendshipSerializer(friendship, context={'request': request}).data)
+
+
+@api_view(['GET'])
+def list_friends_view(request):
+    from django.db.models import Q
+    friendships = Friendship.objects.filter(
+        status='ACCEPTED'
+    ).filter(
+        Q(sender=request.user) | Q(receiver=request.user)
+    ).select_related('sender__profile', 'receiver__profile')
+
+    friends = []
+    for f in friendships:
+        friend_user = f.receiver if f.sender == request.user else f.sender
+        friends.append(friend_user)
+
+    return Response(RiderDiscoverySerializer(friends, many=True, context={'request': request}).data)
+
+
+@api_view(['GET'])
+def list_friend_requests_view(request):
+    incoming = Friendship.objects.filter(
+        receiver=request.user, status='PENDING'
+    ).select_related('sender__profile', 'receiver__profile')
+
+    accepted_notifications = Friendship.objects.filter(
+        sender=request.user, status='ACCEPTED'
+    ).select_related('sender__profile', 'receiver__profile').order_by('-updated_at')[:10]
+
+    return Response({
+        'incoming': FriendshipSerializer(incoming, many=True, context={'request': request}).data,
+        'accepted_notifications': FriendshipSerializer(accepted_notifications, many=True, context={'request': request}).data,
+    })
+

@@ -24,4 +24,9 @@ urlpatterns = [
     path('rides/<int:ride_id>/positions/', api.get_positions_view, name='ride-positions'),
     path('rides/<int:ride_id>/update-position/', api.update_position_view, name='update-position'),
     path('rides/<int:ride_id>/fetch-route/', api.fetch_route_view, name='fetch-route'),
+    path('rides/<int:ride_id>/join/', api.join_public_ride_view, name='join-public-ride'),
+    path('friends/request/', api.friend_request_view, name='friend-request'),
+    path('friends/<int:friendship_id>/respond/', api.respond_friend_request_view, name='respond-friend-request'),
+    path('friends/', api.list_friends_view, name='list-friends'),
+    path('friends/requests/', api.list_friend_requests_view, name='list-friend-requests'),
 ]

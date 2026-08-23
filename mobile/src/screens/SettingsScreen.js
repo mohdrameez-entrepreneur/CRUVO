@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius, scale, moderateScale } from 
 import { useAuth } from '../context/AuthContext';
 import NavBar from '../components/NavBar';
 import GlassModal from '../components/GlassModal';
+import UserAvatar from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InfoRow({ icon, label, value }) {
@@ -21,7 +22,7 @@ function InfoRow({ icon, label, value }) {
 
 export default function SettingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { profile, user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -29,9 +30,9 @@ export default function SettingsScreen({ navigation }) {
     setLoggingOut(true);
     try {
       await logout();
-      setShowLogoutModal(false);
-    } catch {} finally {
+    } finally {
       setLoggingOut(false);
+      setShowLogoutModal(false);
     }
   };
 
@@ -45,13 +46,13 @@ export default function SettingsScreen({ navigation }) {
 
       <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 80 }]}>
         <View style={styles.profileSection}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatarLarge} />
-          ) : (
-            <View style={styles.avatarLarge}>
-              <Text style={styles.avatarInitials}>{profile?.initials || '??'}</Text>
-            </View>
-          )}
+          <UserAvatar
+            avatarUrl={profile?.avatar_url}
+            name={profile?.display_name}
+            initials={profile?.initials}
+            id={profile?.user_id}
+            size={80}
+          />
           <Text style={styles.profileName}>{profile?.display_name || 'Rider'}</Text>
           <Text style={styles.profileUsername}>@{user?.username || ''}</Text>
           <Text style={styles.profileEmail}>{user?.email || ''}</Text>

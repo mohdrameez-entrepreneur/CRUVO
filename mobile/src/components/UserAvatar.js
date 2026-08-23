@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { colors, typography, borderRadius } from '../theme';
+import { colors, typography } from '../theme';
 
 const AVATAR_COLORS = [
   '#ffd600', '#4CAF50', '#FF9800', '#2196F3', '#E91E63',
@@ -19,22 +19,32 @@ function getInitialsFromName(name) {
   return name.substring(0, 2).toUpperCase();
 }
 
+export function getFullAvatarUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const apiBase = (process.env.EXPO_PUBLIC_API_URL || 'https://cruvo.onrender.com/api').replace(/\/api\/?$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${apiBase}${cleanPath}`;
+}
+
 export default function UserAvatar({ avatarUrl, name, initials, id, size = 44, style }) {
   const displayInitials = initials || getInitialsFromName(name);
   const bgColor = getColorFromId(id);
   const [imgError, setImgError] = useState(false);
 
-  const hasValidUrl = avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http');
+  const fullUrl = getFullAvatarUrl(avatarUrl);
 
   useEffect(() => {
     setImgError(false);
   }, [avatarUrl]);
 
-  if (hasValidUrl && !imgError) {
+  if (fullUrl && !imgError) {
     return (
       <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }, style]}>
         <Image
-          source={{ uri: avatarUrl }}
+          source={{ uri: fullUrl }}
           style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
           onError={() => setImgError(true)}
         />

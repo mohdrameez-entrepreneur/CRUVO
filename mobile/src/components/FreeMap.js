@@ -1,15 +1,20 @@
 import React, { useMemo, useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { API_BASE } from '../config';
+import { getFullAvatarUrl } from './UserAvatar';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-function buildHtml({ center, zoom, markers, polyline, followUser }) {
+function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRiders, myUserId }) {
   const markersJson = JSON.stringify(markers || []);
   const polylineJson = JSON.stringify(polyline || []);
-  const centerLng = Number.isFinite(center?.[1]) ? center[1] : 72.8777;
-  const centerLat = Number.isFinite(center?.[0]) ? center[0] : 19.076;
-  const zoomLevel = Number.isFinite(zoom) ? zoom : 13;
+  const initialRidersJson = JSON.stringify(initialRiders || []);
+  const myUserIdJson = JSON.stringify(myUserId || null);
+  const centerLng = Number.isFinite(initialCenter?.[1]) ? initialCenter[1] : 72.8777;
+  const centerLat = Number.isFinite(initialCenter?.[0]) ? initialCenter[0] : 19.076;
+  const zoomLevel = Number.isFinite(initialZoom) ? initialZoom : 13;
+  const cleanApiBase = (API_BASE || '').replace(/\/api\/?$/, '');
 
   return `<!DOCTYPE html>
 <html>
@@ -25,30 +30,57 @@ function buildHtml({ center, zoom, markers, polyline, followUser }) {
   .maplibregl-ctrl-group { box-shadow: none !important; }
   .maplibregl-ctrl button { background: rgba(30,31,35,0.9) !important; border: 1px solid #4d4632 !important; }
   .maplibregl-ctrl button span { filter: invert(1); }
-  #user-dot {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:16px; height:16px; border-radius:8px; background:#4285F4;
-    border:3px solid #fff; box-shadow:0 0 0 2px rgba(66,133,244,0.3), 0 2px 8px rgba(0,0,0,0.5);
-    z-index:10; pointer-events:none; display:none;
+  
+  @keyframes me-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.75), 0 3px 12px rgba(0,0,0,0.8); }
+    70% { box-shadow: 0 0 0 16px rgba(255, 214, 0, 0), 0 3px 12px rgba(0,0,0,0.8); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0), 0 3px 12px rgba(0,0,0,0.8); }
   }
-  #user-ring {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:60px; height:60px; border-radius:30px; background:rgba(66,133,244,0.12);
-    z-index:9; pointer-events:none; display:none;
+  .me-marker-pulse {
+    animation: me-pulse 2s infinite;
   }
-  #user-heading {
-    position:absolute; top:50%; left:50%;
-    width:4px; height:22px; margin-left:-2px; margin-top:-28px;
-    background:#4285F4; border-radius:2px; transform-origin:bottom center;
-    z-index:11; pointer-events:none; display:none;
+  .cruvo-rider-marker {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.8);
+    overflow: visible;
+  }
+  .cruvo-avatar-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cruvo-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .cruvo-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: #121317;
   }
 </style>
 </head>
 <body>
 <div id="map"></div>
-<div id="user-ring"></div>
-<div id="user-dot"></div>
-<div id="user-heading"></div>
 <script>
 try {
   var style = {
@@ -64,77 +96,248 @@ try {
     container: 'map',
     style: style,
     center: [${centerLng}, ${centerLat}],
-    zoom: ${followUser ? 17 : zoomLevel},
-    pitch: ${followUser ? 45 : 0},
+    zoom: ${zoomLevel},
+    pitch: 0,
     bearing: 0,
     attributionControl: false
   });
 
   map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), 'top-right');
 
-  var userMarker = document.getElementById('user-dot');
-  var userRing = document.getElementById('user-ring');
-  var userHeading = document.getElementById('user-heading');
-
   var firstUserPos = true;
   var riderMarkers = {};
   var COLORS = ['#ffd600','#4CAF50','#FF9800','#2196F3','#E91E63','#9C27B0','#00BCD4','#FF5722'];
+  var API_BASE_SERVER = '${cleanApiBase}';
+  var rawPolyline = ${polylineJson} || [];
+  // The current device’s own user ID — camera ONLY follows this user’s GPS
+  var MY_USER_ID = ${myUserIdJson};
 
-  window.addEventListener('message', function(e) {
+  // --- Stable camera state (prevents jitter / teleporting) ---
+  var smoothedHeading = 0;         // EMA-smoothed compass bearing
+  var lastCamLat = null;           // Last camera position — skip update if barely moved
+  var lastCamLng = null;
+  var MIN_MOVE_DEG = 0.00005;      // ~5m in degrees — ignore smaller GPS jitter
+  var MIN_SPEED_FOR_BEARING = 1.5; // m/s (~5 km/h) — below this keep bearing fixed
+
+  // Smooth heading across the 0/360 wrap-around boundary
+  function smoothHeading(prev, next, alpha) {
+    var diff = next - prev;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    return prev + alpha * diff;
+  }
+
+  function updateProgressPolyline(userLngLat) {
+    if (!rawPolyline || !Array.isArray(rawPolyline) || rawPolyline.length < 2 || !userLngLat) return;
+    var uLng = userLngLat[0];
+    var uLat = userLngLat[1];
+    if (!Number.isFinite(uLng) || !Number.isFinite(uLat)) return;
+
+    var minDistanceSq = Infinity;
+    var closestIdx = 0;
+
+    for (var i = 0; i < rawPolyline.length; i++) {
+      var pt = rawPolyline[i];
+      var dLng = pt[0] - uLng;
+      var dLat = pt[1] - uLat;
+      var distSq = dLng * dLng + dLat * dLat;
+      if (distSq < minDistanceSq) {
+        minDistanceSq = distSq;
+        closestIdx = i;
+      }
+    }
+
+    if (minDistanceSq < 0.0003) {
+      var remaining = [userLngLat].concat(rawPolyline.slice(closestIdx + 1));
+      if (remaining.length >= 2) {
+        var src = map.getSource('route');
+        if (src) {
+          src.setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: remaining
+            }
+          });
+        }
+      }
+    }
+  }
+
+  function createMarkerElement(r, isMe, colorIndex) {
+    var el = document.createElement('div');
+    var color = isMe ? '#ffd600' : COLORS[colorIndex % COLORS.length];
+    var borderColor = isMe ? '#ffd600' : '#ffffff';
+    var pulseClass = isMe ? ' me-marker-pulse' : '';
+    
+    el.className = 'cruvo-rider-marker' + pulseClass;
+    el.style.backgroundColor = color;
+    el.style.border = '3px solid ' + borderColor;
+
+    var inner = document.createElement('div');
+    inner.className = 'cruvo-avatar-inner';
+    inner.style.backgroundColor = color;
+
+    var avatarUrl = r.avatar_url;
+    if (avatarUrl && avatarUrl.indexOf('http') !== 0 && avatarUrl.indexOf('data:') !== 0) {
+      avatarUrl = API_BASE_SERVER + (avatarUrl.indexOf('/') === 0 ? '' : '/') + avatarUrl;
+    }
+
+    if (avatarUrl) {
+      var img = document.createElement('img');
+      img.className = 'cruvo-avatar-img';
+      img.src = avatarUrl;
+      img.crossOrigin = 'anonymous';
+      img.referrerPolicy = 'no-referrer';
+
+      var fallback = document.createElement('div');
+      fallback.className = 'cruvo-avatar-fallback';
+      fallback.style.display = 'none';
+      fallback.textContent = r.initials || '??';
+
+      img.onerror = function() {
+        img.style.display = 'none';
+        fallback.style.display = 'flex';
+      };
+
+      inner.appendChild(img);
+      inner.appendChild(fallback);
+    } else {
+      var fallback = document.createElement('div');
+      fallback.className = 'cruvo-avatar-fallback';
+      fallback.textContent = r.initials || '??';
+      inner.appendChild(fallback);
+    }
+
+    el.appendChild(inner);
+    return el;
+  }
+
+  function renderRiders(riders, myUserId) {
+    if (!Array.isArray(riders)) return;
+    var seen = {};
+
+    riders.forEach(function(r, i) {
+      if (!r || !Number.isFinite(r.lat) || !Number.isFinite(r.lng)) return;
+      var uid = String(r.user);
+      seen[uid] = true;
+      var isMe = myUserId && String(myUserId) === uid;
+
+      if (riderMarkers[uid]) {
+        riderMarkers[uid].setLngLat([r.lng, r.lat]);
+        var existingImg = riderMarkers[uid].getElement().querySelector('img');
+        var existingSrc = existingImg ? existingImg.src : null;
+        if (r.avatar_url && (!existingImg || existingSrc !== r.avatar_url)) {
+          var newEl = createMarkerElement(r, isMe, i);
+          riderMarkers[uid].remove();
+          riderMarkers[uid] = new maplibregl.Marker({ element: newEl }).setLngLat([r.lng, r.lat]).addTo(map);
+        }
+      } else {
+        var el = createMarkerElement(r, isMe, i);
+        var marker = new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(map);
+        riderMarkers[uid] = marker;
+      }
+    });
+
+    Object.keys(riderMarkers).forEach(function(uid) {
+      if (!seen[uid]) {
+        riderMarkers[uid].remove();
+        delete riderMarkers[uid];
+      }
+    });
+  }
+
+  function handleMessageData(data) {
+    if (!data) return;
     try {
-      var msg = JSON.parse(e.data);
+      var msg = typeof data === 'string' ? JSON.parse(data) : data;
 
       if (msg.type === 'userLocation' && Number.isFinite(msg.lat) && Number.isFinite(msg.lng)) {
         var lngLat = [msg.lng, msg.lat];
-        if (firstUserPos) {
-          firstUserPos = false;
-          userMarker.style.display = 'block';
-          userRing.style.display = 'block';
-          userHeading.style.display = 'block';
-          map.jumpTo({ center: lngLat, zoom: 17, pitch: 45, bearing: msg.heading || 0 });
-        } else {
-          userMarker.style.display = 'block';
-          userRing.style.display = 'block';
-          userHeading.style.display = 'block';
-          map.easeTo({ center: lngLat, zoom: 17, pitch: 45, bearing: msg.heading || 0, duration: 1000 });
+        var speed = Number.isFinite(msg.speed) ? msg.speed : 0;
+        var rawHeading = Number.isFinite(msg.heading) ? msg.heading : 0;
+
+        // Move MY own avatar marker in real-time from device GPS (not waiting for WebSocket batch)
+        if (MY_USER_ID && riderMarkers[String(MY_USER_ID)]) {
+          riderMarkers[String(MY_USER_ID)].setLngLat(lngLat);
         }
-        if (msg.heading !== undefined && msg.heading !== null) {
-          userHeading.style.transform = 'translate(-50%,-100%) rotate(' + (-msg.heading) + 'deg)';
+
+        // Camera follow logic — only when followUser is true
+        if (msg.followUser) {
+          if (firstUserPos) {
+            // First fix: jump immediately to current position, no bearing
+            firstUserPos = false;
+            lastCamLat = msg.lat;
+            lastCamLng = msg.lng;
+            smoothedHeading = 0;
+            map.jumpTo({ center: lngLat, zoom: 17, pitch: 0, bearing: 0 });
+          } else {
+            // Only move camera if moved more than MIN_MOVE_DEG (eliminates GPS jitter teleport)
+            var moveLat = Math.abs(msg.lat - lastCamLat);
+            var moveLng = Math.abs(msg.lng - lastCamLng);
+            var hasMoved = moveLat > MIN_MOVE_DEG || moveLng > MIN_MOVE_DEG;
+
+            if (hasMoved) {
+              lastCamLat = msg.lat;
+              lastCamLng = msg.lng;
+
+              // Only rotate map bearing when actually moving (speed threshold)
+              // Below threshold keep bearing fixed to avoid spinning from compass noise
+              var targetBearing = map.getBearing(); // default: keep current
+              if (speed >= MIN_SPEED_FOR_BEARING) {
+                // Smooth heading with EMA — alpha=0.25 means slow blend, very stable
+                smoothedHeading = smoothHeading(smoothedHeading, rawHeading, 0.25);
+                targetBearing = smoothedHeading;
+              }
+
+              map.easeTo({
+                center: lngLat,
+                zoom: Math.max(map.getZoom(), 15),
+                pitch: 0,           // Flat top-down: no 3D tilt jitter
+                bearing: targetBearing,
+                duration: 1200,     // Slower ease = much smoother
+              });
+            }
+          }
         }
+        updateProgressPolyline(lngLat);
       }
 
       if (msg.type === 'updateRiders') {
-        var riders = msg.riders || [];
-        var seen = {};
-        riders.forEach(function(r, i) {
-          if (!r || !Number.isFinite(r.lat) || !Number.isFinite(r.lng)) return;
-          seen[r.user] = true;
-          if (riderMarkers[r.user]) {
-            riderMarkers[r.user].setLngLat([r.lng, r.lat]);
-          } else {
-            var color = COLORS[i % COLORS.length];
-            var el = document.createElement('div');
-            el.style.cssText = 'width:38px;height:38px;border-radius:19px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#121317;font-size:11px;font-weight:700;font-family:monospace;box-shadow:0 2px 8px rgba(0,0,0,0.5);transition:transform 0.3s ease;';
-            el.textContent = r.initials || '??';
-            var marker = new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(map);
-            riderMarkers[r.user] = marker;
-          }
-        });
-        Object.keys(riderMarkers).forEach(function(uid) {
-          if (!seen[uid]) {
-            riderMarkers[uid].remove();
-            delete riderMarkers[uid];
-          }
-        });
+        // Sync MY_USER_ID from the message in case it was set later
+        if (msg.myUserId != null) MY_USER_ID = msg.myUserId;
+        renderRiders(msg.riders || [], MY_USER_ID);
+      }
+
+      if (msg.type === 'recenter') {
+        var targetLat = Number.isFinite(msg.lat) ? msg.lat : lastCamLat;
+        var targetLng = Number.isFinite(msg.lng) ? msg.lng : lastCamLng;
+        if (Number.isFinite(targetLat) && Number.isFinite(targetLng)) {
+          lastCamLat = targetLat;
+          lastCamLng = targetLng;
+          smoothedHeading = 0;
+          map.easeTo({
+            center: [targetLng, targetLat],
+            zoom: 17,
+            pitch: 0,
+            bearing: 0,
+            duration: 800,
+          });
+        }
       }
     } catch(err) {
       console.warn('WebView message handler error:', err);
     }
-  });
+  }
+
+  window.handleMessageData = handleMessageData;
+  window.addEventListener('message', function(e) { handleMessageData(e.data); });
+  document.addEventListener('message', function(e) { handleMessageData(e.data); });
 
   map.on('load', function() {
     try {
-      var coords = ${polylineJson};
+      var coords = rawPolyline;
       if (Array.isArray(coords) && coords.length > 0) {
         map.addSource('route', {
           type: 'geojson',
@@ -158,16 +361,14 @@ try {
           paint: { 'line-color': '#705d00', 'line-width': 8, 'line-opacity': 0.4 }
         }, 'route-line');
 
-        if (!${followUser} && coords.length > 1) {
-          var bounds = new maplibregl.LngLatBounds();
-          coords.forEach(function(c) {
-            if (Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
-              bounds.extend(c);
-            }
-          });
-          if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 }, maxZoom: 16 });
+        var bounds = new maplibregl.LngLatBounds();
+        coords.forEach(function(c) {
+          if (Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+            bounds.extend(c);
           }
+        });
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 }, maxZoom: 16 });
         }
       }
 
@@ -182,6 +383,11 @@ try {
           new maplibregl.Marker({ element: el }).setLngLat([m.lng, m.lat]).addTo(map);
         });
       }
+
+      var initRiders = ${initialRidersJson};
+      if (Array.isArray(initRiders) && initRiders.length > 0) {
+        renderRiders(initRiders, ${myUserIdJson});
+      }
     } catch(err) {
       console.warn('Map load handling error:', err);
     }
@@ -194,19 +400,17 @@ try {
 </html>`;
 }
 
-export default function FreeMap({ ride, positions = [], myUserId, userLocation, heading, followMyLocation = false, style }) {
+export default function FreeMap({ ride, positions = [], myUserId, userLocation, heading, followMyLocation = false, recenterTrigger, style }) {
   const webViewRef = useRef(null);
   const lastLocationRef = useRef(null);
   const lastRidersJson = useRef('');
 
-  const center = useMemo(() => {
+  // STABLE initial center computation - NEVER recomputed on userLocation changes to prevent WebView reloads!
+  const initialCenter = useMemo(() => {
     let lat = 19.076;
     let lng = 72.8777;
 
-    if (userLocation && followMyLocation && Number.isFinite(Number(userLocation.latitude)) && Number.isFinite(Number(userLocation.longitude))) {
-      lat = Number(userLocation.latitude);
-      lng = Number(userLocation.longitude);
-    } else if (ride?.origin_lat && ride?.destination_lat) {
+    if (ride?.origin_lat && ride?.destination_lat) {
       const oLat = Number(ride.origin_lat);
       const oLng = Number(ride.origin_lng);
       const dLat = Number(ride.destination_lat);
@@ -222,12 +426,15 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
         lat = oLat;
         lng = oLng;
       }
+    } else if (userLocation && Number.isFinite(Number(userLocation.latitude)) && Number.isFinite(Number(userLocation.longitude))) {
+      lat = Number(userLocation.latitude);
+      lng = Number(userLocation.longitude);
     }
     return [lat, lng];
-  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng, userLocation, followMyLocation]);
+    // ONLY recompute on ride coordinate change, NOT on userLocation changes!
+  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng]);
 
-  const zoom = useMemo(() => {
-    if (followMyLocation && userLocation) return 17;
+  const initialZoom = useMemo(() => {
     if (ride?.origin_lat && ride?.destination_lat) {
       const oLat = Number(ride.origin_lat);
       const oLng = Number(ride.origin_lng);
@@ -244,7 +451,7 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
       }
     }
     return 13;
-  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng, userLocation, followMyLocation]);
+  }, [ride?.id, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng]);
 
   const markers = useMemo(() => {
     const m = [];
@@ -299,7 +506,7 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
       }
     }
 
-    if (ride.origin_lat && ride.destination_lat) {
+    if (ride?.origin_lat && ride?.destination_lat) {
       const oLat = Number(ride.origin_lat);
       const oLng = Number(ride.origin_lng);
       const dLat = Number(ride.destination_lat);
@@ -311,52 +518,113 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
     return [];
   }, [ride?.id, ride?.route_polyline, ride?.origin_lat, ride?.destination_lat, ride?.origin_lng, ride?.destination_lng]);
 
+  const initialRiders = useMemo(() => {
+    return (positions || [])
+      .map(p => {
+        const lat = Number(p.lat);
+        const lng = Number(p.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return {
+          user: p.user,
+          lat,
+          lng,
+          initials: p.initials || '??',
+          avatar_url: getFullAvatarUrl(p.avatar_url) || null,
+          display_name: p.display_name || '',
+        };
+      })
+      .filter(Boolean);
+  }, [ride?.id]);
+
+  // STABLE HTML: Only memoized on static ride & route properties!
   const html = useMemo(
-    () => buildHtml({ center, zoom, markers, polyline, followUser: followMyLocation }),
-    [center, zoom, markers, polyline, followMyLocation]
+    () => buildHtml({ initialCenter, initialZoom, markers, polyline, initialRiders, myUserId }),
+    [ride?.id, initialCenter, initialZoom, markers, polyline]
   );
 
   const sendMessage = useCallback((msg) => {
     if (webViewRef.current) {
       try {
-        webViewRef.current.postMessage(JSON.stringify(msg));
+        const str = JSON.stringify(msg);
+        webViewRef.current.postMessage(str);
+        webViewRef.current.injectJavaScript(`if (window.handleMessageData) { window.handleMessageData(${str}); } true;`);
       } catch {}
     }
   }, []);
 
-  useEffect(() => {
-    if (userLocation && followMyLocation && Number.isFinite(Number(userLocation.latitude)) && Number.isFinite(Number(userLocation.longitude))) {
-      const lat = Number(userLocation.latitude);
-      const lng = Number(userLocation.longitude);
-      const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
-      if (key !== lastLocationRef.current) {
-        lastLocationRef.current = key;
-        sendMessage({
-          type: 'userLocation',
-          lat,
-          lng,
-          heading: Number(heading) || 0,
-        });
-      }
-    }
-  }, [userLocation, heading, followMyLocation, sendMessage]);
-
-  useEffect(() => {
+  const sendRidersUpdate = useCallback(() => {
     const riders = (positions || [])
       .map(p => {
         const lat = Number(p.lat);
         const lng = Number(p.lng);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-        return { user: p.user, lat, lng, initials: p.initials || '??' };
+        return {
+          user: p.user,
+          lat,
+          lng,
+          initials: p.initials || '??',
+          avatar_url: getFullAvatarUrl(p.avatar_url) || null,
+          display_name: p.display_name || '',
+        };
       })
       .filter(Boolean);
 
     const json = JSON.stringify(riders);
     if (json !== lastRidersJson.current) {
       lastRidersJson.current = json;
-      sendMessage({ type: 'updateRiders', riders });
+      sendMessage({ type: 'updateRiders', riders, myUserId });
     }
-  }, [positions, sendMessage]);
+  }, [positions, myUserId, sendMessage]);
+
+  const sendUserLocationUpdate = useCallback(() => {
+    if (userLocation && Number.isFinite(Number(userLocation.latitude)) && Number.isFinite(Number(userLocation.longitude))) {
+      const lat = Number(userLocation.latitude);
+      const lng = Number(userLocation.longitude);
+      const head = Math.round(Number(heading) || 0);
+      const spd = Number.isFinite(Number(userLocation.speed)) ? Number(userLocation.speed) : 0;
+      const key = `${lat.toFixed(5)},${lng.toFixed(5)},${head},${spd.toFixed(1)},${followMyLocation}`;
+      if (key !== lastLocationRef.current) {
+        lastLocationRef.current = key;
+        sendMessage({
+          type: 'userLocation',
+          lat,
+          lng,
+          heading: head,
+          speed: spd,
+          followUser: followMyLocation,
+        });
+      }
+    }
+  }, [userLocation, heading, followMyLocation, sendMessage]);
+
+  useEffect(() => {
+    sendUserLocationUpdate();
+  }, [sendUserLocationUpdate]);
+
+  useEffect(() => {
+    sendRidersUpdate();
+  }, [sendRidersUpdate]);
+
+  useEffect(() => {
+    if (recenterTrigger) {
+      if (userLocation && Number.isFinite(Number(userLocation.latitude)) && Number.isFinite(Number(userLocation.longitude))) {
+        sendMessage({
+          type: 'recenter',
+          lat: Number(userLocation.latitude),
+          lng: Number(userLocation.longitude),
+        });
+      } else {
+        sendMessage({ type: 'recenter' });
+      }
+    }
+  }, [recenterTrigger, userLocation, sendMessage]);
+
+  const handleWebViewLoad = useCallback(() => {
+    lastLocationRef.current = null;
+    lastRidersJson.current = '';
+    sendUserLocationUpdate();
+    sendRidersUpdate();
+  }, [sendUserLocationUpdate, sendRidersUpdate]);
 
   return (
     <View style={[styles.container, style]}>
@@ -370,6 +638,7 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
         scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
+        onLoadEnd={handleWebViewLoad}
         onMessage={() => {}}
       />
     </View>

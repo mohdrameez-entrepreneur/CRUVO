@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { discoveryAPI, ridesAPI } from '../api';
@@ -40,16 +40,27 @@ function RiderCard({ rider, onToggle, isInvited }) {
 export default function InviteRidersScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { rideId, rideName, startOnDone } = route.params || {};
+  const [ride, setRide] = useState(null);
   const [riders, setRiders] = useState([]);
   const [invitedIds, setInvitedIds] = useState(new Set());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
 
+  const loadRide = async () => {
+    if (!rideId) return;
+    try {
+      const res = await ridesAPI.get(rideId);
+      setRide(res.data);
+    } catch {}
+  };
+
   const loadRiders = async (query = '') => {
     try {
       const res = await discoveryAPI.searchRiders(query);
-      setRiders(res.data);
+      // For private rides: Only include accepted friends
+      const friendsOnly = (res.data || []).filter(r => r.is_friend || r.friendship_status === 'ACCEPTED');
+      setRiders(friendsOnly);
     } catch (err) {
       console.log('LOAD RIDERS ERROR:', err.message);
     } finally {
@@ -66,9 +77,10 @@ export default function InviteRidersScreen({ navigation, route }) {
   };
 
   useEffect(() => {
+    loadRide();
     loadRiders();
     loadParticipants();
-  }, []);
+  }, [rideId]);
 
   const handleSearch = (text) => {
     setSearch(text);
@@ -106,15 +118,18 @@ export default function InviteRidersScreen({ navigation, route }) {
       }
     } catch (err) {
       console.log('INVITE ERROR:', err.message, err.response?.data);
-      Alert.alert('Error', 'Failed to update invitation');
+      Alert.alert('Error', err.response?.data?.error || 'Failed to update invitation');
     }
   };
+
+  const isPublicRide = ride?.is_public;
 
   return (
     <View style={styles.container}>
       <NavBar
         title="INVITE RIDERS"
         subtitle={rideName || undefined}
+        badge={isPublicRide ? 'PUBLIC RIDE' : 'PRIVATE RIDE'}
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
@@ -131,45 +146,74 @@ export default function InviteRidersScreen({ navigation, route }) {
         }
       />
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.onSurfaceVariant} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search riders by name, bike, or city..."
-          placeholderTextColor={colors.outline}
-          value={search}
-          onChangeText={handleSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => handleSearch('')}>
-            <Ionicons name="close-circle" size={20} color={colors.onSurfaceVariant} />
+      {isPublicRide ? (
+        <View style={styles.publicInfoContainer}>
+          <View style={styles.publicBanner}>
+            <Ionicons name="globe-outline" size={24} color={colors.primaryContainer} />
+            <View style={styles.publicTextWrap}>
+              <Text style={styles.publicTitle}>PUBLIC RIDE</Text>
+              <Text style={styles.publicSubtext}>
+                This ride is public — anyone in the CRUVO community can discover and join directly from Explore!
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.doneFullBtn} onPress={handleDone} activeOpacity={0.8}>
+            <Text style={styles.doneFullText}>FINISH & RETURN</Text>
           </TouchableOpacity>
-        )}
-      </View>
-
-      {loading ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Loading riders...</Text>
-        </View>
-      ) : riders.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={40} color={colors.onSurfaceVariant} />
-          <Text style={styles.emptyTitle}>No riders found</Text>
-          <Text style={styles.emptyText}>Try a different search or invite later</Text>
         </View>
       ) : (
-        <FlatList
-          data={riders}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <RiderCard
-              rider={item}
-              onToggle={handleToggle}
-              isInvited={invitedIds.has(item.id)}
+        <>
+          <View style={styles.privateHeaderBanner}>
+            <Ionicons name="lock-closed" size={14} color={colors.primaryContainer} />
+            <Text style={styles.privateBannerText}>
+              PRIVATE RIDE • Only your accepted friends can be invited
+            </Text>
+          </View>
+
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={colors.onSurfaceVariant} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search friends by name, bike, or city..."
+              placeholderTextColor={colors.outline}
+              value={search}
+              onChangeText={handleSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <Ionicons name="close-circle" size={20} color={colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {loading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={colors.primaryContainer} />
+              <Text style={styles.emptyText}>Loading friends...</Text>
+            </View>
+          ) : riders.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="people-outline" size={40} color={colors.onSurfaceVariant} />
+              <Text style={styles.emptyTitle}>No friends found</Text>
+              <Text style={styles.emptyText}>
+                You can only invite riders who have accepted your friend request. Add friends in Explore first!
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={riders}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <RiderCard
+                  rider={item}
+                  onToggle={handleToggle}
+                  isInvited={invitedIds.has(item.id)}
+                />
+              )}
+              contentContainerStyle={styles.list}
             />
           )}
-          contentContainerStyle={styles.list}
-        />
+        </>
       )}
     </View>
   );
@@ -227,4 +271,67 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.titleMd, color: colors.onSurface },
   emptyText: { ...typography.bodyMd, color: colors.onSurfaceVariant, textAlign: 'center' },
+  privateHeaderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.3)',
+    marginHorizontal: spacing.marginMobile,
+    marginTop: spacing.stackSm,
+    paddingHorizontal: spacing.stackMd,
+    paddingVertical: 8,
+    borderRadius: borderRadius.md,
+  },
+  privateBannerText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+  },
+  publicInfoContainer: {
+    flex: 1,
+    padding: spacing.marginMobile,
+    justifyContent: 'center',
+    gap: spacing.stackLg,
+  },
+  publicBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackMd,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.xl,
+    padding: spacing.stackLg,
+  },
+  publicTextWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  publicTitle: {
+    ...typography.titleMd,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(16),
+    fontWeight: '800',
+  },
+  publicSubtext: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(13),
+  },
+  doneFullBtn: {
+    backgroundColor: colors.primaryContainer,
+    height: 52,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  doneFullText: {
+    ...typography.titleMd,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(14),
+    fontWeight: '800',
+  },
 });

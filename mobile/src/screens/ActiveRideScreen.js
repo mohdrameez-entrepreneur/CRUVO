@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  LayoutAnimation,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { ridesAPI } from '../api';
@@ -36,11 +48,12 @@ function getDistanceMeters(lat1, lng1, lat2, lng2) {
 export default function ActiveRideScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { rideId } = route.params || {};
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [ride, setRide] = useState(null);
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [panelExpanded, setPanelExpanded] = useState(false);
+  const [rosterExpanded, setRosterExpanded] = useState(false);
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [rideFinished, setRideFinished] = useState(false);
   const [arrivalCount, setArrivalCount] = useState(0);
@@ -315,12 +328,38 @@ export default function ActiveRideScreen({ navigation, route }) {
   const enrichedPositions = useMemo(() => {
     const pMap = {};
     participants.forEach(p => { pMap[p.user] = p; });
-    return positions.map(pos => ({
+    const list = positions.map(pos => ({
       ...pos,
-      initials: pMap[pos.user]?.initials || '??',
-      display_name: pMap[pos.user]?.display_name || '',
+      initials: (pos.user === user?.id ? (profile?.initials || pMap[pos.user]?.initials) : pMap[pos.user]?.initials) || pos.initials || '??',
+      display_name: (pos.user === user?.id ? (profile?.display_name || pMap[pos.user]?.display_name) : pMap[pos.user]?.display_name) || pos.display_name || '',
+      avatar_url: (pos.user === user?.id ? (profile?.avatar_url || pMap[pos.user]?.avatar_url) : pMap[pos.user]?.avatar_url) || pos.avatar_url || null,
     }));
-  }, [positions, participants]);
+
+    if (user?.id && location && !list.some(p => p.user === user.id)) {
+      list.push({
+        user: user.id,
+        lat: location.latitude,
+        lng: location.longitude,
+        heading: location.heading || 0,
+        speed: location.speed || 0,
+        initials: profile?.initials || user?.username?.substring(0, 2).toUpperCase() || 'ME',
+        display_name: profile?.display_name || user?.username || 'You',
+        avatar_url: profile?.avatar_url || null,
+      });
+    }
+
+    return list;
+  }, [positions, participants, user, profile, location]);
+
+  const toggleRoster = (expand) => {
+    LayoutAnimation.configureNext({
+      duration: 300,
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      update: { type: LayoutAnimation.Types.spring, springDamping: 0.82 },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    });
+    setRosterExpanded(expand);
+  };
 
   if (loading) {
     return (
@@ -350,22 +389,70 @@ export default function ActiveRideScreen({ navigation, route }) {
           userLocation={location}
           heading={location?.heading}
           followMyLocation
+          recenterTrigger={recenterTrigger}
         />
       </View>
 
+      {/* Top Floating Header - Aesthetic Matching Rider Roster */}
       <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{ride.name}</Text>
-          <Text style={styles.headerSubtitle}>
-            {positions.length} RIDER{positions.length !== 1 ? 'S' : ''} LIVE · {formatTime(elapsed)}
-            {wsError ? ` · ${wsError}` : (connected ? '' : ' · OFFLINE')}
-          </Text>
+        <View style={styles.headerMain}>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {ride.name}
+            </Text>
+            {isCreator && (
+              <TouchableOpacity style={styles.endRideButton} onPress={endRide} activeOpacity={0.8}>
+                <Ionicons name="stop" size={10} color={colors.white} />
+                <Text style={styles.endRideText}>END</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Route path (From -> To in small clean text) */}
+          {(ride.origin_name || ride.destination_name) ? (
+            <View style={styles.headerRouteRow}>
+              <View style={styles.originDot} />
+              <Text style={styles.headerRouteText} numberOfLines={1}>
+                {ride.origin_name || 'Start'}
+              </Text>
+              <Ionicons name="arrow-forward" size={10} color={colors.primaryContainer} style={styles.routeArrow} />
+              <View style={styles.destDot} />
+              <Text style={styles.headerRouteText} numberOfLines={1}>
+                {ride.destination_name || 'End'}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Subtitle / Live stats row */}
+          <View style={styles.headerStatsRow}>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveBadgeText}>{positions.length} LIVE</Text>
+            </View>
+            <Text style={styles.statsDot}>·</Text>
+            <View style={styles.elapsedBadge}>
+              <Ionicons name="time-outline" size={11} color={colors.onSurfaceVariant} />
+              <Text style={styles.elapsedText}>{formatTime(elapsed)}</Text>
+            </View>
+            {ride?.distance_km ? (
+              <>
+                <Text style={styles.statsDot}>·</Text>
+                <Text style={styles.distanceBadgeText}>{ride.distance_km} km</Text>
+              </>
+            ) : null}
+            {wsError ? (
+              <>
+                <Text style={styles.statsDot}>·</Text>
+                <Text style={styles.offlineStatusText}>{wsError}</Text>
+              </>
+            ) : !connected ? (
+              <>
+                <Text style={styles.statsDot}>·</Text>
+                <Text style={styles.offlineStatusText}>OFFLINE</Text>
+              </>
+            ) : null}
+          </View>
         </View>
-        {isCreator && (
-          <TouchableOpacity style={styles.endRideButton} onPress={endRide}>
-            <Text style={styles.endRideText}>END</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {flagNotification && (
@@ -378,76 +465,116 @@ export default function ActiveRideScreen({ navigation, route }) {
         </View>
       )}
 
-      <TouchableOpacity
-        style={[styles.flagFab, myFlag && styles.flagFabActive]}
-        onPress={handleFlagPress}
-      >
-        <Ionicons name={flagIcon} size={28} color={colors.white} />
-        {flagLabel && <Text style={styles.flagFabLabel}>{flagLabel}</Text>}
-      </TouchableOpacity>
-
-      <View style={[styles.bottomPanel, panelExpanded && styles.bottomPanelExpanded, { paddingBottom: insets.bottom + 10 }]}>
-        <TouchableOpacity style={styles.panelHandle} onPress={() => setPanelExpanded(!panelExpanded)}>
-          <View style={styles.handleBar} />
+      {/* Floating Action Buttons: Relocate Map & Flag Stop */}
+      <View style={[styles.fabStack, { bottom: rosterExpanded ? 240 : insets.bottom + 65 }]}>
+        <TouchableOpacity
+          style={styles.relocateFab}
+          onPress={() => setRecenterTrigger(prev => prev + 1)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="locate" size={20} color={colors.primaryContainer} />
         </TouchableOpacity>
 
-        <View style={styles.panelHeader}>
-          <View>
-            <Text style={styles.panelTitle}>Rider Roster</Text>
-            <Text style={styles.panelSubtitle}>{positions.length} riders broadcasting</Text>
-          </View>
-        </View>
-
-        <ScrollView style={styles.riderList}>
-          {participants.map((rider, i) => {
-            const pos = positions.find(p => p.user === rider.user);
-            const isRiderCreator = rider.user === ride.creator;
-            const riderFlag = allFlags.find(f => f.flagged_by === rider.user);
-            return (
-              <View key={rider.id || i} style={[styles.riderRow, riderFlag && styles.riderRowFlagged]}>
-                <View style={styles.avatarWrap}>
-                  <UserAvatar
-                    avatarUrl={rider.avatar_url}
-                    name={rider.display_name}
-                    initials={rider.initials}
-                    id={rider.user}
-                    size={40}
-                    style={isRiderCreator ? { borderWidth: 2, borderColor: colors.primaryContainer } : null}
-                  />
-                  {riderFlag && (
-                    <View style={styles.flagBadge}>
-                      <Ionicons name={FLAG_ICONS[riderFlag.stop_type] || 'flag'} size={12} color={colors.white} />
-                    </View>
-                  )}
-                </View>
-                <View style={styles.riderInfo}>
-                  <Text style={styles.riderName}>
-                    {rider.display_name} {isRiderCreator && <Text style={styles.youBadge}>Leader</Text>}
-                    {!isRiderCreator && rider.user === user?.id && <Text style={styles.youBadge}>(You)</Text>}
-                  </Text>
-                  <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
-                  {riderFlag && (
-                    <View style={styles.flagTag}>
-                      <Ionicons name={FLAG_ICONS[riderFlag.stop_type] || 'flag'} size={12} color="#e53935" />
-                      <Text style={styles.flagTagText}>{riderFlag.stop_type}</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.riderStatus}>
-                  {pos ? (
-                    <View style={styles.liveIndicator}>
-                      <View style={styles.liveDot} />
-                      <Text style={styles.liveText}>LIVE</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.offlineText}>Offline</Text>
-                  )}
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+        <TouchableOpacity
+          style={[styles.flagFab, myFlag && styles.flagFabActive]}
+          onPress={handleFlagPress}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={flagIcon} size={20} color={colors.white} />
+          {flagLabel && <Text style={styles.flagFabLabel}>{flagLabel}</Text>}
+        </TouchableOpacity>
       </View>
+
+      {/* Minimizable Rider Roster with smooth animation */}
+      {!rosterExpanded ? (
+        <TouchableOpacity
+          style={[styles.rosterPill, { bottom: insets.bottom + 10 }]}
+          onPress={() => toggleRoster(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.rosterPillLeft}>
+            <View style={styles.liveDot} />
+            <Ionicons name="people" size={16} color={colors.primaryContainer} />
+            <Text style={styles.rosterPillTitle}>
+              {positions.length} Rider{positions.length !== 1 ? 's' : ''} Live
+            </Text>
+          </View>
+          <View style={styles.rosterPillRight}>
+            <Text style={styles.rosterPillAction}>Roster</Text>
+            <Ionicons name="chevron-up" size={16} color={colors.onSurfaceVariant} />
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <View style={[styles.bottomPanel, { paddingBottom: insets.bottom + 10 }]}>
+          <TouchableOpacity style={styles.panelHandle} onPress={() => toggleRoster(false)}>
+            <View style={styles.handleBar} />
+          </TouchableOpacity>
+
+          <View style={styles.panelHeader}>
+            <View>
+              <Text style={styles.panelTitle}>Rider Roster</Text>
+              <Text style={styles.panelSubtitle}>{positions.length} riders broadcasting</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.panelMinimizeBtn}
+              onPress={() => toggleRoster(false)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="chevron-down" size={22} color={colors.onSurfaceVariant} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.riderList}>
+            {participants.map((rider, i) => {
+              const pos = positions.find(p => p.user === rider.user);
+              const isRiderCreator = rider.user === ride.creator;
+              const riderFlag = allFlags.find(f => f.flagged_by === rider.user);
+              return (
+                <View key={rider.id || i} style={[styles.riderRow, riderFlag && styles.riderRowFlagged]}>
+                  <View style={styles.avatarWrap}>
+                    <UserAvatar
+                      avatarUrl={rider.avatar_url}
+                      name={rider.display_name}
+                      initials={rider.initials}
+                      id={rider.user}
+                      size={40}
+                      style={isRiderCreator ? { borderWidth: 2, borderColor: colors.primaryContainer } : null}
+                    />
+                    {riderFlag && (
+                      <View style={styles.flagBadge}>
+                        <Ionicons name={FLAG_ICONS[riderFlag.stop_type] || 'flag'} size={12} color={colors.white} />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.riderInfo}>
+                    <Text style={styles.riderName}>
+                      {rider.display_name} {isRiderCreator && <Text style={styles.youBadge}>Leader</Text>}
+                      {!isRiderCreator && rider.user === user?.id && <Text style={styles.youBadge}>(You)</Text>}
+                    </Text>
+                    <Text style={styles.riderRole}>{ROLE_LABELS[rider.role] || rider.role}</Text>
+                    {riderFlag && (
+                      <View style={styles.flagTag}>
+                        <Ionicons name={FLAG_ICONS[riderFlag.stop_type] || 'flag'} size={12} color="#e53935" />
+                        <Text style={styles.flagTagText}>{riderFlag.stop_type}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.riderStatus}>
+                    {pos ? (
+                      <View style={styles.liveIndicator}>
+                        <View style={styles.liveDot} />
+                        <Text style={styles.liveText}>LIVE</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.offlineText}>Offline</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       <Modal visible={showFlagModal} transparent animationType="fade" statusBarTranslucent>
         <View style={styles.modalOverlay}>
@@ -591,44 +718,243 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackMd, backgroundColor: colors.background },
   loadingText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
   floatingHeader: {
-    position: 'absolute', top: spacing.stackLg, left: spacing.marginMobile, right: spacing.marginMobile,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.surfaceContainer, borderWidth: 1, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.xl, padding: spacing.stackMd,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4,
+    position: 'absolute',
+    top: spacing.stackLg,
+    left: spacing.marginMobile,
+    right: spacing.marginMobile,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 50,
   },
-  headerInfo: { flex: 1 },
-  headerTitle: { ...typography.titleMd, color: colors.onSurface },
-  headerSubtitle: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 11 },
+  headerMain: {
+    width: '100%',
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...typography.titleMd,
+    color: colors.onSurface,
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
+  },
   endRideButton: {
-    backgroundColor: colors.error, paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
-    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(229,57,53,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(229,57,53,0.5)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  endRideText: { ...typography.labelTechnical, color: colors.white },
+  endRideText: {
+    ...typography.labelTechnical,
+    color: '#ff6b6b',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  headerRouteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 5,
+  },
+  originDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4CAF50',
+  },
+  destDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#e53935',
+  },
+  headerRouteText: {
+    ...typography.labelSm,
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    maxWidth: '42%',
+  },
+  routeArrow: {
+    marginHorizontal: 1,
+  },
+  headerStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(76,175,80,0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  liveBadgeText: {
+    ...typography.labelTechnical,
+    color: '#4CAF50',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  elapsedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  elapsedText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: 10,
+  },
+  distanceBadgeText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: 10,
+  },
+  statsDot: {
+    color: colors.outlineVariant,
+    fontSize: 10,
+  },
+  offlineStatusText: {
+    ...typography.labelTechnical,
+    color: colors.error,
+    fontSize: 10,
+  },
+  fabStack: {
+    position: 'absolute',
+    right: spacing.marginMobile,
+    alignItems: 'center',
+    gap: 12,
+    zIndex: 50,
+  },
+  relocateFab: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceContainer,
+    borderWidth: 1.5,
+    borderColor: colors.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 6,
+  },
   flagFab: {
-    position: 'absolute', bottom: 220, right: spacing.marginMobile,
-    width: 64, height: 64, borderRadius: 32, backgroundColor: colors.error,
-    justifyContent: 'center', alignItems: 'center', zIndex: 50,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 6,
   },
   flagFabActive: {
     backgroundColor: '#FF9800',
   },
   flagFabLabel: {
-    position: 'absolute', bottom: -18,
-    ...typography.labelTechnical, color: colors.onSurface, fontSize: 9, textTransform: 'uppercase',
+    position: 'absolute',
+    bottom: -15,
+    ...typography.labelTechnical,
+    color: colors.onSurface,
+    fontSize: 8,
+    textTransform: 'uppercase',
+  },
+  rosterPill: {
+    position: 'absolute',
+    left: spacing.marginMobile,
+    right: spacing.marginMobile,
+    height: 46,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainer,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.stackMd,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 6,
+    zIndex: 40,
+  },
+  rosterPillLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rosterPillTitle: {
+    ...typography.labelTechnical,
+    color: colors.onSurface,
+    fontSize: 12,
+  },
+  rosterPillRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  rosterPillAction: {
+    ...typography.labelSm,
+    color: colors.onSurfaceVariant,
   },
   bottomPanel: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: colors.surfaceContainerLow, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl,
-    paddingBottom: 34, maxHeight: 200,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surfaceContainerLow,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingBottom: 34,
+    maxHeight: height * 0.45,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    zIndex: 45,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
   },
-  bottomPanelExpanded: { maxHeight: height * 0.5 },
-  panelHandle: { padding: spacing.stackMd, alignItems: 'center' },
+  panelMinimizeBtn: {
+    padding: 4,
+  },
+  panelHandle: { padding: spacing.stackSm, alignItems: 'center' },
   handleBar: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.outlineVariant },
   panelHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.marginMobile, marginBottom: spacing.stackMd,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.marginMobile,
+    marginBottom: spacing.stackSm,
   },
   panelTitle: { ...typography.titleMd, color: colors.onSurface },
   panelSubtitle: { ...typography.labelSm, color: colors.onSurfaceVariant },

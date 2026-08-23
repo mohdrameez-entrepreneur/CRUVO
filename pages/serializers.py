@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.conf import settings
-from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition
+from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition, Friendship
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -25,7 +25,16 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_avatar_url(self, obj):
         if obj.avatar:
-            return obj.avatar.url
+            try:
+                url = obj.avatar.url
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(url)
+                if not str(url).startswith('http'):
+                    return f"https://cruvo.onrender.com{url if str(url).startswith('/') else '/' + str(url)}"
+                return url
+            except Exception:
+                return None
         return None
 
 
@@ -126,7 +135,16 @@ class RideParticipantSerializer(serializers.ModelSerializer):
 
     def get_avatar_url(self, obj):
         if obj.user.profile.avatar:
-            return obj.user.profile.avatar.url
+            try:
+                url = obj.user.profile.avatar.url
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(url)
+                if not str(url).startswith('http'):
+                    return f"https://cruvo.onrender.com{url if str(url).startswith('/') else '/' + str(url)}"
+                return url
+            except Exception:
+                return None
         return None
 
     def get_bike_info(self, obj):
@@ -189,16 +207,83 @@ class FlagStopSerializer(serializers.ModelSerializer):
         return obj.flagged_by.profile.display_name
 
 
+class FriendshipSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    sender_avatar = serializers.SerializerMethodField()
+    receiver_name = serializers.SerializerMethodField()
+    receiver_avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Friendship
+        fields = ['id', 'sender', 'sender_name', 'sender_avatar',
+                  'receiver', 'receiver_name', 'receiver_avatar',
+                  'status', 'created_at', 'updated_at']
+
+    def get_sender_name(self, obj):
+        return obj.sender.profile.display_name
+
+    def get_sender_avatar(self, obj):
+        if obj.sender.profile.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.sender.profile.avatar.url)
+            return obj.sender.profile.avatar.url
+        return None
+
+    def get_receiver_name(self, obj):
+        return obj.receiver.profile.display_name
+
+    def get_receiver_avatar(self, obj):
+        if obj.receiver.profile.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.receiver.profile.avatar.url)
+            return obj.receiver.profile.avatar.url
+        return None
+
+
 class RiderDiscoverySerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
     distance_km = serializers.SerializerMethodField()
+    friendship_status = serializers.SerializerMethodField()
+    friendship_id = serializers.SerializerMethodField()
+    is_friend = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile', 'distance_km']
+        fields = ['id', 'username', 'profile', 'distance_km', 'friendship_status', 'friendship_id', 'is_friend']
 
     def get_distance_km(self, obj):
         return None
+
+    def _get_friendship(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        from django.db.models import Q
+        return Friendship.objects.filter(
+            Q(sender=request.user, receiver=obj) | Q(sender=obj, receiver=request.user)
+        ).first()
+
+    def get_friendship_status(self, obj):
+        fs = self._get_friendship(obj)
+        if not fs:
+            return 'NONE'
+        request = self.context.get('request')
+        if fs.status == 'ACCEPTED':
+            return 'ACCEPTED'
+        if fs.status == 'DECLINED':
+            return 'DECLINED'
+        if fs.sender == request.user:
+            return 'SENT_PENDING'
+        return 'RECEIVED_PENDING'
+
+    def get_friendship_id(self, obj):
+        fs = self._get_friendship(obj)
+        return fs.id if fs else None
+
+    def get_is_friend(self, obj):
+        return self.get_friendship_status(obj) == 'ACCEPTED'
 
 
 class InvitationSerializer(serializers.ModelSerializer):
@@ -241,5 +326,14 @@ class RidePositionSerializer(serializers.ModelSerializer):
 
     def get_avatar_url(self, obj):
         if obj.user.profile.avatar:
-            return obj.user.profile.avatar.url
+            try:
+                url = obj.user.profile.avatar.url
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(url)
+                if not str(url).startswith('http'):
+                    return f"https://cruvo.onrender.com{url if str(url).startswith('/') else '/' + str(url)}"
+                return url
+            except Exception:
+                return None
         return None

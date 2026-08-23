@@ -194,6 +194,16 @@ class RideConsumer(AsyncWebsocketConsumer):
             ride_id=self.ride_id, user=self.user,
             defaults={'lat': lat, 'lng': lng, 'heading': heading, 'speed': speed},
         )
+        avatar_url = None
+        display_name = ''
+        try:
+            if hasattr(self.user, 'profile'):
+                display_name = self.user.profile.display_name
+                if self.user.profile.avatar:
+                    url = self.user.profile.avatar.url
+                    avatar_url = url if str(url).startswith('http') else f"https://cruvo.onrender.com{url if str(url).startswith('/') else '/' + str(url)}"
+        except Exception:
+            pass
         return {
             'user': self.user.id,
             'lat': lat,
@@ -201,6 +211,8 @@ class RideConsumer(AsyncWebsocketConsumer):
             'heading': heading,
             'speed': speed,
             'initials': self._get_initials_sync(self.user),
+            'display_name': display_name,
+            'avatar_url': avatar_url,
         }
 
     @database_sync_to_async
@@ -208,17 +220,29 @@ class RideConsumer(AsyncWebsocketConsumer):
         positions = RidePosition.objects.filter(
             ride_id=self.ride_id
         ).select_related('user__profile')
-        return [
-            {
+        res = []
+        for p in positions:
+            avatar_url = None
+            display_name = ''
+            try:
+                if hasattr(p.user, 'profile'):
+                    display_name = p.user.profile.display_name
+                    if p.user.profile.avatar:
+                        url = p.user.profile.avatar.url
+                        avatar_url = url if str(url).startswith('http') else f"https://cruvo.onrender.com{url if str(url).startswith('/') else '/' + str(url)}"
+            except Exception:
+                pass
+            res.append({
                 'user': p.user.id,
                 'lat': p.lat,
                 'lng': p.lng,
                 'heading': p.heading,
                 'speed': p.speed,
                 'initials': self._get_initials_sync(p.user),
-            }
-            for p in positions
-        ]
+                'display_name': display_name,
+                'avatar_url': avatar_url,
+            })
+        return res
 
     def _get_initials_sync(self, user):
         try:

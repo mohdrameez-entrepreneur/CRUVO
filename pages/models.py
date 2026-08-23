@@ -141,3 +141,35 @@ class RidePosition(models.Model):
 
     def __str__(self):
         return f"{self.user.username} at {self.lat},{self.lng} on {self.ride.name}"
+
+
+class Friendship(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ACCEPTED', 'Accepted'),
+        ('DECLINED', 'Declined'),
+    ]
+
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_friend_requests')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_friend_requests')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('sender', 'receiver')
+
+    def __str__(self):
+        return f"{self.sender.username} -> {self.receiver.username} ({self.status})"
+
+
+def are_friends(user1, user2):
+    if not user1 or not user2:
+        return False
+    if user1.id == user2.id:
+        return True
+    return Friendship.objects.filter(
+        status='ACCEPTED'
+    ).filter(
+        models.Q(sender=user1, receiver=user2) | models.Q(sender=user2, receiver=user1)
+    ).exists()

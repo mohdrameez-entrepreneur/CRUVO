@@ -5,7 +5,10 @@ import { colors, spacing, typography, borderRadius, scale, moderateScale } from 
 import { useAuth } from '../context/AuthContext';
 import { ridesAPI } from '../api';
 import NavBar from '../components/NavBar';
+import useNotifications from '../hooks/useNotifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import UserAvatar from '../components/UserAvatar';
 
 function getGreeting(hour) {
   if (hour < 12) return 'Good morning';
@@ -14,23 +17,21 @@ function getGreeting(hour) {
 }
 
 function Avatar({ profile, size = 64 }) {
-  if (profile?.avatar_url) {
-    return (
-      <View style={[styles.avatarContainer, { width: size, height: size }]}>
-        <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-      </View>
-    );
-  }
   return (
-    <View style={[styles.avatarContainer, styles.avatarFallback, { width: size, height: size }]}>
-      <Text style={styles.avatarInitials}>{profile?.initials || '??'}</Text>
-    </View>
+    <UserAvatar
+      avatarUrl={profile?.avatar_url}
+      name={profile?.display_name}
+      initials={profile?.initials}
+      id={profile?.user_id}
+      size={size}
+    />
   );
 }
 
-function RideCard({ ride }) {
+function RideCard({ ride, onJoin, userId }) {
   const dateStr = new Date(ride.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
   const timeStr = new Date(`2000-01-01T${ride.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const isParticipant = ride.creator_id === userId || ride.is_user_participant;
 
   return (
     <View style={styles.rideCard}>
@@ -40,8 +41,21 @@ function RideCard({ ride }) {
           <Text style={styles.rideCardTime}>{timeStr} • {dateStr}</Text>
           <Text style={styles.rideCardName}>{ride.name}</Text>
         </View>
-        <View style={styles.rideStatusBadge}>
-          <Text style={styles.rideStatusText}>{ride.status}</Text>
+        <View style={styles.badgeColumn}>
+          <View style={styles.rideStatusBadge}>
+            <Text style={styles.rideStatusText}>{ride.status}</Text>
+          </View>
+          {ride.is_public ? (
+            <View style={styles.publicBadge}>
+              <Ionicons name="globe-outline" size={10} color={colors.primaryContainer} />
+              <Text style={styles.publicBadgeText}>PUBLIC</Text>
+            </View>
+          ) : (
+            <View style={styles.privateBadge}>
+              <Ionicons name="lock-closed-outline" size={10} color={colors.onSurfaceVariant} />
+              <Text style={styles.privateBadgeText}>PRIVATE</Text>
+            </View>
+          )}
         </View>
       </View>
       <View style={styles.rideCardDetails}>
@@ -62,15 +76,26 @@ function RideCard({ ride }) {
           </Text>
         </View>
       </View>
+
+      {ride.is_public && !isParticipant && onJoin && (
+        <TouchableOpacity
+          style={styles.joinRideCardBtn}
+          onPress={() => onJoin(ride.id)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="enter-outline" size={14} color={colors.onPrimaryContainer} />
+          <Text style={styles.joinRideCardText}>JOIN PUBLIC RIDE</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
-
 export default function DashboardScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [rides, setRides] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const { requestPermission } = useNotifications(true);
 
   const loadRides = async () => {
     try {
@@ -80,6 +105,15 @@ export default function DashboardScreen({ navigation }) {
   };
 
   useEffect(() => { loadRides(); }, []);
+
+  const handleJoinRide = async (rideId) => {
+    try {
+      await ridesAPI.joinPublicRide(rideId);
+      loadRides();
+    } catch (err) {
+      console.warn('JOIN RIDE ERROR:', err);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -163,7 +197,7 @@ export default function DashboardScreen({ navigation }) {
                   navigation.navigate('RideSummary', { rideId: ride.id });
                 }
               }} activeOpacity={0.7}>
-                <RideCard ride={ride} />
+                <RideCard ride={ride} onJoin={handleJoinRide} userId={user?.id} />
               </TouchableOpacity>
             ))
           ) : (
@@ -257,6 +291,60 @@ const styles = StyleSheet.create({
     ...typography.labelTechnical,
     color: colors.onSurface,
     fontSize: moderateScale(11),
+  },
+  badgeColumn: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  publicBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.3)',
+  },
+  publicBadgeText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(9),
+    fontWeight: '800',
+  },
+  privateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  privateBadgeText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(9),
+  },
+  joinRideCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryContainer,
+    paddingVertical: 8,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.stackSm,
+    zIndex: 2,
+  },
+  joinRideCardText: {
+    ...typography.labelTechnical,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(11),
+    fontWeight: '800',
   },
   emptyState: {
     borderWidth: 1, borderColor: colors.outlineVariant, borderStyle: 'dashed', borderRadius: borderRadius.xl,

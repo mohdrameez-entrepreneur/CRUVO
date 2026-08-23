@@ -6,7 +6,7 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://cruvo.onrender.com/
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
+  timeout: 45000,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -19,6 +19,31 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Automatic retry interceptor for Render cold-starts & temporary network glitches
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config;
+    if (!config) return Promise.reject(error);
+
+    const isNetworkOrBootError =
+      !error.response ||
+      [502, 503, 504].includes(error.response.status) ||
+      error.code === 'ECONNABORTED';
+
+    config._retryCount = config._retryCount || 0;
+
+    if (isNetworkOrBootError && config._retryCount < 2) {
+      config._retryCount += 1;
+      console.log(`[API Retry] Server waking up / network glitch. Retrying (${config._retryCount}/2)...`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return api(config);
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const authAPI = {
   register: (data) => api.post('/auth/register/', data),
@@ -53,6 +78,14 @@ export const ridesAPI = {
   updatePosition: (id, data) => api.post(`/rides/${id}/update-position/`, data),
   getPositions: (id) => api.get(`/rides/${id}/positions/`),
   fetchRoute: (id) => api.post(`/rides/${id}/fetch-route/`),
+  joinPublicRide: (id) => api.post(`/rides/${id}/join/`),
+};
+
+export const friendsAPI = {
+  sendRequest: (userId) => api.post('/friends/request/', { user_id: userId }),
+  respondRequest: (friendshipId, action) => api.post(`/friends/${friendshipId}/respond/`, { action }),
+  getFriends: () => api.get('/friends/'),
+  getRequests: () => api.get('/friends/requests/'),
 };
 
 export const discoveryAPI = {

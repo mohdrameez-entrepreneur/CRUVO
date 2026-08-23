@@ -6,6 +6,7 @@ import { colors, spacing, typography, borderRadius, scale, moderateScale } from 
 import { useAuth } from '../context/AuthContext';
 import { profileAPI } from '../api';
 import NavBar from '../components/NavBar';
+import { getFullAvatarUrl } from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
@@ -214,7 +215,7 @@ export default function ProfileEditScreen({ navigation }) {
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} disabled={uploadingAvatar}>
             {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+              <Image source={{ uri: getFullAvatarUrl(profile.avatar_url) }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitials}>{getInitials()}</Text>

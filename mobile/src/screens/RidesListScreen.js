@@ -65,7 +65,7 @@ function InvitationCard({ invitation, onAccept, onDecline, loading }) {
   );
 }
 
-function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
+function RideCard({ ride, onPress, onInvite, onDelete, onJoin, isCreator }) {
   const dateStr = new Date(ride.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
   const timeStr = new Date(`2000-01-01T${ride.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -78,6 +78,7 @@ function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
   };
 
   const sc = statusColors[ride.status] || statusColors.SCHEDULED;
+  const isParticipant = isCreator || ride.is_user_participant;
 
   return (
     <TouchableOpacity
@@ -91,8 +92,21 @@ function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
           <Text style={styles.rideCardTime}>{dateStr} at {timeStr}</Text>
           <Text style={styles.rideCardName}>{ride.name}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: sc.bg, borderColor: sc.border }]}>
-          <Text style={[styles.statusText, { color: sc.text }]}>{ride.status}</Text>
+        <View style={styles.badgeColumn}>
+          <View style={[styles.statusBadge, { backgroundColor: sc.bg, borderColor: sc.border }]}>
+            <Text style={[styles.statusText, { color: sc.text }]}>{ride.status}</Text>
+          </View>
+          {ride.is_public ? (
+            <View style={styles.publicBadge}>
+              <Ionicons name="globe-outline" size={10} color={colors.primaryContainer} />
+              <Text style={styles.publicBadgeText}>PUBLIC</Text>
+            </View>
+          ) : (
+            <View style={styles.privateBadge}>
+              <Ionicons name="lock-closed-outline" size={10} color={colors.onSurfaceVariant} />
+              <Text style={styles.privateBadgeText}>PRIVATE</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -120,10 +134,16 @@ function RideCard({ ride, onPress, onInvite, onDelete, isCreator }) {
               <Ionicons name="trash-outline" size={14} color={colors.error} />
             </TouchableOpacity>
           )}
-          {ride.status === 'SCHEDULED' && (
+          {ride.status === 'SCHEDULED' && isCreator && !ride.is_public && (
             <TouchableOpacity style={styles.inviteBtn} onPress={() => onInvite(ride)} activeOpacity={0.7}>
               <Ionicons name="person-add-outline" size={16} color={colors.primaryContainer} />
               <Text style={styles.inviteBtnText}>Invite</Text>
+            </TouchableOpacity>
+          )}
+          {ride.is_public && !isParticipant && (
+            <TouchableOpacity style={styles.joinBtn} onPress={() => onJoin(ride.id)} activeOpacity={0.8}>
+              <Ionicons name="enter-outline" size={14} color={colors.onPrimaryContainer} />
+              <Text style={styles.joinBtnText}>JOIN RIDE</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -228,6 +248,15 @@ export default function RidesListScreen({ navigation }) {
     }
   };
 
+  const handleJoinRide = async (rideId) => {
+    try {
+      await ridesAPI.joinPublicRide(rideId);
+      loadAll();
+    } catch (err) {
+      console.warn('JOIN RIDE ERROR:', err);
+    }
+  };
+
   const hasInvitations = invitations.length > 0;
 
   return (
@@ -261,6 +290,7 @@ export default function RidesListScreen({ navigation }) {
               onPress={() => handleRidePress(item)}
               onInvite={(ride) => navigation.navigate('InviteRiders', { rideId: ride.id, rideName: ride.name })}
               onDelete={() => handleDeleteRide(item)}
+              onJoin={handleJoinRide}
               isCreator={item.creator === user?.id}
             />
           )}
@@ -438,6 +468,50 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.primaryContainer,
   },
   inviteBtnText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 12 },
+  joinBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
+    borderRadius: borderRadius.sm,
+  },
+  joinBtnText: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 12, fontWeight: '800' },
+  badgeColumn: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  publicBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.3)',
+  },
+  publicBadgeText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(9),
+    fontWeight: '800',
+  },
+  privateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  privateBadgeText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: moderateScale(9),
+  },
   emptyContainer: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.marginMobile,

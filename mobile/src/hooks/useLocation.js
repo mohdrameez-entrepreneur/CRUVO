@@ -31,8 +31,20 @@ export default function useLocation(enabled = true) {
     if (!granted) return;
 
     setWatching(true);
+    try {
+      const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (initialLoc?.coords) {
+        setLocation(initialLoc.coords);
+        if (callback) callback(initialLoc.coords);
+      }
+    } catch {}
+
     watchRef.current = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, distanceInterval: 10, timeInterval: 5000 },
+      {
+        accuracy: Location.Accuracy.Balanced, // High causes more jitter on stationary devices
+        distanceInterval: 8,   // Only fire when moved 8m — eliminates GPS jitter
+        timeInterval: 3000,    // Max once per 3s
+      },
       (loc) => {
         setLocation(loc.coords);
         if (callback) callback(loc.coords);

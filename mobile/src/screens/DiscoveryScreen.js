@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
-import { discoveryAPI } from '../api';
+import { discoveryAPI, friendsAPI } from '../api';
 import UserAvatar from '../components/UserAvatar';
 import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -179,8 +179,10 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
   );
 }
 
-function RiderCard({ rider }) {
+function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
   const p = rider.profile;
+  const status = rider.friendship_status || 'NONE';
+
   return (
     <View style={styles.riderCard}>
       <View style={styles.riderHeader}>
@@ -199,6 +201,50 @@ function RiderCard({ rider }) {
           <Text style={styles.riderLocation}>
             <Ionicons name="location-outline" size={12} color={colors.outline} /> {p?.location_city || 'Worldwide'}
           </Text>
+        </View>
+
+        {/* Friend Action Button */}
+        <View style={styles.actionWrap}>
+          {status === 'ACCEPTED' ? (
+            <View style={styles.friendsBadge}>
+              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+              <Text style={styles.friendsText}>FRIENDS</Text>
+            </View>
+          ) : status === 'SENT_PENDING' ? (
+            <View style={styles.pendingBadge}>
+              <Ionicons name="time-outline" size={14} color={colors.primaryContainer} />
+              <Text style={styles.pendingText}>REQUEST SENT</Text>
+            </View>
+          ) : status === 'RECEIVED_PENDING' ? (
+            <View style={styles.binaryRow}>
+              <TouchableOpacity
+                style={styles.acceptBtn}
+                onPress={() => onRespondRequest(rider.friendship_id, 'accept')}
+                disabled={actionLoading === rider.id}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.acceptText}>ACCEPT</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.declineBtn}
+                onPress={() => onRespondRequest(rider.friendship_id, 'decline')}
+                disabled={actionLoading === rider.id}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.declineText}>DECLINE</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addFriendBtn}
+              onPress={() => onSendRequest(rider.id)}
+              disabled={actionLoading === rider.id}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="person-add" size={14} color={colors.onPrimaryContainer} />
+              <Text style={styles.addFriendText}>ADD FRIEND</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       {(p?.riding_style || p?.experience_level) && (
@@ -226,6 +272,8 @@ export default function DiscoveryScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ style: '', experience: '', bike: '', location: '' });
   const [showFilters, setShowFilters] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [notificationToast, setNotificationToast] = useState(null);
   const debounceRef = useRef(null);
 
   const searchRiders = useCallback(async (q, f) => {
@@ -237,9 +285,61 @@ export default function DiscoveryScreen({ navigation }) {
     setLoading(false);
   }, []);
 
+  const checkFriendNotifications = useCallback(async () => {
+    try {
+      const res = await friendsAPI.getRequests();
+      const accepted = res.data.accepted_notifications || [];
+      if (accepted.length > 0) {
+        const latest = accepted[0];
+        setNotificationToast(`${latest.receiver_name} accepted your friend request!`);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     searchRiders('', {});
+    checkFriendNotifications();
   }, []);
+
+  const handleSendFriendRequest = async (userId) => {
+    setActionLoading(userId);
+    try {
+      const res = await friendsAPI.sendRequest(userId);
+      setRiders(prev => prev.map(r => r.id === userId ? {
+        ...r,
+        friendship_status: 'SENT_PENDING',
+        friendship_id: res.data.id,
+      } : r));
+    } catch (err) {
+      console.warn('Friend request failed:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRespondFriendRequest = async (friendshipId, action) => {
+    const targetRider = riders.find(r => r.friendship_id === friendshipId);
+    const targetId = targetRider ? targetRider.id : null;
+    if (targetId) setActionLoading(targetId);
+
+    try {
+      const res = await friendsAPI.respondRequest(friendshipId, action);
+      const newStatus = res.data.status === 'ACCEPTED' ? 'ACCEPTED' : 'DECLINED';
+      setRiders(prev => prev.map(r => r.friendship_id === friendshipId ? {
+        ...r,
+        friendship_status: newStatus,
+        is_friend: newStatus === 'ACCEPTED',
+      } : r));
+
+      if (action === 'accept' && targetRider) {
+        setNotificationToast(`You are now friends with ${targetRider.profile?.display_name || targetRider.username}!`);
+      }
+    } catch (err) {
+      console.warn('Respond friend request failed:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleTextChange = (text) => {
     setQuery(text);
@@ -266,6 +366,16 @@ export default function DiscoveryScreen({ navigation }) {
         subtitle="DISCOVER RIDERS & CREWS"
         badge={riders.length > 0 ? `${riders.length} FOUND` : undefined}
       />
+
+      {notificationToast && (
+        <View style={styles.notificationToast}>
+          <Ionicons name="sparkles" size={18} color="#ffd600" />
+          <Text style={styles.toastText} numberOfLines={1}>{notificationToast}</Text>
+          <TouchableOpacity onPress={() => setNotificationToast(null)}>
+            <Ionicons name="close" size={18} color={colors.onSurface} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Search Input Section */}
       <View style={styles.searchSection}>
@@ -355,7 +465,14 @@ export default function DiscoveryScreen({ navigation }) {
           data={riders}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={[styles.listContent, { paddingBottom: 110 }]}
-          renderItem={({ item }) => <RiderCard rider={item} />}
+          renderItem={({ item }) => (
+            <RiderCard
+              rider={item}
+              onSendRequest={handleSendFriendRequest}
+              onRespondRequest={handleRespondFriendRequest}
+              actionLoading={actionLoading}
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={48} color={colors.outline} />
@@ -664,5 +781,109 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  actionWrap: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  addFriendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: spacing.stackSm + 4,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
+  },
+  addFriendText: {
+    ...typography.labelTechnical,
+    color: colors.onPrimaryContainer,
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+  },
+  friendsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.35)',
+    paddingHorizontal: spacing.stackSm + 4,
+    paddingVertical: 5,
+    borderRadius: borderRadius.md,
+  },
+  friendsText: {
+    ...typography.labelTechnical,
+    color: '#4CAF50',
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 214, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.35)',
+    paddingHorizontal: spacing.stackSm + 4,
+    paddingVertical: 5,
+    borderRadius: borderRadius.md,
+  },
+  pendingText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+  },
+  binaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  acceptBtn: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: spacing.stackSm + 2,
+    paddingVertical: 5,
+    borderRadius: borderRadius.md,
+  },
+  acceptText: {
+    ...typography.labelTechnical,
+    color: '#ffffff',
+    fontSize: moderateScale(10),
+    fontWeight: '800',
+  },
+  declineBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 82, 82, 0.4)',
+    paddingHorizontal: spacing.stackSm + 2,
+    paddingVertical: 5,
+    borderRadius: borderRadius.md,
+  },
+  declineText: {
+    ...typography.labelTechnical,
+    color: '#ff5252',
+    fontSize: moderateScale(10),
+    fontWeight: '800',
+  },
+  notificationToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm,
+    backgroundColor: 'rgba(255, 214, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.35)',
+    borderRadius: borderRadius.lg,
+    marginHorizontal: spacing.marginMobile,
+    marginTop: spacing.stackSm,
+    paddingHorizontal: spacing.stackMd,
+    paddingVertical: 10,
+  },
+  toastText: {
+    flex: 1,
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    fontSize: moderateScale(13),
+    fontWeight: '600',
   },
 });
