@@ -32,4 +32,6 @@ urlpatterns = [
     path('friends/', api.list_friends_view, name='list-friends'),
     path('friends/requests/', api.list_friend_requests_view, name='list-friend-requests'),
     path('users/<int:user_id>/summary/', api.user_profile_summary_view, name='user-profile-summary'),
+    path('app-version/', api.app_version_view, name='app-version'),
+    path('bug-report/', api.submit_bug_report_view, name='bug-report'),
 ]

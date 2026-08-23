@@ -99,4 +99,9 @@ export const invitationsAPI = {
   respond: (participantId, action) => api.post(`/invitations/${participantId}/respond/`, { action }),
 };
 
+export const versionAPI = {
+  getAppVersion: () => api.get('/app-version/'),
+  submitBugReport: (data) => api.post('/bug-report/', data),
+};
+
 export default api;

@@ -12,8 +12,11 @@ import { colors, spacing, typography, borderRadius, moderateScale } from '../the
 import { useAuth } from '../context/AuthContext';
 import NavBar from '../components/NavBar';
 import GlassModal from '../components/GlassModal';
+import WhatsNewModal from '../components/WhatsNewModal';
 import UserAvatar from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { versionAPI } from '../api';
+import { CURRENT_APP_VERSION } from '../config';
 
 function SettingsSection({ title, children }) {
   return (
@@ -55,6 +58,8 @@ export default function SettingsScreen({ navigation }) {
   const { user, profile, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
 
   const handleConfirmLogout = async () => {
     setLoggingOut(true);
@@ -63,6 +68,23 @@ export default function SettingsScreen({ navigation }) {
     } finally {
       setLoggingOut(false);
       setShowLogoutModal(false);
+    }
+  };
+
+  const handleCheckForUpdates = async () => {
+    setCheckingUpdates(true);
+    try {
+      const res = await versionAPI.getAppVersion();
+      const latest = res.data.latest_version;
+      if (latest === CURRENT_APP_VERSION) {
+        Alert.alert('Up to Date', `CRUVO v${CURRENT_APP_VERSION} is the latest version. You are all set!`);
+      } else {
+        Alert.alert('Update Available', `CRUVO v${latest} is now available! Check website to update.`);
+      }
+    } catch {
+      Alert.alert('Status', `CRUVO v${CURRENT_APP_VERSION} installed.`);
+    } finally {
+      setCheckingUpdates(false);
     }
   };
 
@@ -211,10 +233,27 @@ export default function SettingsScreen({ navigation }) {
           />
         </SettingsSection>
 
+        {/* Updates & Release Notes */}
+        <SettingsSection title="UPDATES & RELEASE NOTES">
+          <SettingRow
+            icon="sparkles-outline"
+            label={`What's New in v${CURRENT_APP_VERSION}`}
+            value="Privacy controls, profile cards, live avatar flags"
+            onPress={() => setShowWhatsNew(true)}
+          />
+          <SettingRow
+            icon="refresh-outline"
+            label="Check for Updates"
+            value={checkingUpdates ? 'Checking server...' : `Installed v${CURRENT_APP_VERSION}`}
+            isLast
+            onPress={handleCheckForUpdates}
+          />
+        </SettingsSection>
+
         {/* App Version Info */}
         <View style={styles.versionWrap}>
           <Text style={styles.versionTitle}>CRUVO TELEMETRY ENGINE</Text>
-          <Text style={styles.versionSub}>Version 1.2.0 • Squad Riding Platform</Text>
+          <Text style={styles.versionSub}>Version {CURRENT_APP_VERSION} • Squad Riding Platform</Text>
         </View>
 
         {/* Logout Action */}
@@ -227,6 +266,13 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.logoutText}>LOG OUT</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Whats New Modal */}
+      <WhatsNewModal
+        visible={showWhatsNew}
+        version={CURRENT_APP_VERSION}
+        onClose={() => setShowWhatsNew(false)}
+      />
 
       {/* Logout Confirmation Modal */}
       <GlassModal

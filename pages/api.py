@@ -691,3 +691,72 @@ def list_friend_requests_view(request):
         'accepted_notifications': FriendshipSerializer(accepted_notifications, many=True, context={'request': request}).data,
     })
 
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def app_version_view(request):
+    return Response({
+        'latest_version': '2.0.0',
+        'min_required_version': '2.0.0',
+        'download_url': 'https://cruvo.onrender.com',
+        'website_url': 'https://cruvo.onrender.com',
+        'release_date': '2026-08-24',
+        'whats_new': [
+            {
+                'title': 'Friends-Only Privacy Controls',
+                'description': 'Select whether your Email and Phone number are kept private or shared strictly with confirmed friends.',
+                'icon': 'shield-checkmark-outline'
+            },
+            {
+                'title': 'Rider Profile Summary & Garage Cards',
+                'description': 'Inspect rider profiles, motorcycle specifications, and contact status badges directly from Explore.',
+                'icon': 'person-outline'
+            },
+            {
+                'title': 'Ride Auto-Naming & Optional Fields',
+                'description': 'Creating a ride is faster than ever with automatic ride naming based on your destination.',
+                'icon': 'navigate-outline'
+            },
+            {
+                'title': 'Real-Time Notifications & Instant Sync',
+                'description': 'Instant notification alerts when riders accept requests and immediate Explore screen updates.',
+                'icon': 'notifications-outline'
+            },
+            {
+                'title': 'Redesigned Luxury Dark Settings',
+                'description': 'Sleek new settings screen for garage preferences, privacy badges, and account security.',
+                'icon': 'options-outline'
+            },
+            {
+                'title': 'Live Ride Avatar Stop Indicators',
+                'description': 'Distinct visual stop badges on rider map avatars when flagging a stop during live rides.',
+                'icon': 'location-outline'
+            }
+        ],
+        'update_steps': [
+            'Tap "DOWNLOAD UPDATE v2.0.0" below to open the official CRUVO download portal.',
+            'Download the new CRUVO v2.0.0 package file to your device.',
+            'Open the downloaded package file to complete installation.',
+            'Launch CRUVO v2.0.0 to experience the brand new features and performance enhancements!'
+        ]
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def submit_bug_report_view(request):
+    description = request.data.get('description', '').strip()
+    category = request.data.get('category', 'GENERAL').strip()
+    user_email = request.data.get('email', '') or (request.user.email if request.user.is_authenticated else '')
+    app_version = request.data.get('app_version', '2.0.0')
+
+    if not description:
+        return Response({'error': 'Description is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    print(f"[BUG REPORT] Category: {category} | Version: {app_version} | Email: {user_email}\nDescription: {description}")
+
+    return Response({
+        'success': True,
+        'message': 'Thank you! Your feedback / bug report has been submitted directly to the CRUVO dev team.'
+    })
+
