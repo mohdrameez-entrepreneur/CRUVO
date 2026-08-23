@@ -23,6 +23,7 @@ import NavBar from '../components/NavBar';
 import ProfileSummaryModal from '../components/ProfileSummaryModal';
 import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -327,10 +328,12 @@ export default function DiscoveryScreen({ navigation }) {
     } catch {}
   }, []);
 
-  useEffect(() => {
-    searchRiders('', {});
-    checkFriendNotifications();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      searchRiders(query, filters);
+      checkFriendNotifications();
+    }, [query, filters, searchRiders, checkFriendNotifications])
+  );
 
   const handleSendFriendRequest = async (userId) => {
     setActionLoading(userId);
@@ -356,20 +359,20 @@ export default function DiscoveryScreen({ navigation }) {
   };
 
   const handleRespondFriendRequest = async (friendshipId, action) => {
-    const targetRider = riders.find(r => r.friendship_id === friendshipId);
+    const targetRider = riders.find(r => r.friendship_id === friendshipId || r.id === friendshipId);
     const targetId = targetRider ? targetRider.id : null;
     if (targetId) setActionLoading(targetId);
 
     try {
       const res = await friendsAPI.respondRequest(friendshipId, action);
       const newStatus = res.data.status === 'ACCEPTED' ? 'ACCEPTED' : 'DECLINED';
-      setRiders(prev => prev.map(r => r.friendship_id === friendshipId ? {
+      setRiders(prev => prev.map(r => (r.friendship_id === friendshipId || r.id === targetId) ? {
         ...r,
         friendship_status: newStatus,
         is_friend: newStatus === 'ACCEPTED',
       } : r));
 
-      if (selectedRider && selectedRider.friendship_id === friendshipId) {
+      if (selectedRider && (selectedRider.friendship_id === friendshipId || selectedRider.id === targetId)) {
         setSelectedRider(prev => prev ? {
           ...prev,
           friendship_status: newStatus,
@@ -380,6 +383,8 @@ export default function DiscoveryScreen({ navigation }) {
       if (action === 'accept' && targetRider) {
         setNotificationToast(`You are now friends with ${targetRider.profile?.display_name || targetRider.username}!`);
       }
+      // Re-fetch riders list to get fresh unmasked serializer data
+      searchRiders(query, filters);
     } catch (err) {
       console.warn('Respond friend request failed:', err);
     } finally {
@@ -405,6 +410,8 @@ export default function DiscoveryScreen({ navigation }) {
         } : null);
       }
       setNotificationToast('Friend removed');
+      // Re-fetch riders list to sync state
+      searchRiders(query, filters);
     } catch (err) {
       console.warn('Remove friend failed:', err);
     }

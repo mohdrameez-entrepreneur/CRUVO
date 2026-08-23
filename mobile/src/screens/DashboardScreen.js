@@ -140,6 +140,7 @@ export default function DashboardScreen({ navigation }) {
     try {
       await ridesAPI.joinPublicRide(rideId);
       loadRides();
+      navigation.navigate('Rides');
     } catch (err) {
       console.warn('JOIN RIDE ERROR:', err);
     }
@@ -225,10 +226,10 @@ export default function DashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.secondaryCta}
-            onPress={() => navigation.navigate('Discovery')}
+            onPress={() => navigation.navigate('Rides')}
             activeOpacity={0.8}
           >
-            <Ionicons name="people-outline" size={24} color={colors.onSurface} />
+            <Ionicons name="bicycle-outline" size={24} color={colors.onSurface} />
             <Text style={styles.ctaSecondaryText}>JOIN A RIDE</Text>
           </TouchableOpacity>
         </View>
