@@ -182,9 +182,10 @@ function FilterModal({ visible, filters, onApply, onClear, onClose }) {
 function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
   const p = rider.profile;
   const status = rider.friendship_status || 'NONE';
+  const isReceivedPending = status === 'RECEIVED_PENDING';
 
   return (
-    <View style={styles.riderCard}>
+    <View style={[styles.riderCard, isReceivedPending && styles.riderCardPending]}>
       <View style={styles.riderHeader}>
         <UserAvatar
           avatarUrl={p?.avatar_url}
@@ -194,59 +195,76 @@ function RiderCard({ rider, onSendRequest, onRespondRequest, actionLoading }) {
           size={48}
         />
         <View style={styles.riderInfo}>
-          <Text style={styles.riderName}>{p?.display_name || 'Rider'}</Text>
-          <Text style={styles.riderBike}>
+          <Text style={styles.riderName} numberOfLines={1} ellipsizeMode="tail">
+            {p?.display_name || 'Rider'}
+          </Text>
+          <Text style={styles.riderBike} numberOfLines={1} ellipsizeMode="tail">
             {[p?.bike_make, p?.bike_model].filter(Boolean).join(' ') || 'Motorcycle enthusiast'}
           </Text>
-          <Text style={styles.riderLocation}>
+          <Text style={styles.riderLocation} numberOfLines={1} ellipsizeMode="tail">
             <Ionicons name="location-outline" size={12} color={colors.outline} /> {p?.location_city || 'Worldwide'}
           </Text>
         </View>
 
-        {/* Friend Action Button */}
-        <View style={styles.actionWrap}>
-          {status === 'ACCEPTED' ? (
-            <View style={styles.friendsBadge}>
-              <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-              <Text style={styles.friendsText}>FRIENDS</Text>
-            </View>
-          ) : status === 'SENT_PENDING' ? (
-            <View style={styles.pendingBadge}>
-              <Ionicons name="time-outline" size={14} color={colors.primaryContainer} />
-              <Text style={styles.pendingText}>REQUEST SENT</Text>
-            </View>
-          ) : status === 'RECEIVED_PENDING' ? (
-            <View style={styles.binaryRow}>
+        {/* Friend Action Button / Status (when not pending response) */}
+        {!isReceivedPending && (
+          <View style={styles.actionWrap}>
+            {status === 'ACCEPTED' ? (
+              <View style={styles.friendsBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                <Text style={styles.friendsText}>FRIENDS</Text>
+              </View>
+            ) : status === 'SENT_PENDING' ? (
+              <View style={styles.pendingBadge}>
+                <Ionicons name="time-outline" size={14} color={colors.primaryContainer} />
+                <Text style={styles.pendingText}>REQUEST SENT</Text>
+              </View>
+            ) : (
               <TouchableOpacity
-                style={styles.acceptBtn}
-                onPress={() => onRespondRequest(rider.friendship_id, 'accept')}
+                style={styles.addFriendBtn}
+                onPress={() => onSendRequest(rider.id)}
                 disabled={actionLoading === rider.id}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
-                <Text style={styles.acceptText}>ACCEPT</Text>
+                <Ionicons name="person-add" size={14} color={colors.onPrimaryContainer} />
+                <Text style={styles.addFriendText}>ADD FRIEND</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.declineBtn}
-                onPress={() => onRespondRequest(rider.friendship_id, 'decline')}
-                disabled={actionLoading === rider.id}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.declineText}>DECLINE</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.addFriendBtn}
-              onPress={() => onSendRequest(rider.id)}
-              disabled={actionLoading === rider.id}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="person-add" size={14} color={colors.onPrimaryContainer} />
-              <Text style={styles.addFriendText}>ADD FRIEND</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            )}
+          </View>
+        )}
+
+        {isReceivedPending && (
+          <View style={styles.incomingTagBadge}>
+            <Ionicons name="mail-unread-outline" size={12} color={colors.primaryContainer} />
+            <Text style={styles.incomingTagText}>REQUEST</Text>
+          </View>
+        )}
       </View>
+
+      {/* When Received Pending: Wide, dedicated Action Row so the name has 100% space and never wraps */}
+      {isReceivedPending && (
+        <View style={styles.requestActionRow}>
+          <TouchableOpacity
+            style={styles.acceptActionBtn}
+            onPress={() => onRespondRequest(rider.friendship_id, 'accept')}
+            disabled={actionLoading === rider.id}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="checkmark" size={14} color="#ffffff" />
+            <Text style={styles.acceptActionText}>ACCEPT</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.declineActionBtn}
+            onPress={() => onRespondRequest(rider.friendship_id, 'decline')}
+            disabled={actionLoading === rider.id}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="close" size={14} color="#ff5252" />
+            <Text style={styles.declineActionText}>DECLINE</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {(p?.riding_style || p?.experience_level) && (
         <View style={styles.riderTags}>
           {p?.riding_style ? (
@@ -288,8 +306,12 @@ export default function DiscoveryScreen({ navigation }) {
   const checkFriendNotifications = useCallback(async () => {
     try {
       const res = await friendsAPI.getRequests();
+      const incoming = res.data.incoming || [];
       const accepted = res.data.accepted_notifications || [];
-      if (accepted.length > 0) {
+      if (incoming.length > 0) {
+        const latest = incoming[0];
+        setNotificationToast(`You received a friend request from ${latest.sender_name || 'a rider'}!`);
+      } else if (accepted.length > 0) {
         const latest = accepted[0];
         setNotificationToast(`${latest.receiver_name} accepted your friend request!`);
       }
@@ -834,6 +856,74 @@ const styles = StyleSheet.create({
     color: colors.primaryContainer,
     fontSize: moderateScale(10),
     fontWeight: '700',
+  },
+  riderCardPending: {
+    borderColor: 'rgba(255, 214, 0, 0.35)',
+    backgroundColor: 'rgba(255, 214, 0, 0.04)',
+  },
+  incomingTagBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 214, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.35)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+  },
+  incomingTagText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(9),
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  requestActionRow: {
+    flexDirection: 'row',
+    gap: spacing.stackSm + 2,
+    marginTop: 2,
+  },
+  acceptActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 8,
+    borderRadius: borderRadius.md,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  acceptActionText: {
+    ...typography.labelTechnical,
+    color: '#ffffff',
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  declineActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 82, 82, 0.35)',
+    paddingVertical: 8,
+    borderRadius: borderRadius.md,
+  },
+  declineActionText: {
+    ...typography.labelTechnical,
+    color: '#ff5252',
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   binaryRow: {
     flexDirection: 'row',

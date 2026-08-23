@@ -334,10 +334,31 @@ def clear_flag_view(request, ride_id):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     from django.utils import timezone
-    updated = FlagStop.objects.filter(
+    FlagStop.objects.filter(
         ride=ride, flagged_by=request.user, resolved_at__isnull=True
     ).update(resolved_at=timezone.now())
-    return Response({'cleared': updated > 0})
+    
+    display_name = getattr(getattr(request.user, 'profile', None), 'display_name', None) or request.user.username
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'ride_{ride_id}',
+        {
+            'type': 'flag_cleared',
+            'user_id': request.user.id,
+        }
+    )
+    async_to_sync(channel_layer.group_send)(
+        f'ride_{ride_id}',
+        {
+            'type': 'clear_flag_notification',
+            'user_id': request.user.id,
+            'user_name': display_name,
+        }
+    )
+        
+    return Response({'cleared': True})
 
 
 @api_view(['GET'])

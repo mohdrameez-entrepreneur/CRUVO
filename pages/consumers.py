@@ -107,12 +107,17 @@ class RideConsumer(AsyncWebsocketConsumer):
                 })
 
         elif msg_type == 'clear_flag':
-            cleared = await self.clear_flag()
-            if cleared:
-                await self.channel_layer.group_send(self.group_name, {
-                    'type': 'flag_cleared',
-                    'user_id': self.user.id,
-                })
+            await self.clear_flag()
+            user_name = await self.get_display_name()
+            await self.channel_layer.group_send(self.group_name, {
+                'type': 'flag_cleared',
+                'user_id': self.user.id,
+            })
+            await self.channel_layer.group_send(self.group_name, {
+                'type': 'clear_flag_notification',
+                'user_id': self.user.id,
+                'user_name': user_name,
+            })
 
     async def ready_update(self, event):
         await self.send(text_data=json.dumps({
@@ -170,6 +175,13 @@ class RideConsumer(AsyncWebsocketConsumer):
             'location_name': event['location_name'],
             'lat': event['lat'],
             'lng': event['lng'],
+        }))
+
+    async def clear_flag_notification(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'clear_flag_notification',
+            'user_id': event['user_id'],
+            'user_name': event['user_name'],
         }))
 
     @database_sync_to_async

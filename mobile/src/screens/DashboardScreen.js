@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, I
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
-import { ridesAPI } from '../api';
+import { ridesAPI, friendsAPI } from '../api';
 import NavBar from '../components/NavBar';
 import useNotifications from '../hooks/useNotifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -95,6 +95,7 @@ export default function DashboardScreen({ navigation }) {
   const { user, profile } = useAuth();
   const [rides, setRides] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [friendNotification, setFriendNotification] = useState(null);
   const { requestPermission } = useNotifications(true);
 
   const loadRides = async () => {
@@ -104,7 +105,33 @@ export default function DashboardScreen({ navigation }) {
     } catch {}
   };
 
-  useEffect(() => { loadRides(); }, []);
+  const loadFriendNotifications = async () => {
+    try {
+      const res = await friendsAPI.getRequests();
+      const incoming = res.data.incoming || [];
+      const accepted = res.data.accepted_notifications || [];
+      if (incoming.length > 0) {
+        const latest = incoming[0];
+        setFriendNotification({
+          type: 'incoming',
+          text: `You received a friend request from ${latest.sender_name || 'a rider'}!`,
+        });
+      } else if (accepted.length > 0) {
+        const latest = accepted[0];
+        setFriendNotification({
+          type: 'accepted',
+          text: `${latest.receiver_name} accepted your friend request!`,
+        });
+      } else {
+        setFriendNotification(null);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadRides();
+    loadFriendNotifications();
+  }, []);
 
   const handleJoinRide = async (rideId) => {
     try {
@@ -117,7 +144,7 @@ export default function DashboardScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRides();
+    await Promise.all([loadRides(), loadFriendNotifications()]);
     setRefreshing(false);
   };
 
@@ -144,6 +171,29 @@ export default function DashboardScreen({ navigation }) {
         contentContainerStyle={[styles.contentContainer, { paddingBottom: 110 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryContainer} />}
       >
+        {friendNotification && (
+          <TouchableOpacity
+            style={styles.friendNotificationBanner}
+            onPress={() => navigation.navigate('Discovery')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.friendNotificationLeft}>
+              <Ionicons
+                name={friendNotification.type === 'incoming' ? "mail-unread" : "sparkles"}
+                size={18}
+                color={colors.primaryContainer}
+              />
+              <Text style={styles.friendNotificationText} numberOfLines={1}>
+                {friendNotification.text}
+              </Text>
+            </View>
+            <View style={styles.friendNotificationAction}>
+              <Text style={styles.friendNotificationActionText}>VIEW</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primaryContainer} />
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.greetingSection}>
           <Avatar profile={profile} />
           <View style={styles.greetingText}>
@@ -356,4 +406,45 @@ const styles = StyleSheet.create({
     padding: spacing.stackMd, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
   },
   planAnotherText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
+  friendNotificationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.35)',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.stackMd,
+    paddingVertical: 10,
+    marginBottom: spacing.stackMd,
+  },
+  friendNotificationLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm,
+    marginRight: spacing.stackSm,
+  },
+  friendNotificationText: {
+    flex: 1,
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+  },
+  friendNotificationAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(255, 214, 0, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  friendNotificationActionText: {
+    ...typography.labelTechnical,
+    color: colors.primaryContainer,
+    fontSize: moderateScale(10),
+    fontWeight: '800',
+  },
 });

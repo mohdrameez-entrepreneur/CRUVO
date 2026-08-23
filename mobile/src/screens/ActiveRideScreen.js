@@ -104,24 +104,28 @@ export default function ActiveRideScreen({ navigation, route }) {
       if (exists) return prev;
       const enriched = { ...flag, flagged_by: flag.user };
       const next = [...prev, enriched];
-      if (flag.user === user?.id) setMyFlag(enriched);
+      if (String(flag.user) === String(user?.id)) setMyFlag(enriched);
       return next;
     });
   }, [user?.id]);
 
   const handleFlagCleared = useCallback((userId) => {
-    setAllFlags(prev => prev.filter(f => f.user !== userId));
-    if (userId === user?.id) setMyFlag(null);
+    setAllFlags(prev => prev.filter(f => String(f.user || f.flagged_by) !== String(userId)));
+    if (String(userId) === String(user?.id)) setMyFlag(null);
   }, [user?.id]);
 
   const FLAG_LABELS = { FUEL: 'Fuel', FOOD: 'Food', BREAK: 'Break', GENERAL: 'General', ISSUE: 'Issue' };
 
   const handleFlagNotification = useCallback((data) => {
-    if (data.user_id === user?.id) return;
     const label = FLAG_LABELS[data.stop_type] || data.stop_type;
-    setFlagNotification({ userName: data.user_name, stopType: label, locationName: data.location_name });
+    setFlagNotification({ userName: data.user_name, stopType: label, locationName: data.location_name, isClear: false });
     setTimeout(() => setFlagNotification(null), 4000);
-  }, [user?.id]);
+  }, []);
+
+  const handleClearFlagNotification = useCallback((data) => {
+    setFlagNotification({ userName: data.user_name, isClear: true });
+    setTimeout(() => setFlagNotification(null), 4000);
+  }, []);
 
   const handleRideEnded = useCallback((data) => {
     if (data.ended_by === user?.id) return;
@@ -137,6 +141,7 @@ export default function ActiveRideScreen({ navigation, route }) {
     onFlag: handleFlag,
     onFlagCleared: handleFlagCleared,
     onFlagNotification: handleFlagNotification,
+    onClearFlagNotification: handleClearFlagNotification,
     onRideEnded: handleRideEnded,
   });
 
@@ -152,7 +157,7 @@ export default function ActiveRideScreen({ navigation, route }) {
       setRide(rideRes.data);
       const flags = (flagsRes.data || []).filter(f => !f.resolved_at);
       setAllFlags(flags);
-      const mine = flags.find(f => f.flagged_by === user?.id);
+      const mine = flags.find(f => String(f.flagged_by || f.user) === String(user?.id));
       setMyFlag(mine || null);
     } catch {}
   };
@@ -301,11 +306,10 @@ export default function ActiveRideScreen({ navigation, route }) {
     try {
       if (connected) {
         sendClearFlag();
-      } else {
-        await ridesAPI.clearFlag(rideId);
       }
+      await ridesAPI.clearFlag(rideId).catch(() => {});
       setMyFlag(null);
-      setAllFlags(prev => prev.filter(f => f.flagged_by !== user?.id));
+      setAllFlags(prev => prev.filter(f => String(f.flagged_by || f.user) !== String(user?.id)));
     } catch {
       Alert.alert('Error', 'Failed to clear flag');
     } finally {
@@ -328,12 +332,16 @@ export default function ActiveRideScreen({ navigation, route }) {
   const enrichedPositions = useMemo(() => {
     const pMap = {};
     participants.forEach(p => { pMap[p.user] = p; });
-    const list = positions.map(pos => ({
-      ...pos,
-      initials: (pos.user === user?.id ? (profile?.initials || pMap[pos.user]?.initials) : pMap[pos.user]?.initials) || pos.initials || '??',
-      display_name: (pos.user === user?.id ? (profile?.display_name || pMap[pos.user]?.display_name) : pMap[pos.user]?.display_name) || pos.display_name || '',
-      avatar_url: (pos.user === user?.id ? (profile?.avatar_url || pMap[pos.user]?.avatar_url) : pMap[pos.user]?.avatar_url) || pos.avatar_url || null,
-    }));
+    const list = positions.map(pos => {
+      const riderFlag = allFlags.find(f => String(f.flagged_by || f.user) === String(pos.user));
+      return {
+        ...pos,
+        initials: (pos.user === user?.id ? (profile?.initials || pMap[pos.user]?.initials) : pMap[pos.user]?.initials) || pos.initials || '??',
+        display_name: (pos.user === user?.id ? (profile?.display_name || pMap[pos.user]?.display_name) : pMap[pos.user]?.display_name) || pos.display_name || '',
+        avatar_url: (pos.user === user?.id ? (profile?.avatar_url || pMap[pos.user]?.avatar_url) : pMap[pos.user]?.avatar_url) || pos.avatar_url || null,
+        flag_type: riderFlag ? riderFlag.stop_type : null,
+      };
+    });
 
     if (user?.id && location && !list.some(p => p.user === user.id)) {
       list.push({
@@ -345,11 +353,12 @@ export default function ActiveRideScreen({ navigation, route }) {
         initials: profile?.initials || user?.username?.substring(0, 2).toUpperCase() || 'ME',
         display_name: profile?.display_name || user?.username || 'You',
         avatar_url: profile?.avatar_url || null,
+        flag_type: myFlag ? myFlag.stop_type : null,
       });
     }
 
     return list;
-  }, [positions, participants, user, profile, location]);
+  }, [positions, participants, user, profile, location, allFlags, myFlag]);
 
   const toggleRoster = (expand) => {
     LayoutAnimation.configureNext({
@@ -456,11 +465,11 @@ export default function ActiveRideScreen({ navigation, route }) {
       </View>
 
       {flagNotification && (
-        <View style={styles.flagBanner}>
-          <Ionicons name="flag" size={18} color={colors.white} />
+        <View style={[styles.flagBanner, flagNotification.isClear && { backgroundColor: '#4CAF50' }]}>
+          <Ionicons name={flagNotification.isClear ? "checkmark-circle" : "flag"} size={18} color={colors.white} />
           <Text style={styles.flagBannerText}>
-            <Text style={styles.flagBannerName}>{flagNotification.userName}</Text> flagged a {flagNotification.stopType} stop
-            {flagNotification.locationName ? ` — ${flagNotification.locationName}` : ''}
+            <Text style={styles.flagBannerName}>{flagNotification.userName}</Text> 
+            {flagNotification.isClear ? " is ready to ride again" : ` flagged a ${flagNotification.stopType} stop${flagNotification.locationName ? ` — ${flagNotification.locationName}` : ''}`}
           </Text>
         </View>
       )}
@@ -528,7 +537,7 @@ export default function ActiveRideScreen({ navigation, route }) {
             {participants.map((rider, i) => {
               const pos = positions.find(p => p.user === rider.user);
               const isRiderCreator = rider.user === ride.creator;
-              const riderFlag = allFlags.find(f => f.flagged_by === rider.user);
+              const riderFlag = allFlags.find(f => String(f.flagged_by || f.user) === String(rider.user));
               return (
                 <View key={rider.id || i} style={[styles.riderRow, riderFlag && styles.riderRowFlagged]}>
                   <View style={styles.avatarWrap}>

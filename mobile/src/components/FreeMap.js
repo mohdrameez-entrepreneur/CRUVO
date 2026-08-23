@@ -77,6 +77,22 @@ function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRider
     font-weight: 800;
     color: #121317;
   }
+  .cruvo-flag-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    background: #e53935;
+    border-radius: 11px;
+    border: 2px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    z-index: 2;
+  }
 </style>
 </head>
 <body>
@@ -211,6 +227,21 @@ try {
     }
 
     el.appendChild(inner);
+
+    if (r.flag_type) {
+      var flagEmoji = '🚩';
+      if (r.flag_type === 'FUEL') flagEmoji = '⛽';
+      else if (r.flag_type === 'FOOD') flagEmoji = '🍔';
+      else if (r.flag_type === 'BREAK') flagEmoji = '☕';
+      else if (r.flag_type === 'ISSUE') flagEmoji = '⚠️';
+      
+      var badge = document.createElement('div');
+      badge.className = 'cruvo-flag-badge';
+      badge.textContent = flagEmoji;
+      badge.dataset.flagType = r.flag_type;
+      el.appendChild(badge);
+    }
+
     return el;
   }
 
@@ -228,7 +259,11 @@ try {
         riderMarkers[uid].setLngLat([r.lng, r.lat]);
         var existingImg = riderMarkers[uid].getElement().querySelector('img');
         var existingSrc = existingImg ? existingImg.src : null;
-        if (r.avatar_url && (!existingImg || existingSrc !== r.avatar_url)) {
+        var existingBadge = riderMarkers[uid].getElement().querySelector('.cruvo-flag-badge');
+        var existingFlagType = existingBadge ? existingBadge.dataset.flagType : null;
+        var newFlagType = r.flag_type || null;
+
+        if ((r.avatar_url && (!existingImg || existingSrc !== r.avatar_url)) || String(existingFlagType) !== String(newFlagType)) {
           var newEl = createMarkerElement(r, isMe, i);
           riderMarkers[uid].remove();
           riderMarkers[uid] = new maplibregl.Marker({ element: newEl }).setLngLat([r.lng, r.lat]).addTo(map);
@@ -531,6 +566,7 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
           initials: p.initials || '??',
           avatar_url: getFullAvatarUrl(p.avatar_url) || null,
           display_name: p.display_name || '',
+          flag_type: p.flag_type || null,
         };
       })
       .filter(Boolean);
@@ -565,6 +601,7 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
           initials: p.initials || '??',
           avatar_url: getFullAvatarUrl(p.avatar_url) || null,
           display_name: p.display_name || '',
+          flag_type: p.flag_type || null,
         };
       })
       .filter(Boolean);

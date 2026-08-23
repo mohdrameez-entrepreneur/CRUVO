@@ -4,7 +4,7 @@ import { WS_BASE } from '../config';
 
 const AUTH_CLOSE_CODES = [4001, 4003];
 
-export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onRideEnded }) {
+export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onClearFlagNotification, onRideEnded }) {
   const ws = useRef(null);
   const reconnectTimer = useRef(null);
   const reconnectDelay = useRef(1000);
@@ -12,9 +12,9 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
   const [wsError, setWsError] = useState(null);
   const mountedRef = useRef(true);
   const genRef = useRef(0);
-  const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onRideEnded });
+  const listenersRef = useRef({ onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onClearFlagNotification, onRideEnded });
 
-  listenersRef.current = { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onRideEnded };
+  listenersRef.current = { onPositionsUpdate, onFlag, onFlagCleared, onFlagNotification, onClearFlagNotification, onRideEnded };
 
   const connect = useCallback(async () => {
     if (!rideId) return;
@@ -71,6 +71,8 @@ export default function useRideSocket(rideId, { onPositionsUpdate, onFlag, onFla
           listenersRef.current.onFlagCleared?.(data.user_id);
         } else if (data.type === 'flag_notification') {
           listenersRef.current.onFlagNotification?.(data);
+        } else if (data.type === 'clear_flag_notification') {
+          listenersRef.current.onClearFlagNotification?.(data);
         } else if (data.type === 'ride_ended') {
           listenersRef.current.onRideEnded?.(data);
         }
