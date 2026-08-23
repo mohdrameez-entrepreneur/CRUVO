@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Calculate Full APK Download URL
-  const apkRelativePath = 'downloads/CRUVO.zip';
+  const apkRelativePath = 'downloads/CRUVO v2.zip';
   const fullApkUrl = new URL(apkRelativePath, window.location.href).href;
 
   const shareLinkInput = document.getElementById('share-link-input');
