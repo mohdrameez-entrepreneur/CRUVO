@@ -16,8 +16,9 @@ import * as Google from 'expo-auth-session/providers/google';
 
 import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
-import { GOOGLE_WEB_CLIENT_ID } from '../config';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../config';
 import AlertCard from '../components/AlertCard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -47,6 +48,7 @@ const POPULAR_BRANDS = [
 ];
 
 export default function SignupScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { register, googleLogin } = useAuth();
 
   const [step, setStep] = useState(1);
@@ -73,8 +75,8 @@ export default function SignupScreen({ navigation }) {
   // Google OAuth Hook
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
     scopes: ['profile', 'email', 'openid'],
   });
 
@@ -125,6 +127,8 @@ export default function SignupScreen({ navigation }) {
     if (!form.display_name.trim()) e.display_name = 'Display Name is required';
     if (!form.username.trim()) {
       e.username = 'Username is required';
+    } else if (form.username.includes(' ')) {
+      e.username = 'Username cannot contain spaces';
     } else if (form.username.trim().length < 3) {
       e.username = 'Username must be at least 3 characters';
     } else if (!/^[a-zA-Z0-9_]+$/.test(form.username.trim())) {
@@ -241,7 +245,7 @@ export default function SignupScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* TOP HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.stackLg) }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={22} color={colors.onSurface} />
         </TouchableOpacity>
@@ -347,7 +351,7 @@ export default function SignupScreen({ navigation }) {
                   placeholder="e.g. kabir_ride, speed_demon"
                   placeholderTextColor={colors.outline}
                   value={form.username}
-                  onChangeText={v => update('username', v.toLowerCase())}
+                  onChangeText={v => update('username', v.toLowerCase().replace(/\s+/g, ''))}
                   autoCapitalize="none"
                 />
               </View>
@@ -661,7 +665,7 @@ export default function SignupScreen({ navigation }) {
       </ScrollView>
 
       {/* FOOTER */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.stackLg) }]}>
         <Text style={styles.footerText}>
           ALREADY HAVE AN ACCOUNT?{' '}
           <Text style={styles.footerLink} onPress={() => navigation.navigate('Login')}>LOG IN</Text>

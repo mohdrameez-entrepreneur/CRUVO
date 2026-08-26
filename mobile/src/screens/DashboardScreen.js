@@ -172,7 +172,7 @@ export default function DashboardScreen({ navigation }) {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: 110 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, 16) + 90 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryContainer} />}
       >
         {friendNotification && (

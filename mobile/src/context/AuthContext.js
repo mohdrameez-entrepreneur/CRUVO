@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { authAPI, profileAPI } from '../api';
+import { authAPI, profileAPI, setAuthToken } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -22,12 +22,14 @@ export function AuthProvider({ children }) {
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
+            setAuthToken(token);
             setProfile(parsed);
             setUser({ token, id: parsed.user_id, username: parsed.username, email: parsed.email });
           } catch {}
         }
         
         // Fetch fresh profile from backend
+        setAuthToken(token);
         const res = await profileAPI.get();
         setProfile(res.data);
         setUser({ token, id: res.data.user_id, username: res.data.username, email: res.data.email });
@@ -36,6 +38,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       // ONLY log out if backend explicitly rejected auth (401 / 403)
       if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+        setAuthToken(null);
         await SecureStore.deleteItemAsync('auth_token');
         await SecureStore.deleteItemAsync('cached_profile');
         setUser(null);
@@ -49,6 +52,7 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     const res = await authAPI.login({ username, password });
+    setAuthToken(res.data.token);
     await SecureStore.setItemAsync('auth_token', res.data.token);
     await SecureStore.setItemAsync('cached_profile', JSON.stringify(res.data.user.profile));
     setProfile(res.data.user.profile);
@@ -58,6 +62,7 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     const res = await authAPI.register(data);
+    setAuthToken(res.data.token);
     await SecureStore.setItemAsync('auth_token', res.data.token);
     await SecureStore.setItemAsync('cached_profile', JSON.stringify(res.data.user.profile));
     setProfile(res.data.user.profile);
@@ -67,6 +72,7 @@ export function AuthProvider({ children }) {
 
   const googleLogin = async (tokenPayload) => {
     const res = await authAPI.googleAuth(tokenPayload);
+    setAuthToken(res.data.token);
     await SecureStore.setItemAsync('auth_token', res.data.token);
     await SecureStore.setItemAsync('cached_profile', JSON.stringify(res.data.user.profile));
     setProfile(res.data.user.profile);
@@ -78,6 +84,7 @@ export function AuthProvider({ children }) {
     try {
       await authAPI.logout();
     } catch {}
+    setAuthToken(null);
     await SecureStore.deleteItemAsync('auth_token');
     await SecureStore.deleteItemAsync('cached_profile');
     setUser(null);

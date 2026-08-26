@@ -6,12 +6,14 @@ import * as Google from 'expo-auth-session/providers/google';
 
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
-import { GOOGLE_WEB_CLIENT_ID } from '../config';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../config';
 import AlertCard from '../components/AlertCard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { login, googleLogin } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -26,8 +28,8 @@ export default function LoginScreen({ navigation }) {
   // Google OAuth Hook
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
     scopes: ['profile', 'email', 'openid'],
   });
 
@@ -113,7 +115,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.stackLg) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
@@ -170,7 +172,7 @@ export default function LoginScreen({ navigation }) {
           {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
         </View>
 
-        <TouchableOpacity style={styles.forgotPassword}>
+        <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </TouchableOpacity>
 
@@ -207,7 +209,7 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.stackLg) }]}>
         <Text style={styles.footerText}>
           DON'T HAVE AN ACCOUNT?{' '}
           <Text style={styles.footerLink} onPress={() => navigation.navigate('Signup')}>SIGN UP</Text>

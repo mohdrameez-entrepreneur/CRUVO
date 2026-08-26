@@ -1,21 +1,33 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
 export default function OnboardingScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   return (
     <View style={styles.container}>
-      <View style={styles.heroSection}>
-        <View style={styles.heroOverlay}>
+      <ImageBackground 
+        source={require('../../assets/Motorcycle-Bike-Riding-Group-In-India_1.webp')} 
+        style={styles.heroSection}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={['transparent', 'transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+          locations={[0, 0.4, 0.7, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={[styles.heroOverlay, { paddingTop: insets.top }]}>
           <Text style={styles.heroTitle}>CRUVO</Text>
           <Text style={styles.heroSubtitle}>Group Motorcycle Touring</Text>
         </View>
-      </View>
+      </ImageBackground>
 
-      <View style={styles.bottomSheet}>
+      <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, spacing.stackLg) }]}>
         <View style={styles.handle} />
 
         <View style={styles.stepIndicator}>
@@ -61,12 +73,13 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'flex-end',
-    padding: spacing.marginMobile,
+    paddingHorizontal: spacing.marginMobile,
+    paddingBottom: spacing.stackLg,
   },
   heroOverlay: {
     marginBottom: spacing.stackLg,
+    zIndex: 1,
   },
   heroTitle: {
     ...typography.displayLg,

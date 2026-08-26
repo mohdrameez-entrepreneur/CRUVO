@@ -49,7 +49,7 @@ export default function MapScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <NavBar title="LIVE RADAR" subtitle="ACTIVE RIDE TRACKING" />
-      <View style={[styles.centerContent, { paddingBottom: insets.bottom + 80 }]}>
+      <View style={[styles.centerContent, { paddingBottom: Math.max(insets.bottom, 16) + 90 }]}>
         <View style={styles.iconContainer}>
           <Ionicons name="map-outline" size={56} color={colors.primaryContainer} />
         </View>

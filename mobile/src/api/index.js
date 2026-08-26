@@ -9,11 +9,31 @@ const api = axios.create({
   timeout: 45000,
 });
 
-api.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync('auth_token');
+let currentToken = null;
+
+export const setAuthToken = (token) => {
+  currentToken = token;
   if (token) {
-    config.headers.Authorization = `Token ${token}`;
+    api.defaults.headers.common['Authorization'] = `Token ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
   }
+};
+
+api.interceptors.request.use(async (config) => {
+  if (!currentToken) {
+    // Fallback for edge cases (e.g., interceptor running before checkAuth completes)
+    const token = await SecureStore.getItemAsync('auth_token');
+    if (token) {
+      setAuthToken(token);
+    }
+  }
+
+  // Ensure Authorization is set on the specific config if available
+  if (currentToken && !config.headers.Authorization) {
+    config.headers.Authorization = `Token ${currentToken}`;
+  }
+
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
@@ -50,6 +70,9 @@ export const authAPI = {
   login: (data) => api.post('/auth/login/', data),
   googleAuth: (data) => api.post('/auth/google/', data),
   logout: () => api.post('/auth/logout/'),
+  forgotPasswordRequest: (data) => api.post('/auth/forgot-password/', data),
+  forgotPasswordVerify: (data) => api.post('/auth/forgot-password/verify/', data),
+  forgotPasswordReset: (data) => api.post('/auth/forgot-password/reset/', data),
 };
 
 export const profileAPI = {

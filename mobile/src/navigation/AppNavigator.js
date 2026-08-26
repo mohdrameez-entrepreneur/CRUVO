@@ -18,6 +18,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ProfileEditScreen from '../screens/ProfileEditScreen';
 import InviteRidersScreen from '../screens/InviteRidersScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import WhatsNewModal from '../components/WhatsNewModal';
 import UpdateRequiredModal from '../components/UpdateRequiredModal';
 import MainTabs from './MainTabs';
@@ -137,6 +138,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           </>
         ) : (

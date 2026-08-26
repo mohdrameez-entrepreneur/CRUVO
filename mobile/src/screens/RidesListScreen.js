@@ -294,7 +294,7 @@ export default function RidesListScreen({ navigation }) {
               isCreator={item.creator === user?.id}
             />
           )}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: Math.max(insets.bottom, 16) + 90 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primaryContainer} />}
           ListHeaderComponent={
             <>

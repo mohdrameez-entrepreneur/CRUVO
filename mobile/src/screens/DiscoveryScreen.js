@@ -541,7 +541,7 @@ export default function DiscoveryScreen({ navigation }) {
         <FlatList
           data={riders}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[styles.listContent, { paddingBottom: 110 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom, 16) + 90 }]}
           renderItem={({ item }) => (
             <RiderCard
               rider={item}
