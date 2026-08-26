@@ -5,7 +5,14 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.core.mail import send_mail
+from django.core.cache import cache
+from django.conf import settings as django_settings
 from datetime import date
+import hashlib
+import uuid
+import random
+import string
 
 from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition, Friendship, are_friends
 from .serializers import (
@@ -14,6 +21,130 @@ from .serializers import (
     FlagStopSerializer, RiderDiscoverySerializer, UserSerializer,
     InvitationSerializer, RidePositionSerializer, FriendshipSerializer,
 )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def forgot_password_request(request):
+    """Step 1: Request OTP. Always returns 200 to prevent email enumeration."""
+    email = request.data.get('email', '').strip().lower()
+    if not email:
+        return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(email__iexact=email).first()
+    if user:
+        # Generate a 6-digit OTP
+        otp = ''.join(random.choices(string.digits, k=6))
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+
+        # Store in cache for 15 minutes (900 seconds)
+        cache_key = f'pwd_reset_otp_{email}'
+        cache.set(cache_key, {'otp_hash': otp_hash, 'user_id': user.id}, timeout=900)
+
+        # Send email
+        try:
+            send_mail(
+                subject='Your CRUVO Password Reset Code',
+                message=(
+                    f'Hi {user.username},\n\n'
+                    f'Your password reset code is: {otp}\n\n'
+                    f'This code expires in 15 minutes. Do not share it with anyone.\n\n'
+                    f'If you did not request this, you can safely ignore this email.\n\n'
+                    f'— The CRUVO Team'
+                ),
+                html_message=(
+                    f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
+                    f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
+                    f'<p style="font-size:16px;">Hi <strong>{user.username}</strong>,</p>'
+                    f'<p>Your password reset code is:</p>'
+                    f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{otp}</div>'
+                    f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
+                    f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
+                    f'</div>'
+                ),
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log the error but don't reveal it to the client
+            import logging
+            logging.getLogger(__name__).error(f'[ForgotPassword] Email send failed for {email}: {e}')
+
+    # Always return success to prevent email enumeration
+    return Response({'detail': 'If an account with that email exists, a reset code has been sent.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def forgot_password_verify(request):
+    """Step 2: Verify OTP. Returns a short-lived reset_token on success."""
+    email = request.data.get('email', '').strip().lower()
+    otp = request.data.get('otp', '').strip()
+
+    if not email or not otp:
+        return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    cache_key = f'pwd_reset_otp_{email}'
+    cached = cache.get(cache_key)
+
+    if not cached:
+        return Response({'error': 'Reset code has expired or is invalid. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+    if otp_hash != cached['otp_hash']:
+        return Response({'error': 'Incorrect code. Please check and try again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # OTP is valid — issue a reset token (valid for 10 minutes)
+    reset_token = str(uuid.uuid4())
+    reset_cache_key = f'pwd_reset_token_{reset_token}'
+    cache.set(reset_cache_key, {'user_id': cached['user_id']}, timeout=600)
+
+    # Invalidate the OTP so it can't be reused
+    cache.delete(cache_key)
+
+    return Response({'reset_token': reset_token}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def forgot_password_reset(request):
+    """Step 3: Set new password using the reset_token from step 2."""
+    reset_token = request.data.get('reset_token', '').strip()
+    new_password = request.data.get('new_password', '')
+    confirm_password = request.data.get('confirm_password', '')
+
+    if not reset_token or not new_password or not confirm_password:
+        return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != confirm_password:
+        return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if len(new_password) < 8:
+        return Response({'error': 'Password must be at least 8 characters'}, status=status.HTTP_400_BAD_REQUEST)
+
+    reset_cache_key = f'pwd_reset_token_{reset_token}'
+    cached = cache.get(reset_cache_key)
+
+    if not cached:
+        return Response({'error': 'Reset session has expired. Please start over.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(id=cached['user_id'])
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid session'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Set the new password
+    user.set_password(new_password)
+    user.save()
+
+    # Invalidate all existing auth tokens (force re-login on all devices)
+    Token.objects.filter(user=user).delete()
+
+    # Invalidate the reset token so it can't be reused
+    cache.delete(reset_cache_key)
+
+    return Response({'detail': 'Password reset successfully. Please log in with your new password.'}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -52,6 +183,96 @@ def login_view(request):
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def google_auth_view(request):
+    import urllib.request
+    import json
+    from django.utils.crypto import get_random_string
+
+    id_token = request.data.get('id_token')
+    access_token = request.data.get('access_token')
+
+    if not id_token and not access_token:
+        return Response({'error': 'id_token or access_token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user_info = None
+
+    # 1. Verify via Google ID token if provided
+    if id_token:
+        try:
+            url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'CRUVO-Backend'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    payload = json.loads(response.read().decode())
+                    if payload.get('email'):
+                        user_info = payload
+        except Exception:
+            pass
+
+    # 2. Fallback to access_token userinfo if id_token failed or wasn't provided
+    if not user_info and access_token:
+        try:
+            url = f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={access_token}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'CRUVO-Backend'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    payload = json.loads(response.read().decode())
+                    if payload.get('email'):
+                        user_info = payload
+        except Exception:
+            pass
+
+    if not user_info or not user_info.get('email'):
+        return Response({'error': 'Invalid Google token or unverified email'}, status=status.HTTP_400_BAD_REQUEST)
+
+    email = user_info['email'].lower().strip()
+    name = user_info.get('name') or user_info.get('given_name') or email.split('@')[0]
+
+    # Look up existing user by email
+    user = User.objects.filter(email__iexact=email).first()
+
+    if not user:
+        # Generate clean unique username
+        base_username = email.split('@')[0].lower()
+        base_username = ''.join(c for c in base_username if c.isalnum() or c in ('_', '.'))[:20]
+        if not base_username or len(base_username) < 3:
+            base_username = f"rider_{get_random_string(6).lower()}"
+
+        username = base_username
+        counter = 1
+        while User.objects.filter(username__iexact=username).exists():
+            username = f"{base_username[:15]}_{counter}"
+            counter += 1
+
+        random_pw = get_random_string(32)
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=random_pw,
+            first_name=user_info.get('given_name', '')[:30],
+            last_name=user_info.get('family_name', '')[:30],
+        )
+        Profile.objects.create(
+            user=user,
+            display_name=name[:100],
+        )
+    else:
+        # Ensure user profile exists
+        if not hasattr(user, 'profile'):
+            Profile.objects.create(
+                user=user,
+                display_name=name[:100],
+            )
+
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response({
+        'token': token.key,
+        'user': UserSerializer(user, context={'request': request}).data,
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -509,7 +730,7 @@ def fetch_route_view(request, ride_id):
     import urllib.request, json
     from django.conf import settings
 
-    api_key = getattr(settings, 'TOMTOM_API_KEY', '') or os.environ.get('TOMTOM_API_KEY', '54S1S2VigjyRLWIZiK8XRI8OsPPz30Sd')
+    api_key = getattr(settings, 'TOMTOM_API_KEY', '') or os.environ.get('TOMTOM_API_KEY', '')
     url = (
         f'https://api.tomtom.com/routing/1/calculateRoute/'
         f'{ride.origin_lat},{ride.origin_lng}:{ride.destination_lat},{ride.destination_lng}'
