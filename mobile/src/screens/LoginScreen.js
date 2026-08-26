@@ -1,20 +1,61 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { GOOGLE_WEB_CLIENT_ID } from '../config';
 import AlertCard from '../components/AlertCard';
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen({ navigation }) {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const scrollRef = useRef(null);
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
+
+  // Google OAuth Hook
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    scopes: ['profile', 'email', 'openid'],
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication, params } = response;
+      const id_token = authentication?.idToken || params?.id_token;
+      const access_token = authentication?.accessToken || params?.access_token;
+      if (id_token || access_token) {
+        handleGoogleAuth({ id_token, access_token });
+      }
+    } else if (response?.type === 'error') {
+      setErrors({ general: 'Google sign in was cancelled or failed' });
+    }
+  }, [response]);
+
+  const handleGoogleAuth = async (tokens) => {
+    setGoogleLoading(true);
+    setErrors({});
+    try {
+      await googleLogin(tokens);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Google sign in failed. Please try again.';
+      setErrors({ general: msg });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const fieldRefs = { username: usernameRef, password: passwordRef };
 
@@ -95,12 +136,12 @@ export default function LoginScreen({ navigation }) {
         )}
 
         <View ref={usernameRef} style={styles.inputGroup}>
-          <Text style={[styles.label, errors.username && styles.labelError]}>USERNAME</Text>
+          <Text style={[styles.label, errors.username && styles.labelError]}>USERNAME OR EMAIL</Text>
           <View style={[styles.inputContainer, errors.username && styles.inputError]}>
             <Ionicons name="person-outline" size={20} color={errors.username ? '#e53935' : colors.onSurfaceVariant} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
               placeholderTextColor={colors.outline}
               value={username}
               onChangeText={(v) => { setUsername(v); clearError('username'); }}
@@ -136,7 +177,7 @@ export default function LoginScreen({ navigation }) {
         <TouchableOpacity
           style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
           onPress={handleLogin}
-          disabled={loading}
+          disabled={loading || googleLoading}
           activeOpacity={0.8}
         >
           <Text style={styles.primaryButtonText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
@@ -148,14 +189,21 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
-          <Ionicons name="logo-google" size={20} color={colors.onSurface} />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.phoneButton} activeOpacity={0.8}>
-          <Ionicons name="call-outline" size={20} color={colors.onSurface} />
-          <Text style={styles.phoneButtonText}>Continue with Phone</Text>
+        {/* GOOGLE SIGN IN BUTTON */}
+        <TouchableOpacity
+          style={[styles.googleButton, googleLoading && { opacity: 0.7 }]}
+          activeOpacity={0.85}
+          onPress={() => promptAsync()}
+          disabled={!request || googleLoading || loading}
+        >
+          {googleLoading ? (
+            <ActivityIndicator size="small" color={colors.onSurface} style={{ marginRight: 8 }} />
+          ) : (
+            <Ionicons name="logo-google" size={20} color={colors.onSurface} />
+          )}
+          <Text style={styles.googleButtonText}>
+            {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -194,12 +242,6 @@ const styles = StyleSheet.create({
   input: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   eyeButton: { padding: spacing.stackSm },
   errorText: { ...typography.labelSm, color: '#e53935', marginTop: moderateScale(6), marginLeft: moderateScale(4) },
-  generalError: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
-    backgroundColor: 'rgba(229,57,53,0.1)', borderWidth: 1, borderColor: 'rgba(229,57,53,0.3)',
-    borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackLg,
-  },
-  generalErrorText: { ...typography.bodyMd, color: '#e53935', flex: 1 },
   forgotPassword: { alignSelf: 'flex-end', marginBottom: spacing.stackLg },
   forgotPasswordText: { ...typography.labelSm, color: colors.primaryContainer },
   primaryButton: {
@@ -215,16 +257,11 @@ const styles = StyleSheet.create({
   dividerText: { ...typography.labelSm, color: colors.onSurfaceVariant, marginHorizontal: spacing.stackMd },
   googleButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: spacing.touchTargetMin, borderWidth: 2, borderColor: colors.outlineVariant,
+    height: spacing.touchTargetMin, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg, marginBottom: spacing.stackMd, gap: spacing.stackSm,
+    backgroundColor: colors.surfaceContainerLow,
   },
-  googleButtonText: { ...typography.labelTechnical, color: colors.onSurface },
-  phoneButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: spacing.touchTargetMin, backgroundColor: colors.secondaryContainer,
-    borderRadius: borderRadius.lg, gap: spacing.stackSm,
-  },
-  phoneButtonText: { ...typography.labelTechnical, color: colors.onSecondaryContainer },
+  googleButtonText: { ...typography.titleMd, color: colors.onSurface, fontSize: 14 },
   footer: { padding: spacing.marginMobile, paddingBottom: spacing.stackLg, alignItems: 'center' },
   footerText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
   footerLink: { color: colors.primaryContainer },

@@ -93,6 +93,18 @@ function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRider
     box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     z-index: 2;
   }
+  .cruvo-direction-arrow {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 9px solid currentColor;
+    z-index: 5;
+  }
 </style>
 </head>
 <body>
@@ -181,6 +193,64 @@ try {
     }
   }
 
+  var interpolationStates = {};
+
+  function easeInOutQuad(x) {
+    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  }
+
+  function interpolateAngle(current, target, t) {
+    var diff = target - current;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    return current + diff * t;
+  }
+
+  function updateRiderPositionState(uid, lat, lng, heading, speed) {
+    var now = performance.now();
+    var marker = riderMarkers[uid];
+    if (!marker) return;
+
+    if (!interpolationStates[uid]) {
+      interpolationStates[uid] = {
+        marker: marker,
+        currentLng: lng,
+        currentLat: lat,
+        prevLng: lng,
+        prevLat: lat,
+        targetLng: lng,
+        targetLat: lat,
+        currentHeading: heading || 0,
+        targetHeading: heading || 0,
+        lastUpdateTime: now,
+        updateInterval: 1000
+      };
+      marker.setLngLat([lng, lat]);
+      if (Number.isFinite(heading)) {
+        marker.setRotation(heading);
+      }
+    } else {
+      var state = interpolationStates[uid];
+      state.marker = marker;
+      state.prevLng = state.currentLng;
+      state.prevLat = state.currentLat;
+      state.targetLng = lng;
+      state.targetLat = lat;
+
+      var elapsedSinceLastUpdate = now - state.lastUpdateTime;
+      if (elapsedSinceLastUpdate > 400 && elapsedSinceLastUpdate < 12000) {
+        state.updateInterval = elapsedSinceLastUpdate;
+      } else {
+        state.updateInterval = 1000;
+      }
+      state.lastUpdateTime = now;
+
+      if (Number.isFinite(heading)) {
+        state.targetHeading = heading;
+      }
+    }
+  }
+
   function createMarkerElement(r, isMe, colorIndex) {
     var el = document.createElement('div');
     var color = isMe ? '#ffd600' : COLORS[colorIndex % COLORS.length];
@@ -190,6 +260,12 @@ try {
     el.className = 'cruvo-rider-marker' + pulseClass;
     el.style.backgroundColor = color;
     el.style.border = '3px solid ' + borderColor;
+
+    // Direction arrow pointing in the direction of marker rotation (heading)
+    var arrow = document.createElement('div');
+    arrow.className = 'cruvo-direction-arrow';
+    arrow.style.color = borderColor;
+    el.appendChild(arrow);
 
     var inner = document.createElement('div');
     inner.className = 'cruvo-avatar-inner';
@@ -245,6 +321,96 @@ try {
     return el;
   }
 
+  function updateMarkerElement(marker, r, isMe, colorIndex) {
+    var el = marker.getElement();
+    if (!el) return;
+
+    var borderColor = isMe ? '#ffd600' : '#ffffff';
+
+    var existingBadge = el.querySelector('.cruvo-flag-badge');
+    var existingFlagType = existingBadge ? existingBadge.dataset.flagType : null;
+    var newFlagType = r.flag_type || null;
+
+    if (String(existingFlagType) !== String(newFlagType)) {
+      if (newFlagType) {
+        var flagEmoji = '🚩';
+        if (newFlagType === 'FUEL') flagEmoji = '⛽';
+        else if (newFlagType === 'FOOD') flagEmoji = '🍔';
+        else if (newFlagType === 'BREAK') flagEmoji = '☕';
+        else if (newFlagType === 'ISSUE') flagEmoji = '⚠️';
+
+        if (existingBadge) {
+          existingBadge.textContent = flagEmoji;
+          existingBadge.dataset.flagType = newFlagType;
+        } else {
+          var badge = document.createElement('div');
+          badge.className = 'cruvo-flag-badge';
+          badge.textContent = flagEmoji;
+          badge.dataset.flagType = newFlagType;
+          el.appendChild(badge);
+        }
+      } else {
+        if (existingBadge) {
+          existingBadge.remove();
+        }
+      }
+    }
+
+    var inner = el.querySelector('.cruvo-avatar-inner');
+    if (!inner) return;
+
+    var existingImg = inner.querySelector('img');
+    var existingFallback = inner.querySelector('.cruvo-avatar-fallback');
+    
+    var avatarUrl = r.avatar_url;
+    if (avatarUrl && avatarUrl.indexOf('http') !== 0 && avatarUrl.indexOf('data:') !== 0) {
+      avatarUrl = API_BASE_SERVER + (avatarUrl.indexOf('/') === 0 ? '' : '/') + avatarUrl;
+    }
+
+    if (avatarUrl) {
+      if (existingImg) {
+        var normalizedImgSrc = existingImg.src;
+        if (normalizedImgSrc !== avatarUrl) {
+          existingImg.src = avatarUrl;
+          existingImg.style.display = 'block';
+          if (existingFallback) existingFallback.style.display = 'none';
+        }
+      } else {
+        var img = document.createElement('img');
+        img.className = 'cruvo-avatar-img';
+        img.src = avatarUrl;
+        img.crossOrigin = 'anonymous';
+        img.referrerPolicy = 'no-referrer';
+
+        var fallback = existingFallback || document.createElement('div');
+        fallback.className = 'cruvo-avatar-fallback';
+        fallback.style.display = 'none';
+        fallback.textContent = r.initials || '??';
+
+        img.onerror = function() {
+          img.style.display = 'none';
+          fallback.style.display = 'flex';
+        };
+
+        inner.innerHTML = '';
+        inner.appendChild(img);
+        inner.appendChild(fallback);
+      }
+    } else {
+      if (existingImg) existingImg.style.display = 'none';
+      if (existingFallback) {
+        existingFallback.style.display = 'flex';
+        existingFallback.textContent = r.initials || '??';
+      } else {
+        var fallback = document.createElement('div');
+        fallback.className = 'cruvo-avatar-fallback';
+        fallback.textContent = r.initials || '??';
+        inner.innerHTML = '';
+        inner.appendChild(fallback);
+      }
+    }
+  }
+
   function renderRiders(riders, myUserId) {
     if (!Array.isArray(riders)) return;
     var seen = {};
@@ -256,22 +422,19 @@ try {
       var isMe = myUserId && String(myUserId) === uid;
 
       if (riderMarkers[uid]) {
-        riderMarkers[uid].setLngLat([r.lng, r.lat]);
-        var existingImg = riderMarkers[uid].getElement().querySelector('img');
-        var existingSrc = existingImg ? existingImg.src : null;
-        var existingBadge = riderMarkers[uid].getElement().querySelector('.cruvo-flag-badge');
-        var existingFlagType = existingBadge ? existingBadge.dataset.flagType : null;
-        var newFlagType = r.flag_type || null;
-
-        if ((r.avatar_url && (!existingImg || existingSrc !== r.avatar_url)) || String(existingFlagType) !== String(newFlagType)) {
-          var newEl = createMarkerElement(r, isMe, i);
-          riderMarkers[uid].remove();
-          riderMarkers[uid] = new maplibregl.Marker({ element: newEl }).setLngLat([r.lng, r.lat]).addTo(map);
+        // If it's NOT the local user, update their coordinate targets.
+        // The local user's coordinate target is driven directly by the local GPS watch to prevent jumping back to server coordinates.
+        if (!isMe) {
+          updateRiderPositionState(uid, r.lat, r.lng, r.heading, r.speed);
         }
+
+        // Direct DOM update instead of full marker removal/recreation to prevent flashing
+        updateMarkerElement(riderMarkers[uid], r, isMe, i);
       } else {
         var el = createMarkerElement(r, isMe, i);
         var marker = new maplibregl.Marker({ element: el }).setLngLat([r.lng, r.lat]).addTo(map);
         riderMarkers[uid] = marker;
+        updateRiderPositionState(uid, r.lat, r.lng, r.heading, r.speed);
       }
     });
 
@@ -279,9 +442,46 @@ try {
       if (!seen[uid]) {
         riderMarkers[uid].remove();
         delete riderMarkers[uid];
+        delete interpolationStates[uid];
       }
     });
   }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    var now = performance.now();
+
+    Object.keys(interpolationStates).forEach(function(uid) {
+      var state = interpolationStates[uid];
+      if (!state.marker) return;
+
+      var elapsed = now - state.lastUpdateTime;
+      var t = Math.min(elapsed / state.updateInterval, 1.0);
+      var easedT = easeInOutQuad(t);
+
+      var currentLng = state.prevLng + (state.targetLng - state.prevLng) * easedT;
+      var currentLat = state.prevLat + (state.targetLat - state.prevLat) * easedT;
+
+      state.currentLng = currentLng;
+      state.currentLat = currentLat;
+      state.marker.setLngLat([currentLng, currentLat]);
+
+      // Interpolate heading and set rotation
+      if (Number.isFinite(state.targetHeading)) {
+        var currentHeading = interpolateAngle(state.currentHeading, state.targetHeading, easedT);
+        state.currentHeading = currentHeading;
+        state.marker.setRotation(currentHeading);
+
+        // Apply inverse transform on the inner avatar image/fallback so it remains upright
+        var inner = state.marker.getElement().querySelector('.cruvo-avatar-inner');
+        if (inner) {
+          inner.style.transform = 'rotate(' + (-currentHeading) + 'deg)';
+        }
+      }
+    });
+  }
+
+  requestAnimationFrame(animate);
 
   function handleMessageData(data) {
     if (!data) return;
@@ -295,7 +495,7 @@ try {
 
         // Move MY own avatar marker in real-time from device GPS (not waiting for WebSocket batch)
         if (MY_USER_ID && riderMarkers[String(MY_USER_ID)]) {
-          riderMarkers[String(MY_USER_ID)].setLngLat(lngLat);
+          updateRiderPositionState(String(MY_USER_ID), msg.lat, msg.lng, rawHeading, speed);
         }
 
         // Camera follow logic — only when followUser is true

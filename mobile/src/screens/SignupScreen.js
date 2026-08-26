@@ -1,9 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { GOOGLE_WEB_CLIENT_ID } from '../config';
 import AlertCard from '../components/AlertCard';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const RIDING_STYLES = ['ADVENTURE', 'SPORT', 'TOURING', 'CRUISE', 'COMMUTE'];
 const EXPERIENCE_LEVELS = ['BEGINNER', 'INTERMEDIATE', 'VETERAN', 'EXPERT'];
@@ -19,16 +25,51 @@ const FIELDS = [
 ];
 
 export default function SignupScreen({ navigation }) {
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
   const [form, setForm] = useState({
     username: '', display_name: '', email: '', password: '', password2: '',
     bike_make: '', bike_model: '', riding_style: '', experience_level: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const scrollRef = useRef(null);
   const fieldRefs = useRef({});
+
+  // Google OAuth Hook
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    scopes: ['profile', 'email', 'openid'],
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication, params } = response;
+      const id_token = authentication?.idToken || params?.id_token;
+      const access_token = authentication?.accessToken || params?.access_token;
+      if (id_token || access_token) {
+        handleGoogleAuth({ id_token, access_token });
+      }
+    } else if (response?.type === 'error') {
+      setErrors({ general: 'Google sign up was cancelled or failed' });
+    }
+  }, [response]);
+
+  const handleGoogleAuth = async (tokens) => {
+    setGoogleLoading(true);
+    setErrors({});
+    try {
+      await googleLogin(tokens);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Google sign up failed. Please try again.';
+      setErrors({ general: msg });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const scrollToField = (key) => {
     const ref = fieldRefs.current[key];
@@ -103,7 +144,7 @@ export default function SignupScreen({ navigation }) {
           onChangeText={(v) => update(field.key, v)}
           secureTextEntry={field.secure && !showPassword}
           keyboardType={field.keyboardType || 'default'}
-          autoCapitalize="none"
+          autoCapitalize={field.key === 'username' || field.key === 'email' ? 'none' : 'words'}
         />
         {field.secure && (
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
@@ -126,8 +167,8 @@ export default function SignupScreen({ navigation }) {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join the ride community</Text>
+        <Text style={styles.title}>Join the Crew</Text>
+        <Text style={styles.subtitle}>Create your profile to start riding</Text>
 
         {errors.general && (
           <AlertCard
@@ -139,10 +180,33 @@ export default function SignupScreen({ navigation }) {
           />
         )}
 
-        {FIELDS.map(f => renderInput(f))}
+        {/* QUICK GOOGLE SIGN UP */}
+        <TouchableOpacity
+          style={[styles.googleButton, googleLoading && { opacity: 0.7 }]}
+          activeOpacity={0.85}
+          onPress={() => promptAsync()}
+          disabled={!request || googleLoading || loading}
+        >
+          {googleLoading ? (
+            <ActivityIndicator size="small" color={colors.onSurface} style={{ marginRight: 8 }} />
+          ) : (
+            <Ionicons name="logo-google" size={20} color={colors.onSurface} />
+          )}
+          <Text style={styles.googleButtonText}>
+            {googleLoading ? 'Connecting to Google...' : 'Sign up with Google'}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or register with email</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {FIELDS.map(renderInput)}
 
         <View ref={el => { fieldRefs.current['riding_style'] = { current: el }; }} style={styles.inputGroup}>
-          <Text style={styles.label}>RIDING STYLE</Text>
+          <Text style={styles.label}>RIDING STYLE (OPTIONAL)</Text>
           <View style={styles.chipContainer}>
             {RIDING_STYLES.map(s => (
               <TouchableOpacity
@@ -157,7 +221,7 @@ export default function SignupScreen({ navigation }) {
         </View>
 
         <View ref={el => { fieldRefs.current['experience_level'] = { current: el }; }} style={styles.inputGroup}>
-          <Text style={styles.label}>EXPERIENCE</Text>
+          <Text style={styles.label}>EXPERIENCE (OPTIONAL)</Text>
           <View style={styles.chipContainer}>
             {EXPERIENCE_LEVELS.map(level => (
               <TouchableOpacity
@@ -174,21 +238,10 @@ export default function SignupScreen({ navigation }) {
         <TouchableOpacity
           style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
           onPress={handleSignup}
-          disabled={loading}
+          disabled={loading || googleLoading}
           activeOpacity={0.8}
         >
           <Text style={styles.primaryButtonText}>{loading ? 'Creating...' : 'Create Account'}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity style={styles.googleButton} activeOpacity={0.8}>
-          <Ionicons name="logo-google" size={20} color={colors.onSurface} />
-          <Text style={styles.googleButtonText}>Sign up with Google</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -226,39 +279,35 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: spacing.stackSm },
   input: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   eyeButton: { padding: spacing.stackSm },
-  errorText: { ...typography.labelSm, color: '#e53935', marginTop: 6, marginLeft: 4 },
-  generalError: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
-    backgroundColor: 'rgba(229,57,53,0.1)', borderWidth: 1, borderColor: 'rgba(229,57,53,0.3)',
-    borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackLg,
-  },
-  generalErrorText: { ...typography.bodyMd, color: '#e53935', flex: 1 },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  errorText: { ...typography.labelSm, color: '#e53935', marginTop: moderateScale(6), marginLeft: moderateScale(4) },
+  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm },
   chip: {
-    paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
-    borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLow,
+    paddingVertical: spacing.stackSm, paddingHorizontal: spacing.stackMd,
+    borderRadius: borderRadius.full, backgroundColor: colors.surfaceContainerLowest,
+    borderWidth: 1, borderColor: colors.outlineVariant,
   },
   chipActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
-  chipText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 12 },
+  chipText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
   chipTextActive: { color: colors.onPrimaryContainer },
   primaryButton: {
     backgroundColor: colors.primaryContainer, height: spacing.touchTargetMin,
     borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
-    marginBottom: spacing.stackMd, shadowColor: colors.black, shadowOffset: { width: 0, height: 4 },
+    marginTop: spacing.stackMd, marginBottom: spacing.stackMd,
+    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
   },
   primaryButtonDisabled: { opacity: 0.6 },
   primaryButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
-  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.stackMd },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.stackMd },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.outlineVariant },
   dividerText: { ...typography.labelSm, color: colors.onSurfaceVariant, marginHorizontal: spacing.stackMd },
   googleButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: spacing.touchTargetMin, borderWidth: 2, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.lg, gap: spacing.stackSm,
+    height: spacing.touchTargetMin, borderWidth: 1, borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg, marginBottom: spacing.stackSm, gap: spacing.stackSm,
+    backgroundColor: colors.surfaceContainerLow,
   },
-  googleButtonText: { ...typography.labelTechnical, color: colors.onSurface },
+  googleButtonText: { ...typography.titleMd, color: colors.onSurface, fontSize: 14 },
   footer: { padding: spacing.marginMobile, paddingBottom: spacing.stackLg, alignItems: 'center' },
   footerText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
   footerLink: { color: colors.primaryContainer },

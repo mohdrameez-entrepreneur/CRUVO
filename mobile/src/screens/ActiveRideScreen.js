@@ -85,7 +85,7 @@ export default function ActiveRideScreen({ navigation, route }) {
     clearInterval(fallbackInterval.current);
     fallbackInterval.current = setInterval(() => {
       if (!wsConnected.current) {
-        ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => {});
+        ridesAPI.getPositions(rideId).then(res => setPositions(res.data)).catch(() => { });
       }
     }, interval);
   };
@@ -159,7 +159,7 @@ export default function ActiveRideScreen({ navigation, route }) {
       setAllFlags(flags);
       const mine = flags.find(f => String(f.flagged_by || f.user) === String(user?.id));
       setMyFlag(mine || null);
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function ActiveRideScreen({ navigation, route }) {
           route_distance_m: res.data.distance_km * 1000,
           route_duration_s: res.data.duration_s,
         }));
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [ride?.id, ride?.origin_lat, ride?.route_polyline]);
 
@@ -194,7 +194,7 @@ export default function ActiveRideScreen({ navigation, route }) {
               lng: coords.longitude,
               heading: coords.heading || 0,
               speed: coords.speed || 0,
-            }).catch(() => {});
+            }).catch(() => { });
           }
 
           const speedDelta = Math.abs(coords.speed - prevSpeed);
@@ -244,7 +244,7 @@ export default function ActiveRideScreen({ navigation, route }) {
       clearInterval(fallbackInterval.current);
       clearInterval(timerInterval.current);
       setRideFinished(true);
-    } catch {}
+    } catch { }
   };
 
   const endRide = () => {
@@ -307,7 +307,7 @@ export default function ActiveRideScreen({ navigation, route }) {
       if (connected) {
         sendClearFlag();
       }
-      await ridesAPI.clearFlag(rideId).catch(() => {});
+      await ridesAPI.clearFlag(rideId).catch(() => { });
       setMyFlag(null);
       setAllFlags(prev => prev.filter(f => String(f.flagged_by || f.user) !== String(user?.id)));
     } catch {
@@ -321,7 +321,7 @@ export default function ActiveRideScreen({ navigation, route }) {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
-    return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
   };
 
   const participants = ride?.participants || [];
@@ -468,7 +468,7 @@ export default function ActiveRideScreen({ navigation, route }) {
         <View style={[styles.flagBanner, flagNotification.isClear && { backgroundColor: '#4CAF50' }]}>
           <Ionicons name={flagNotification.isClear ? "checkmark-circle" : "flag"} size={18} color={colors.white} />
           <Text style={styles.flagBannerText}>
-            <Text style={styles.flagBannerName}>{flagNotification.userName}</Text> 
+            <Text style={styles.flagBannerName}>{flagNotification.userName}</Text>
             {flagNotification.isClear ? " is ready to ride again" : ` flagged a ${flagNotification.stopType} stop${flagNotification.locationName ? ` — ${flagNotification.locationName}` : ''}`}
           </Text>
         </View>

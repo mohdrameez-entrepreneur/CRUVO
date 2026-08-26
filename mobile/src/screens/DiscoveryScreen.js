@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -309,7 +310,7 @@ export default function DiscoveryScreen({ navigation }) {
     try {
       const res = await discoveryAPI.searchRiders(q, f);
       setRiders(res.data);
-    } catch {}
+    } catch { }
     setLoading(false);
   }, []);
 
@@ -325,7 +326,7 @@ export default function DiscoveryScreen({ navigation }) {
         const latest = accepted[0];
         setNotificationToast(`${latest.receiver_name} accepted your friend request!`);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   useFocusEffect(

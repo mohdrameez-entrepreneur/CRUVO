@@ -42,8 +42,8 @@ export default function useLocation(enabled = true) {
     watchRef.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Balanced, // High causes more jitter on stationary devices
-        distanceInterval: 8,   // Only fire when moved 8m — eliminates GPS jitter
-        timeInterval: 3000,    // Max once per 3s
+        distanceInterval: 3,   // Only fire when moved 3m — eliminates GPS jitter
+        timeInterval: 1000,    // Max once per 1s for fast responsive updates
       },
       (loc) => {
         setLocation(loc.coords);
