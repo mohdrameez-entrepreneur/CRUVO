@@ -2,6 +2,7 @@
   "expo": {
     "name": "CRUVO",
     "slug": "cruvo",
+    "scheme": "cruvo",
     "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/CRUVO LOGO.jpg",
@@ -60,7 +61,8 @@
           "color": "#ffd600"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
