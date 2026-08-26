@@ -13,6 +13,10 @@ import hashlib
 import uuid
 import random
 import string
+import logging
+import threading
+
+logger = logging.getLogger(__name__)
 
 from .models import Profile, Ride, RideParticipant, FlagStop, RidePosition, Friendship, are_friends
 from .serializers import (
@@ -41,37 +45,43 @@ def forgot_password_request(request):
         cache_key = f'pwd_reset_otp_{email}'
         cache.set(cache_key, {'otp_hash': otp_hash, 'user_id': user.id}, timeout=900)
 
-        # Send email
-        try:
-            send_mail(
-                subject='Your CRUVO Password Reset Code',
-                message=(
-                    f'Hi {user.username},\n\n'
-                    f'Your password reset code is: {otp}\n\n'
-                    f'This code expires in 15 minutes. Do not share it with anyone.\n\n'
-                    f'If you did not request this, you can safely ignore this email.\n\n'
-                    f'— The CRUVO Team'
-                ),
-                html_message=(
-                    f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
-                    f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
-                    f'<p style="font-size:16px;">Hi <strong>{user.username}</strong>,</p>'
-                    f'<p>Your password reset code is:</p>'
-                    f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{otp}</div>'
-                    f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
-                    f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
-                    f'</div>'
-                ),
-                from_email=django_settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            # Log the error but don't reveal it to the client
-            import logging
-            logging.getLogger(__name__).error(f'[ForgotPassword] Email send failed for {email}: {e}')
+        # Send email in background thread so the view returns instantly (no SMTP blocking)
+        def _send_otp_email(username, recipient, code):
+            try:
+                send_mail(
+                    subject='Your CRUVO Password Reset Code',
+                    message=(
+                        f'Hi {username},\n\n'
+                        f'Your password reset code is: {code}\n\n'
+                        f'This code expires in 15 minutes. Do not share it with anyone.\n\n'
+                        f'If you did not request this, you can safely ignore this email.\n\n'
+                        f'\u2014 The CRUVO Team'
+                    ),
+                    html_message=(
+                        f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
+                        f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
+                        f'<p style="font-size:16px;">Hi <strong>{username}</strong>,</p>'
+                        f'<p>Your password reset code is:</p>'
+                        f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{code}</div>'
+                        f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
+                        f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
+                        f'</div>'
+                    ),
+                    from_email=django_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[recipient],
+                    fail_silently=True,
+                )
+                logger.info(f'[ForgotPassword] OTP email sent to {recipient}')
+            except Exception as exc:
+                logger.error(f'[ForgotPassword] Email send failed for {recipient}: {exc}')
 
-    # Always return success to prevent email enumeration
+        threading.Thread(
+            target=_send_otp_email,
+            args=(user.username, user.email, otp),
+            daemon=True,
+        ).start()
+
+    # Always return success immediately — never block on SMTP
     return Response({'detail': 'If an account with that email exists, a reset code has been sent.'}, status=status.HTTP_200_OK)
 
 
