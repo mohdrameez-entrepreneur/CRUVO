@@ -11,7 +11,5 @@ from pages.routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     'http': get_asgi_application(),
-    'websocket': AllowedHostsOriginValidator(
-        URLRouter(websocket_urlpatterns)
-    ),
+    'websocket': URLRouter(websocket_urlpatterns),
 })

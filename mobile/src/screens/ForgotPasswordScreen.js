@@ -25,14 +25,18 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState(0);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(OTP_TTL_SECONDS);
   const [canResend, setCanResend] = useState(false);
 
   const otpRefs = useRef([]);
   const countdownRef = useRef(null);
+  const loadingTimerRef = useRef(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const loadingMsgAnim = useRef(new Animated.Value(1)).current;
 
+  // OTP countdown
   useEffect(() => {
     if (step === STEPS.OTP) {
       setCountdown(OTP_TTL_SECONDS);
@@ -50,6 +54,40 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
     return () => clearInterval(countdownRef.current);
   }, [step]);
+
+  // Progressive loading messages — cycle phases without faking progress
+  const LOADING_PHASES = [
+    { headline: 'Sending reset code\u2026', sub: 'This usually takes a few seconds.' },
+    { headline: 'Still working on it\u2026', sub: 'Your code is on its way.' },
+    { headline: 'Almost there\u2026', sub: 'Email delivery can sometimes take a little longer.' },
+    { headline: 'Taking longer than usual', sub: 'You can wait a little longer or tap to try again.' },
+  ];
+  const PHASE_TIMINGS = [0, 4000, 10000, 22000]; // ms after loading starts
+
+  useEffect(() => {
+    if (loading) {
+      setLoadingPhase(0);
+      // Schedule phase transitions
+      loadingTimerRef.current = [
+        setTimeout(() => fadeToPhase(1), PHASE_TIMINGS[1]),
+        setTimeout(() => fadeToPhase(2), PHASE_TIMINGS[2]),
+        setTimeout(() => fadeToPhase(3), PHASE_TIMINGS[3]),
+      ];
+    } else {
+      loadingTimerRef.current?.forEach(t => clearTimeout(t));
+      loadingTimerRef.current = null;
+      setLoadingPhase(0);
+    }
+    return () => loadingTimerRef.current?.forEach(t => clearTimeout(t));
+  }, [loading]);
+
+  const fadeToPhase = (phase) => {
+    Animated.sequence([
+      Animated.timing(loadingMsgAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(loadingMsgAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+    ]).start();
+    setLoadingPhase(phase);
+  };
 
   const animateStep = useCallback(() => {
     slideAnim.setValue(40);
@@ -233,43 +271,65 @@ export default function ForgotPasswordScreen({ navigation }) {
               <View style={styles.iconCircle}>
                 <Ionicons name="lock-open-outline" size={32} color={colors.primaryContainer} />
               </View>
-              <Text style={styles.title}>Forgot password?</Text>
-              <Text style={styles.subtitle}>
-                Enter the email tied to your account and we'll send you a 6-digit reset code.
-              </Text>
-              {!!error && (
-                <AlertCard type="error" title="Error" message={error}
-                  onDismiss={() => setError('')} style={{ marginBottom: spacing.stackMd }} />
+
+              {/* Progressive loading overlay — shows when sending OTP */}
+              {loading ? (
+                <Animated.View style={[styles.loadingCard, { opacity: loadingMsgAnim }]}>
+                  <ActivityIndicator size="large" color={colors.primaryContainer} style={{ marginBottom: spacing.stackMd }} />
+                  <Text style={styles.loadingHeadline}>
+                    {LOADING_PHASES[loadingPhase].headline}
+                  </Text>
+                  <Text style={styles.loadingSub}>
+                    {LOADING_PHASES[loadingPhase].sub}
+                  </Text>
+                  {/* On the last phase, show a tap-to-retry hint */}
+                  {loadingPhase === 3 && (
+                    <TouchableOpacity
+                      onPress={() => { setLoading(false); }}
+                      style={styles.retryHint}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.retryHintText}>Tap to try again</Text>
+                    </TouchableOpacity>
+                  )}
+                </Animated.View>
+              ) : (
+                <>
+                  <Text style={styles.title}>Forgot password?</Text>
+                  <Text style={styles.subtitle}>
+                    Enter the email tied to your account and we'll send you a 6-digit reset code.
+                  </Text>
+                  {!!error && (
+                    <AlertCard type="error" title="Error" message={error}
+                      onDismiss={() => setError('')} style={{ marginBottom: spacing.stackMd }} />
+                  )}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>EMAIL ADDRESS</Text>
+                    <View style={styles.inputContainer}>
+                      <Ionicons name="mail-outline" size={20} color={colors.onSurfaceVariant} style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter your email"
+                        placeholderTextColor={colors.outline}
+                        value={email}
+                        onChangeText={v => { setEmail(v); setError(''); }}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        autoComplete="email"
+                        returnKeyType="send"
+                        onSubmitEditing={handleSendOTP}
+                      />
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={handleSendOTP}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.primaryButtonText}>Send Reset Code</Text>
+                  </TouchableOpacity>
+                </>
               )}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>EMAIL ADDRESS</Text>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail-outline" size={20} color={colors.onSurfaceVariant} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email"
-                    placeholderTextColor={colors.outline}
-                    value={email}
-                    onChangeText={v => { setEmail(v); setError(''); }}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    returnKeyType="send"
-                    onSubmitEditing={handleSendOTP}
-                  />
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.buttonDisabled]}
-                onPress={handleSendOTP}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading
-                  ? <ActivityIndicator size="small" color={colors.onPrimaryContainer} />
-                  : <Text style={styles.primaryButtonText}>Send Reset Code</Text>
-                }
-              </TouchableOpacity>
             </>
           )}
 
@@ -514,5 +574,35 @@ const styles = StyleSheet.create({
     width: moderateScale(80), height: moderateScale(80), borderRadius: moderateScale(40),
     backgroundColor: 'rgba(255,214,0,0.12)', justifyContent: 'center', alignItems: 'center',
     marginBottom: spacing.stackMd, borderWidth: 2, borderColor: colors.primaryContainer,
+  },
+  // Progressive loading card
+  loadingCard: {
+    paddingVertical: spacing.stackLg,
+    alignItems: 'flex-start',
+  },
+  loadingHeadline: {
+    ...typography.headlineLgMobile,
+    color: colors.onSurface,
+    marginBottom: spacing.stackSm,
+    fontSize: moderateScale(22),
+  },
+  loadingSub: {
+    ...typography.bodyMd,
+    color: colors.onSurfaceVariant,
+    lineHeight: moderateScale(22),
+    marginBottom: spacing.stackMd,
+  },
+  retryHint: {
+    marginTop: spacing.stackMd,
+    paddingVertical: spacing.stackSm,
+    paddingHorizontal: spacing.stackMd,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primaryContainer,
+  },
+  retryHintText: {
+    ...typography.labelSm,
+    color: colors.primaryContainer,
+    fontWeight: '700',
   },
 });

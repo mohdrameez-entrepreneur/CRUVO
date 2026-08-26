@@ -9,6 +9,7 @@ class Profile(models.Model):
         ('TOURING', 'Touring'),
         ('CRUISE', 'Cruise'),
         ('COMMUTE', 'Commute'),
+        ('ALL', 'All Styles'),
     ]
     EXPERIENCE_CHOICES = [
         ('BEGINNER', 'Beginner'),

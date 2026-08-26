@@ -93,19 +93,25 @@ class RegisterSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
     display_name = serializers.CharField(max_length=100)
-    bike_make = serializers.CharField(max_length=100, required=False, default='')
-    bike_model = serializers.CharField(max_length=100, required=False, default='')
+    bike_make = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
+    bike_model = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
     riding_style = serializers.ChoiceField(
-        choices=[c[0] for c in Profile.STYLE_CHOICES], required=False, default=''
+        choices=[c[0] for c in Profile.STYLE_CHOICES], required=False, allow_blank=True, default=''
     )
     experience_level = serializers.ChoiceField(
-        choices=[c[0] for c in Profile.EXPERIENCE_CHOICES], required=False, default=''
+        choices=[c[0] for c in Profile.EXPERIENCE_CHOICES], required=False, allow_blank=True, default=''
     )
 
     def validate_username(self, value):
+        import re
+        value = value.strip().lower()
+        if ' ' in value:
+            raise serializers.ValidationError('Username cannot contain spaces.')
+        if not re.match(r'^[a-zA-Z0-9_]+$', value):
+            raise serializers.ValidationError('Username can only contain letters, numbers, and underscores.')
         if User.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError('This username is already taken.')
-        return value.lower()
+        return value
 
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value).exists():
@@ -212,6 +218,12 @@ class RideSerializer(serializers.ModelSerializer):
 
 
 class RideCreateSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    origin_name = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+    destination_name = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+    date = serializers.DateField(required=False)
+    time = serializers.TimeField(required=False)
+
     class Meta:
         model = Ride
         fields = [
@@ -220,6 +232,17 @@ class RideCreateSerializer(serializers.ModelSerializer):
             'date', 'time', 'is_public', 'route_polyline',
             'route_distance_m', 'route_duration_s',
         ]
+
+    def validate(self, attrs):
+        from datetime import date as today_date, datetime
+        if not attrs.get('date'):
+            attrs['date'] = today_date.today()
+        if not attrs.get('time'):
+            attrs['time'] = datetime.now().time()
+        if not attrs.get('name') or not str(attrs['name']).strip():
+            dest = attrs.get('destination_name', '').strip()
+            attrs['name'] = f"Ride to {dest}" if dest else "CRUVO Ride"
+        return attrs
 
     def validate_date(self, value):
         from datetime import date as today_date

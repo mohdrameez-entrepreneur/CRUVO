@@ -30,6 +30,11 @@ class RideConsumer(AsyncWebsocketConsumer):
             await self.close(code=4003)
             return
 
+        profile_info = await self.get_user_profile_info()
+        self.user_display_name = profile_info['display_name']
+        self.user_avatar_url = profile_info['avatar_url']
+        self.user_initials = profile_info['initials']
+
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         self._joined_group = True
         await self.accept()
@@ -70,7 +75,17 @@ class RideConsumer(AsyncWebsocketConsumer):
             if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
                 return
 
-            pos = await self.save_position(lat, lng, heading, speed)
+            await self.save_position(lat, lng, heading, speed)
+            pos = {
+                'user': self.user.id,
+                'lat': lat,
+                'lng': lng,
+                'heading': heading,
+                'speed': speed,
+                'initials': getattr(self, 'user_initials', '??'),
+                'display_name': getattr(self, 'user_display_name', ''),
+                'avatar_url': getattr(self, 'user_avatar_url', None),
+            }
             await self.channel_layer.group_send(self.group_name, {
                 'type': 'position_update',
                 'position': pos,
@@ -118,6 +133,10 @@ class RideConsumer(AsyncWebsocketConsumer):
                 'user_id': self.user.id,
                 'user_name': user_name,
             })
+
+        elif msg_type == 'ping':
+            await self.send(text_data=json.dumps({'type': 'pong'}))
+            return
 
     async def ready_update(self, event):
         await self.send(text_data=json.dumps({
@@ -201,31 +220,35 @@ class RideConsumer(AsyncWebsocketConsumer):
         ).exists()
 
     @database_sync_to_async
-    def save_position(self, lat, lng, heading, speed):
-        RidePosition.objects.update_or_create(
-            ride_id=self.ride_id, user=self.user,
-            defaults={'lat': lat, 'lng': lng, 'heading': heading, 'speed': speed},
-        )
+    def get_user_profile_info(self):
         avatar_url = None
         display_name = ''
+        initials = ''
         try:
             if hasattr(self.user, 'profile'):
                 display_name = self.user.profile.display_name
                 if self.user.profile.avatar:
                     url = self.user.profile.avatar.url
                     avatar_url = url if str(url).startswith('http') else f"https://cruvo.onrender.com{url if str(url).startswith('/') else '/' + str(url)}"
+                initials = self.user.profile.initials()
         except Exception:
             pass
+        if not initials:
+            initials = self.user.username[:2].upper() if self.user.username else '??'
+        if not display_name:
+            display_name = self.user.username or 'You'
         return {
-            'user': self.user.id,
-            'lat': lat,
-            'lng': lng,
-            'heading': heading,
-            'speed': speed,
-            'initials': self._get_initials_sync(self.user),
             'display_name': display_name,
             'avatar_url': avatar_url,
+            'initials': initials,
         }
+
+    @database_sync_to_async
+    def save_position(self, lat, lng, heading, speed):
+        RidePosition.objects.update_or_create(
+            ride_id=self.ride_id, user=self.user,
+            defaults={'lat': lat, 'lng': lng, 'heading': heading, 'speed': speed},
+        )
 
     @database_sync_to_async
     def get_all_positions(self):
