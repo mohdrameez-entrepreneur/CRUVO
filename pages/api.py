@@ -48,7 +48,8 @@ def forgot_password_request(request):
         # Send email in background thread so the view returns instantly (no SMTP blocking)
         def _send_otp_email(username, recipient, code):
             try:
-                send_mail(
+                print(f"[ForgotPassword] Sending OTP via {django_settings.EMAIL_BACKEND} (Host: {django_settings.EMAIL_HOST}, User: {django_settings.EMAIL_HOST_USER})...")
+                sent_count = send_mail(
                     subject='Your CRUVO Password Reset Code',
                     message=(
                         f'Hi {username},\n\n'
@@ -69,11 +70,13 @@ def forgot_password_request(request):
                     ),
                     from_email=django_settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[recipient],
-                    fail_silently=True,
+                    fail_silently=False,
                 )
-                logger.info(f'[ForgotPassword] OTP email sent to {recipient}')
+                print(f'[ForgotPassword] SUCCESS: OTP email sent to {recipient} (count={sent_count})')
             except Exception as exc:
-                logger.error(f'[ForgotPassword] Email send failed for {recipient}: {exc}')
+                print(f'[ForgotPassword] ERROR: Email send failed for {recipient}: {type(exc).__name__} - {exc}')
+                import traceback
+                traceback.print_exc()
 
         threading.Thread(
             target=_send_otp_email,
