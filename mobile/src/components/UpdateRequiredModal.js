@@ -12,16 +12,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
 
 const DEFAULT_STEPS = [
-  'Tap "DOWNLOAD UPDATE v2.0.0" below to open the official portal.',
-  'Download the new CRUVO v2.0.0 installation package.',
+  'Tap "DOWNLOAD UPDATE v3.0.0" below to open the official portal.',
+  'Download the new CRUVO v3.0.0 installation package.',
   'Open the downloaded file on your device to install the update.',
-  'Launch CRUVO v2.0.0 and enjoy the upgraded squad riding experience!',
+  'Launch CRUVO v3.0.0 and enjoy the upgraded squad riding experience!',
 ];
 
 export default function UpdateRequiredModal({
   visible,
   currentVersion = '1.0.0',
-  requiredVersion = '2.0.0',
+  requiredVersion = '3.0.0',
   downloadUrl = 'https://cruvoride.vercel.app',
   websiteUrl = 'https://cruvoride.vercel.app',
   updateSteps = DEFAULT_STEPS,

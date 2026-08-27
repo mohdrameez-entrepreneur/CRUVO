@@ -8,4 +8,4 @@ export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
 export const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj.apps.googleusercontent.com';
 export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
-export const CURRENT_APP_VERSION = '2.0.0';
+export const CURRENT_APP_VERSION = '3.0.0';

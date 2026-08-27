@@ -954,12 +954,22 @@ def list_friend_requests_view(request):
 @permission_classes([permissions.AllowAny])
 def app_version_view(request):
     return Response({
-        'latest_version': '2.0.0',
-        'min_required_version': '2.0.0',
+        'latest_version': '3.0.0',
+        'min_required_version': '3.0.0',
         'download_url': 'https://cruvoride.vercel.app',
         'website_url': 'https://cruvoride.vercel.app',
-        'release_date': '2026-08-24',
+        'release_date': '2026-08-27',
         'whats_new': [
+            {
+                'title': 'Google OAuth 2.0 Integration',
+                'description': 'Direct, secure one-tap Google Sign-In and account authentication.',
+                'icon': 'logo-google'
+            },
+            {
+                'title': 'High-Reliability Email Infrastructure',
+                'description': 'Upgraded instant password reset OTP system powered by official Google REST APIs.',
+                'icon': 'mail-outline'
+            },
             {
                 'title': 'Friends-Only Privacy Controls',
                 'description': 'Select whether your Email and Phone number are kept private or shared strictly with confirmed friends.',
@@ -979,23 +989,13 @@ def app_version_view(request):
                 'title': 'Real-Time Notifications & Instant Sync',
                 'description': 'Instant notification alerts when riders accept requests and immediate Explore screen updates.',
                 'icon': 'notifications-outline'
-            },
-            {
-                'title': 'Redesigned Luxury Dark Settings',
-                'description': 'Sleek new settings screen for garage preferences, privacy badges, and account security.',
-                'icon': 'options-outline'
-            },
-            {
-                'title': 'Live Ride Avatar Stop Indicators',
-                'description': 'Distinct visual stop badges on rider map avatars when flagging a stop during live rides.',
-                'icon': 'location-outline'
             }
         ],
         'update_steps': [
-            'Tap "DOWNLOAD UPDATE v2.0.0" below to open the official CRUVO download portal.',
-            'Download the new CRUVO v2.0.0 package file to your device.',
+            'Tap "DOWNLOAD UPDATE v3.0.0" below to open the official CRUVO download portal.',
+            'Download the new CRUVO v3.0.0 package file to your device.',
             'Open the downloaded package file to complete installation.',
-            'Launch CRUVO v2.0.0 to experience the brand new features and performance enhancements!'
+            'Launch CRUVO v3.0.0 to experience the brand new features and performance enhancements!'
         ]
     })
 
@@ -1006,7 +1006,7 @@ def submit_bug_report_view(request):
     description = request.data.get('description', '').strip()
     category = request.data.get('category', 'GENERAL').strip()
     user_email = request.data.get('email', '') or (request.user.email if request.user.is_authenticated else '')
-    app_version = request.data.get('app_version', '2.0.0')
+    app_version = request.data.get('app_version', '3.0.0')
 
     if not description:
         return Response({'error': 'Description is required'}, status=status.HTTP_400_BAD_REQUEST)
