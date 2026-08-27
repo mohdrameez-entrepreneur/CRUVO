@@ -228,4 +228,4 @@ else:
     }
 
 # TomTom Navigation & Geocoding API
-TOMTOM_API_KEY = os.environ.get('TOMTOM_API_KEY', '')
+TOMTOM_API_KEY = os.environ.get('TOMTOM_API_KEY', '54S1S2VigjyRLWIZiK8XRI8OsPPz30Sd')

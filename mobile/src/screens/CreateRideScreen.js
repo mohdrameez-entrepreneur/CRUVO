@@ -289,14 +289,33 @@ export default function CreateRideScreen({ navigation }) {
         return;
       }
 
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      let loc = await Location.getLastKnownPositionAsync();
+      if (!loc) {
+        loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeout: 8000,
+        });
+      }
+
+      if (!loc || !loc.coords) {
+        throw new Error('No coordinates returned');
+      }
+
       const { latitude, longitude } = loc.coords;
 
-      const reverseRes = await axios.get(`${TOMTOM_BASE_URL}/reverseGeocode/${longitude},${latitude}.json`, {
-        params: { key: TOMTOM_API_KEY },
-      });
-      const address = reverseRes.data.addresses?.[0];
-      const name = address?.freeformAddress || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      let name = `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      try {
+        const reverseRes = await axios.get(`${TOMTOM_BASE_URL}/reverseGeocode/${longitude},${latitude}.json`, {
+          params: { key: TOMTOM_API_KEY },
+          timeout: 5000,
+        });
+        const address = reverseRes.data.addresses?.[0];
+        if (address?.freeformAddress) {
+          name = address.freeformAddress;
+        }
+      } catch (geocodeErr) {
+        console.log('[CreateRide] Reverse geocode notice:', geocodeErr?.message);
+      }
 
       setOrigin({ name, lat: latitude, lng: longitude });
       setOriginQuery(name);
@@ -305,8 +324,9 @@ export default function CreateRideScreen({ navigation }) {
       if (mapRef.current?.flyTo) {
         mapRef.current.flyTo(latitude, longitude, 15);
       }
-    } catch {
-      Alert.alert('Error', 'Failed to acquire current location');
+    } catch (err) {
+      console.log('[CreateRide] Location error:', err?.message);
+      Alert.alert('Location Notice', 'Could not get high-accuracy position. Make sure GPS is enabled on your phone.');
     } finally {
       setLocatingUser(false);
     }
