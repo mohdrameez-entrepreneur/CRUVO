@@ -26,32 +26,43 @@ export default function LoginScreen({ navigation }) {
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
 
-  // Google OAuth Hook
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-    scopes: ['profile', 'email', 'openid'],
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication, params } = response;
-      const id_token = authentication?.idToken || params?.id_token;
-      const access_token = authentication?.accessToken || params?.access_token;
-      if (id_token || access_token) {
-        handleGoogleAuth({ id_token, access_token });
-      }
-    } else if (response?.type === 'error') {
-      setErrors({ general: 'Google sign in was cancelled or failed' });
-    }
-  }, [response]);
-
-  const handleGoogleAuth = async (tokens) => {
+  // Supabase Google OAuth Handler
+  const handleGoogleAuthSupabase = async () => {
     setGoogleLoading(true);
     setErrors({});
     try {
-      await googleLogin(tokens);
+      const supabaseUrl = 'https://gskjxtxmdidxyzavamby.supabase.co';
+      const redirectUrl = 'cruvo://oauth';
+      const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+
+      if (result.type === 'success' && result.url) {
+        const rawUrl = result.url;
+        const hashIndex = rawUrl.indexOf('#');
+        const queryIndex = rawUrl.indexOf('?');
+        let paramString = '';
+        if (hashIndex !== -1) {
+          paramString = rawUrl.substring(hashIndex + 1);
+        } else if (queryIndex !== -1) {
+          paramString = rawUrl.substring(queryIndex + 1);
+        }
+
+        const params = {};
+        paramString.split('&').forEach(part => {
+          const [k, v] = part.split('=');
+          if (k && v) params[k] = decodeURIComponent(v);
+        });
+
+        const googleAccessToken = params.provider_token || params.access_token;
+        const googleIdToken = params.id_token;
+
+        if (googleAccessToken || googleIdToken) {
+          await googleLogin({ access_token: googleAccessToken, id_token: googleIdToken });
+        } else {
+          setErrors({ general: 'Google sign in did not return valid tokens.' });
+        }
+      }
     } catch (err) {
       const msg = err.response?.data?.error || err.message || 'Google sign in failed. Please try again.';
       setErrors({ general: msg });
@@ -196,8 +207,8 @@ export default function LoginScreen({ navigation }) {
         <TouchableOpacity
           style={[styles.googleButton, googleLoading && { opacity: 0.7 }]}
           activeOpacity={0.85}
-          onPress={() => promptAsync()}
-          disabled={!request || googleLoading || loading}
+          onPress={handleGoogleAuthSupabase}
+          disabled={googleLoading || loading}
         >
           {googleLoading ? (
             <ActivityIndicator size="small" color={colors.onSurface} style={{ marginRight: 8 }} />

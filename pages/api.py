@@ -264,6 +264,23 @@ def google_auth_view(request):
         except Exception:
             pass
 
+    # 3. Fallback to Supabase /auth/v1/user if Google tokeninfo failed
+    if not user_info and access_token:
+        try:
+            supabase_url = os.environ.get('SUPABASE_URL', 'https://gskjxtxmdidxyzavamby.supabase.co')
+            url = f"{supabase_url}/auth/v1/user"
+            req = urllib.request.Request(url, headers={'Authorization': f'Bearer {access_token}', 'User-Agent': 'CRUVO-Backend'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    payload = json.loads(response.read().decode())
+                    if payload.get('email'):
+                        user_info = {
+                            'email': payload.get('email'),
+                            'name': payload.get('user_metadata', {}).get('full_name') or payload.get('user_metadata', {}).get('name')
+                        }
+        except Exception:
+            pass
+
     if not user_info or not user_info.get('email'):
         return Response({'error': 'Invalid Google token or unverified email'}, status=status.HTTP_400_BAD_REQUEST)
 
