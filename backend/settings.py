@@ -229,3 +229,7 @@ else:
 
 # TomTom Navigation & Geocoding API
 TOMTOM_API_KEY = os.environ.get('TOMTOM_API_KEY', '')
+
+# Mailjet Transactional Email API
+MAILJET_API_KEY = os.environ.get('MAILJET_API_KEY', '')
+MAILJET_SECRET_KEY = os.environ.get('MAILJET_SECRET_KEY', '')

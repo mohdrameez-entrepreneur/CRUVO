@@ -7,7 +7,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
-import { GOOGLE_WEB_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../config';
+import { SUPABASE_URL } from '../config';
 import AlertCard from '../components/AlertCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,8 +31,8 @@ export default function LoginScreen({ navigation }) {
     setGoogleLoading(true);
     setErrors({});
     try {
-      const supabaseUrl = 'https://gskjxtxmdidxyzavamby.supabase.co';
-      const redirectUrl = 'cruvo://oauth';
+      const supabaseUrl = SUPABASE_URL;
+      const redirectUrl = makeRedirectUri({ scheme: 'cruvo', path: 'oauth' });
       const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
@@ -78,7 +78,7 @@ export default function LoginScreen({ navigation }) {
     if (ref?.current && scrollRef.current) {
       ref.current.measureLayout(scrollRef.current, (x, y) => {
         scrollRef.current.scrollTo({ y: Math.max(0, y - 100), animated: true });
-      }, () => {});
+      }, () => { });
     }
   };
 

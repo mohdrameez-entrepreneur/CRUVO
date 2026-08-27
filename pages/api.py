@@ -51,55 +51,68 @@ def forgot_password_request(request):
         cache_key = f'pwd_reset_otp_{email}'
         cache.set(cache_key, {'otp_hash': otp_hash, 'user_id': user.id}, timeout=900)
 
-        # Send email via Gmail API in background thread (bypasses Render SMTP port 587 block)
+        # Send email via Mailjet API v3.1 in background thread (bypasses Render SMTP port 587 block)
         def _send_otp_email(username, recipient, code):
             try:
-                print(f"[ForgotPassword] Authenticating Gmail API for {django_settings.EMAIL_HOST_USER}...")
-                
-                # Reconstruct credentials from tokens in settings
-                creds = Credentials(
-                    token=None,
-                    refresh_token=django_settings.GMAIL_API_REFRESH_TOKEN,
-                    token_uri="https://oauth2.googleapis.com/token",
-                    client_id=django_settings.GMAIL_API_CLIENT_ID,
-                    client_secret=django_settings.GMAIL_API_CLIENT_SECRET,
+                api_key = getattr(django_settings, 'MAILJET_API_KEY', '') or os.environ.get('MAILJET_API_KEY', '')
+                secret_key = getattr(django_settings, 'MAILJET_SECRET_KEY', '') or os.environ.get('MAILJET_SECRET_KEY', '')
+
+                if not api_key or not secret_key:
+                    print(f"[ForgotPassword] MAILJET_API_KEY or MAILJET_SECRET_KEY missing. Cannot send OTP to {recipient}.")
+                    return
+
+                auth_str = f"{api_key}:{secret_key}"
+                b64_auth = base64.b64encode(auth_str.encode()).decode()
+
+                sender_email = "cruvobs@gmail.com"
+                if hasattr(django_settings, 'DEFAULT_FROM_EMAIL') and '<' in django_settings.DEFAULT_FROM_EMAIL:
+                    sender_email = django_settings.DEFAULT_FROM_EMAIL.split('<')[-1].replace('>', '').strip()
+                elif hasattr(django_settings, 'DEFAULT_FROM_EMAIL') and django_settings.DEFAULT_FROM_EMAIL:
+                    sender_email = django_settings.DEFAULT_FROM_EMAIL.strip()
+
+                payload = {
+                    "Messages": [
+                        {
+                            "From": {
+                                "Email": sender_email,
+                                "Name": "CRUVO"
+                            },
+                            "To": [
+                                {
+                                    "Email": recipient,
+                                    "Name": username or "Rider"
+                                }
+                            ],
+                            "Subject": "Your CRUVO Password Reset Code",
+                            "HTMLPart": (
+                                f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
+                                f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
+                                f'<p style="font-size:16px;">Hi <strong>{username}</strong>,</p>'
+                                f'<p>Your password reset code is:</p>'
+                                f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{code}</div>'
+                                f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
+                                f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
+                                f'</div>'
+                            )
+                        }
+                    ]
+                }
+
+                data = json.dumps(payload).encode('utf-8')
+                req = urllib.request.Request(
+                    "https://api.mailjet.com/v3.1/send",
+                    data=data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Basic {b64_auth}"
+                    },
+                    method="POST"
                 )
 
-                # Build Gmail API service
-                service = build('gmail', 'v1', credentials=creds)
-
-                # Create the email message
-                message = EmailMessage()
-                message['To'] = recipient
-                message['From'] = django_settings.DEFAULT_FROM_EMAIL
-                message['Subject'] = 'Your CRUVO Password Reset Code'
-                
-                # HTML content
-                html_content = (
-                    f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
-                    f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
-                    f'<p style="font-size:16px;">Hi <strong>{username}</strong>,</p>'
-                    f'<p>Your password reset code is:</p>'
-                    f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{code}</div>'
-                    f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
-                    f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
-                    f'</div>'
-                )
-                
-                message.set_content(html_content, subtype='html')
-
-                # Base64 encode the message
-                encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-                create_message = {'raw': encoded_message}
-
-                # Send it!
-                send_message = service.users().messages().send(userId="me", body=create_message).execute()
-                
-                print(f"[ForgotPassword] SUCCESS: OTP email sent to {recipient} via Gmail API (Message Id: {send_message.get('id')})")
-            except HttpError as error:
-                print(f"[ForgotPassword] HTTP ERROR: Gmail API failed for {recipient}: {error}")
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    print(f"[ForgotPassword] SUCCESS: Mailjet OTP email sent to {recipient} (Status: {resp.status})")
             except Exception as exc:
-                print(f'[ForgotPassword] ERROR: Email send failed for {recipient}: {type(exc).__name__} - {exc}')
+                print(f'[ForgotPassword] ERROR: Mailjet OTP email failed for {recipient}: {type(exc).__name__} - {exc}')
                 import traceback
                 traceback.print_exc()
 
