@@ -344,6 +344,9 @@ export default function ForgotPasswordScreen({ navigation }) {
                 We sent a 6-digit code to{'\n'}
                 <Text style={styles.emailHighlight}>{email}</Text>
               </Text>
+              <Text style={styles.spamNotice}>
+                📩 Check your <Text style={{ fontWeight: '700', color: colors.primaryContainer }}>Spam or Junk folder</Text> if it doesn't appear in your main inbox.
+              </Text>
               {!!error && (
                 <AlertCard type="error" title="Error" message={error}
                   onDismiss={() => setError('')} style={{ marginBottom: spacing.stackMd }} />
@@ -604,5 +607,13 @@ const styles = StyleSheet.create({
     ...typography.labelSm,
     color: colors.primaryContainer,
     fontWeight: '700',
+  },
+  spamNotice: {
+    ...typography.bodyMd,
+    fontSize: moderateScale(13),
+    color: colors.onSurfaceVariant,
+    marginTop: moderateScale(6),
+    marginBottom: spacing.stackLg,
+    lineHeight: moderateScale(18),
   },
 });
