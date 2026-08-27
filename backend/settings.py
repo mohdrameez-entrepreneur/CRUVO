@@ -197,7 +197,7 @@ LOGOUT_REDIRECT_URL = 'pages:onboarding'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# Email (Gmail SMTP)
+# Email (Gmail SMTP / REST API)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
@@ -205,6 +205,10 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'cruvobs@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'tcvkstfeetpjfpix')
 DEFAULT_FROM_EMAIL = f'CRUVO <{EMAIL_HOST_USER}>'
+
+GMAIL_API_CLIENT_ID = os.environ.get('GMAIL_API_CLIENT_ID', '')
+GMAIL_API_CLIENT_SECRET = os.environ.get('GMAIL_API_CLIENT_SECRET', '')
+GMAIL_API_REFRESH_TOKEN = os.environ.get('GMAIL_API_REFRESH_TOKEN', '')
 
 
 # Channels / WebSocket

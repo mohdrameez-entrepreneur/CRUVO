@@ -15,6 +15,12 @@ import random
 import string
 import logging
 import threading
+import base64
+from email.message import EmailMessage
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
 
@@ -45,34 +51,53 @@ def forgot_password_request(request):
         cache_key = f'pwd_reset_otp_{email}'
         cache.set(cache_key, {'otp_hash': otp_hash, 'user_id': user.id}, timeout=900)
 
-        # Send email in background thread so the view returns instantly (no SMTP blocking)
+        # Send email via Gmail API in background thread (bypasses Render SMTP port 587 block)
         def _send_otp_email(username, recipient, code):
             try:
-                print(f"[ForgotPassword] Sending OTP via {django_settings.EMAIL_BACKEND} (Host: {django_settings.EMAIL_HOST}, User: {django_settings.EMAIL_HOST_USER})...")
-                sent_count = send_mail(
-                    subject='Your CRUVO Password Reset Code',
-                    message=(
-                        f'Hi {username},\n\n'
-                        f'Your password reset code is: {code}\n\n'
-                        f'This code expires in 15 minutes. Do not share it with anyone.\n\n'
-                        f'If you did not request this, you can safely ignore this email.\n\n'
-                        f'\u2014 The CRUVO Team'
-                    ),
-                    html_message=(
-                        f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
-                        f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
-                        f'<p style="font-size:16px;">Hi <strong>{username}</strong>,</p>'
-                        f'<p>Your password reset code is:</p>'
-                        f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{code}</div>'
-                        f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
-                        f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
-                        f'</div>'
-                    ),
-                    from_email=django_settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[recipient],
-                    fail_silently=False,
+                print(f"[ForgotPassword] Authenticating Gmail API for {django_settings.EMAIL_HOST_USER}...")
+                
+                # Reconstruct credentials from tokens in settings
+                creds = Credentials(
+                    token=None,
+                    refresh_token=django_settings.GMAIL_API_REFRESH_TOKEN,
+                    token_uri="https://oauth2.googleapis.com/token",
+                    client_id=django_settings.GMAIL_API_CLIENT_ID,
+                    client_secret=django_settings.GMAIL_API_CLIENT_SECRET,
                 )
-                print(f'[ForgotPassword] SUCCESS: OTP email sent to {recipient} (count={sent_count})')
+
+                # Build Gmail API service
+                service = build('gmail', 'v1', credentials=creds)
+
+                # Create the email message
+                message = EmailMessage()
+                message['To'] = recipient
+                message['From'] = django_settings.DEFAULT_FROM_EMAIL
+                message['Subject'] = 'Your CRUVO Password Reset Code'
+                
+                # HTML content
+                html_content = (
+                    f'<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#1a1b1f;color:#e3e2e7;border-radius:12px;">'
+                    f'<h2 style="color:#ffd600;letter-spacing:-0.5px;">CRUVO</h2>'
+                    f'<p style="font-size:16px;">Hi <strong>{username}</strong>,</p>'
+                    f'<p>Your password reset code is:</p>'
+                    f'<div style="font-size:40px;font-weight:800;letter-spacing:10px;color:#ffd600;padding:20px 0;">{code}</div>'
+                    f'<p style="color:#999077;font-size:13px;">This code expires in <strong>15 minutes</strong>. Do not share it with anyone.</p>'
+                    f'<p style="color:#999077;font-size:13px;">If you did not request this, you can safely ignore this email.</p>'
+                    f'</div>'
+                )
+                
+                message.set_content(html_content, subtype='html')
+
+                # Base64 encode the message
+                encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                create_message = {'raw': encoded_message}
+
+                # Send it!
+                send_message = service.users().messages().send(userId="me", body=create_message).execute()
+                
+                print(f"[ForgotPassword] SUCCESS: OTP email sent to {recipient} via Gmail API (Message Id: {send_message.get('id')})")
+            except HttpError as error:
+                print(f"[ForgotPassword] HTTP ERROR: Gmail API failed for {recipient}: {error}")
             except Exception as exc:
                 print(f'[ForgotPassword] ERROR: Email send failed for {recipient}: {type(exc).__name__} - {exc}')
                 import traceback
