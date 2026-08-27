@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 
 import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
@@ -75,9 +76,13 @@ export default function SignupScreen({ navigation }) {
   // Google OAuth Hook
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
     scopes: ['profile', 'email', 'openid'],
+    redirectUri: makeRedirectUri({
+      scheme: 'cruvo',
+      native: 'com.cruvo.app:/oauth2redirect/google',
+    }),
   });
 
   useEffect(() => {
