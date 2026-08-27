@@ -28,13 +28,10 @@ export default function LoginScreen({ navigation }) {
 
   // Google OAuth Hook
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
     scopes: ['profile', 'email', 'openid'],
-    redirectUri: makeRedirectUri({
-      scheme: 'com.googleusercontent.apps.226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj',
-    }),
   });
 
   useEffect(() => {
