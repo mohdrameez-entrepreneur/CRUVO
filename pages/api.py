@@ -5,7 +5,6 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.core.mail import send_mail
 from django.core.cache import cache
 from django.conf import settings as django_settings
 from datetime import date
