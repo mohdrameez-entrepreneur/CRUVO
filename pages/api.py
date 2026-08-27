@@ -16,6 +16,8 @@ import string
 import logging
 import threading
 import base64
+import json
+import urllib.request
 from email.message import EmailMessage
 
 from google.oauth2.credentials import Credentials
