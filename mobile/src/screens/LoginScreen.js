@@ -33,8 +33,7 @@ export default function LoginScreen({ navigation }) {
     iosClientId: GOOGLE_IOS_CLIENT_ID,
     scopes: ['profile', 'email', 'openid'],
     redirectUri: makeRedirectUri({
-      scheme: 'cruvo',
-      native: 'com.cruvo.app:/oauth2redirect/google',
+      scheme: 'com.googleusercontent.apps.226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj',
     }),
   });
 

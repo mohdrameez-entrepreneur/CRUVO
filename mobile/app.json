@@ -2,7 +2,10 @@
   "expo": {
     "name": "CRUVO",
     "slug": "cruvo",
-    "scheme": "cruvo",
+    "scheme": [
+      "cruvo",
+      "com.googleusercontent.apps.226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj"
+    ],
     "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/CRUVO LOGO.jpg",
