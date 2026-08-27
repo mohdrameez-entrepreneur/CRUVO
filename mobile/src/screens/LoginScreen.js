@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import * as Linking from 'expo-linking';
 import { makeRedirectUri } from 'expo-auth-session';
 
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
@@ -26,47 +26,67 @@ export default function LoginScreen({ navigation }) {
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
 
+  // Helper to process returning auth URL
+  const processAuthUrl = async (rawUrl) => {
+    const hashIndex = rawUrl.indexOf('#');
+    const queryIndex = rawUrl.indexOf('?');
+    let paramString = '';
+    if (hashIndex !== -1) {
+      paramString = rawUrl.substring(hashIndex + 1);
+    } else if (queryIndex !== -1) {
+      paramString = rawUrl.substring(queryIndex + 1);
+    }
+
+    const params = {};
+    paramString.split('&').forEach(part => {
+      const [k, v] = part.split('=');
+      if (k && v) params[k] = decodeURIComponent(v);
+    });
+
+    console.log('[SupabaseAuth] Parsed Params:', params);
+
+    const googleAccessToken = params.provider_token || params.access_token;
+    const googleIdToken = params.id_token;
+
+    if (googleAccessToken || googleIdToken) {
+      console.log('[SupabaseAuth] Calling googleLogin...');
+      await googleLogin({ access_token: googleAccessToken, id_token: googleIdToken });
+      console.log('[SupabaseAuth] googleLogin SUCCESS!');
+    } else {
+      setErrors({ general: 'Google sign in did not return valid tokens.' });
+    }
+  };
+
   // Supabase Google OAuth Handler
   const handleGoogleAuthSupabase = async () => {
     setGoogleLoading(true);
     setErrors({});
+    let linkSubscription = null;
     try {
       const supabaseUrl = SUPABASE_URL;
       const redirectUrl = makeRedirectUri({ scheme: 'cruvo', path: 'oauth' });
-      const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+      console.log('[SupabaseAuth] Redirect URL:', redirectUrl);
+      const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&response_type=token&redirect_to=${encodeURIComponent(redirectUrl)}`;
+
+      linkSubscription = Linking.addEventListener('url', async (event) => {
+        if (event.url) {
+          console.log('[SupabaseAuth] Received Linking URL:', event.url);
+          await processAuthUrl(event.url);
+        }
+      });
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      console.log('[SupabaseAuth] Auth Session Result:', result);
 
       if (result.type === 'success' && result.url) {
-        const rawUrl = result.url;
-        const hashIndex = rawUrl.indexOf('#');
-        const queryIndex = rawUrl.indexOf('?');
-        let paramString = '';
-        if (hashIndex !== -1) {
-          paramString = rawUrl.substring(hashIndex + 1);
-        } else if (queryIndex !== -1) {
-          paramString = rawUrl.substring(queryIndex + 1);
-        }
-
-        const params = {};
-        paramString.split('&').forEach(part => {
-          const [k, v] = part.split('=');
-          if (k && v) params[k] = decodeURIComponent(v);
-        });
-
-        const googleAccessToken = params.provider_token || params.access_token;
-        const googleIdToken = params.id_token;
-
-        if (googleAccessToken || googleIdToken) {
-          await googleLogin({ access_token: googleAccessToken, id_token: googleIdToken });
-        } else {
-          setErrors({ general: 'Google sign in did not return valid tokens.' });
-        }
+        await processAuthUrl(result.url);
       }
     } catch (err) {
+      console.log('[SupabaseAuth] Error during auth:', err);
       const msg = err.response?.data?.error || err.message || 'Google sign in failed. Please try again.';
       setErrors({ general: msg });
     } finally {
+      if (linkSubscription) linkSubscription.remove();
       setGoogleLoading(false);
     }
   };

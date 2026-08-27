@@ -80,7 +80,7 @@ export default function SignupScreen({ navigation }) {
     try {
       const supabaseUrl = SUPABASE_URL;
       const redirectUrl = makeRedirectUri({ scheme: 'cruvo', path: 'oauth' });
-      const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+      const authUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&response_type=token&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
 
