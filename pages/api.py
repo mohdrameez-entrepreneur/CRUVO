@@ -971,24 +971,19 @@ def app_version_view(request):
                 'icon': 'mail-outline'
             },
             {
+                'title': 'UI Betterments & Micro-Animations',
+                'description': 'Refined dark luxury visual aesthetics, progressive loading feedback, and smooth navigation transitions.',
+                'icon': 'color-palette-outline'
+            },
+            {
+                'title': 'Stability & Bug Fixes',
+                'description': 'Resolved cold-start connection timeouts, background threading issues, and state sync bugs.',
+                'icon': 'bug-outline'
+            },
+            {
                 'title': 'Friends-Only Privacy Controls',
                 'description': 'Select whether your Email and Phone number are kept private or shared strictly with confirmed friends.',
                 'icon': 'shield-checkmark-outline'
-            },
-            {
-                'title': 'Rider Profile Summary & Garage Cards',
-                'description': 'Inspect rider profiles, motorcycle specifications, and contact status badges directly from Explore.',
-                'icon': 'person-outline'
-            },
-            {
-                'title': 'Ride Auto-Naming & Optional Fields',
-                'description': 'Creating a ride is faster than ever with automatic ride naming based on your destination.',
-                'icon': 'navigate-outline'
-            },
-            {
-                'title': 'Real-Time Notifications & Instant Sync',
-                'description': 'Instant notification alerts when riders accept requests and immediate Explore screen updates.',
-                'icon': 'notifications-outline'
             }
         ],
         'update_steps': [
