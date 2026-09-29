@@ -14,6 +14,7 @@ urlpatterns = [
     path('profile/', api.profile_view, name='profile'),
     path('profile/change-username/', api.change_username_view, name='change-username'),
     path('profile/change-email/', api.change_email_view, name='change-email'),
+    path('profile/purge-location-history/', api.purge_location_history_view, name='purge-location-history'),
     path('rides/', api.rides_view, name='rides'),
     path('rides/<int:ride_id>/', api.ride_detail_view, name='ride-detail'),
     path('rides/<int:ride_id>/participants/', api.ride_participants_view, name='ride-participants'),

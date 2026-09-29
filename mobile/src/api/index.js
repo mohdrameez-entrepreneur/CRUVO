@@ -84,6 +84,8 @@ export const profileAPI = {
   uploadAvatar: (formData) => api.patch('/profile/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  deleteAccount: () => api.delete('/profile/'),
+  purgeLocationHistory: () => api.post('/profile/purge-location-history/'),
 };
 
 export const ridesAPI = {

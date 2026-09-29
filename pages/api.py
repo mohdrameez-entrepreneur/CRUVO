@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.core.cache import cache
 from django.conf import settings as django_settings
 from datetime import date
+from django.utils import timezone
 import hashlib
 import uuid
 import random
@@ -354,8 +355,12 @@ def logout_view(request):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['GET', 'PATCH'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 def profile_view(request):
+    if request.method == 'DELETE':
+        user = request.user
+        user.delete()
+        return Response({'message': 'Account and all associated personal data have been permanently deleted.'}, status=status.HTTP_200_OK)
     profile = request.user.profile
     if request.method == 'PATCH':
         serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
@@ -394,6 +399,25 @@ def change_email_view(request):
     request.user.email = new_email
     request.user.save()
     return Response({'email': request.user.email})
+
+
+@api_view(['POST'])
+def purge_location_history_view(request):
+    """
+    Technical Location Purge (DPDP Act & GDPR Data Minimization).
+    Permanently deletes all real-time GPS pings and coordinates associated with the requesting user.
+    """
+    user = request.user
+    deleted_count, _ = RidePosition.objects.filter(user=user).delete()
+    profile = user.profile
+    profile.location_lat = None
+    profile.location_lng = None
+    profile.save(update_fields=['location_lat', 'location_lng'])
+    return Response({
+        'message': 'All raw location pings and telemetry coordinates have been permanently purged.',
+        'records_purged': deleted_count,
+        'purged_at': timezone.now().isoformat(),
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET', 'POST'])
@@ -438,7 +462,10 @@ def ride_detail_view(request, ride_id):
         serializer = RideCreateSerializer(ride, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            if new_status == 'COMPLETED' and old_status != 'COMPLETED':
+            if new_status in ['COMPLETED', 'CANCELLED'] and old_status not in ['COMPLETED', 'CANCELLED']:
+                # Technical Data Minimization: Auto-delete raw location pings when ride ends
+                ride.positions.all().delete()
+
                 from channels.layers import get_channel_layer
                 from asgiref.sync import async_to_sync
                 channel_layer = get_channel_layer()
@@ -987,43 +1014,49 @@ def list_friend_requests_view(request):
 @permission_classes([permissions.AllowAny])
 def app_version_view(request):
     return Response({
-        'latest_version': '3.0.0',
+        'latest_version': '3.1.0',
         'min_required_version': '3.0.0',
-        'download_url': 'https://cruvoride.vercel.app',
-        'website_url': 'https://cruvoride.vercel.app',
-        'release_date': '2026-08-27',
+        'play_store_url': 'market://details?id=com.cruvo.app',
+        'web_store_url': 'https://play.google.com/store/apps/details?id=com.cruvo.app',
+        'download_url': 'https://play.google.com/store/apps/details?id=com.cruvo.app',
+        'website_url': 'https://cruvo-web.onrender.com',
+        'release_date': '2026-09-08',
         'whats_new': [
             {
-                'title': 'Google OAuth 2.0 Integration',
-                'description': 'Direct, secure one-tap Google Sign-In and account authentication.',
-                'icon': 'logo-google'
+                'title': 'Psychological Telemetry Loading Engine',
+                'description': 'Dynamic multi-stage telemetry warm-up and perceived-progress feedback during server spin-ups.',
+                'icon': 'flash-outline'
             },
             {
-                'title': 'High-Reliability Email Infrastructure',
-                'description': 'Upgraded instant password reset OTP system powered by official Google REST APIs.',
-                'icon': 'mail-outline'
+                'title': 'High-Precision 40m Arrival Geofence',
+                'description': 'Fixed premature ride auto-completion by narrowing geofence to 40m with lead rider arrival prompt.',
+                'icon': 'navigate-circle-outline'
             },
             {
-                'title': 'UI Betterments & Micro-Animations',
-                'description': 'Refined dark luxury visual aesthetics, progressive loading feedback, and smooth navigation transitions.',
-                'icon': 'color-palette-outline'
+                'title': 'Android Foreground Service & Sticky Notification',
+                'description': 'Persistent live ride notification that protects background GPS telemetry from aggressive OS battery killers.',
+                'icon': 'notifications-outline'
             },
             {
-                'title': 'Stability & Bug Fixes',
-                'description': 'Resolved cold-start connection timeouts, background threading issues, and state sync bugs.',
-                'icon': 'bug-outline'
-            },
-            {
-                'title': 'Friends-Only Privacy Controls',
-                'description': 'Select whether your Email and Phone number are kept private or shared strictly with confirmed friends.',
+                'title': 'DPDP Act 2023 & GDPR Privacy Suite',
+                'description': 'One-tap in-app controls to purge location history, review stored data summaries, or delete your entire account.',
                 'icon': 'shield-checkmark-outline'
+            },
+            {
+                'title': 'Automated Stale Telemetry Purging',
+                'description': 'Server automatically wipes raw location breadcrumbs upon ride completion to guarantee rider privacy.',
+                'icon': 'trash-outline'
+            },
+            {
+                'title': 'Google Play Prominent Location Disclosure',
+                'description': 'Explicit, transparent privacy consent modal detailing why background GPS is required for squad tracking.',
+                'icon': 'map-outline'
             }
         ],
         'update_steps': [
-            'Tap "DOWNLOAD UPDATE v3.0.0" below to open the official CRUVO download portal.',
-            'Download the new CRUVO v3.0.0 package file to your device.',
-            'Open the downloaded package file to complete installation.',
-            'Launch CRUVO v3.0.0 to experience the brand new features and performance enhancements!'
+            'Tap "UPDATE ON GOOGLE PLAY" below to open the official Google Play Store page.',
+            'Tap "Update" on the Google Play Store to install the latest CRUVO release.',
+            'Open CRUVO v3.1.0 to experience our high-precision ride tracking and new privacy controls!'
         ]
     })
 

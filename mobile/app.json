@@ -6,7 +6,7 @@
       "cruvo",
       "com.googleusercontent.apps.226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj"
     ],
-    "version": "3.0.0",
+    "version": "3.1.0",
     "orientation": "portrait",
     "icon": "./assets/CRUVO LOGO.jpg",
     "userInterfaceStyle": "dark",
@@ -18,13 +18,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cruvo.app",
+      "buildNumber": "3.1.0",
       "config": {
         "googleMapsApiKey": ""
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "CRUVO needs your location to track your position during rides.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "CRUVO needs your location to track your position during rides.",
-        "NSLocationAlwaysUsageDescription": "CRUVO needs your location to track your position during rides."
+        "NSLocationWhenInUseUsageDescription": "CRUVO uses your precise location to display your position, heading, and speed on the live group-ride map so other riders in your squad can see you in real time.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "CRUVO needs background location access so your position continues to broadcast to your squad's live map when you minimise the app — for example, to answer a call or check navigation — preventing your marker from disappearing during an active group ride.",
+        "NSLocationAlwaysUsageDescription": "CRUVO needs background location access so your position continues to broadcast to your squad's live map when you minimise the app — for example, to answer a call or check navigation — preventing your marker from disappearing during an active group ride."
       }
     },
     "android": {
@@ -33,6 +34,7 @@
         "backgroundColor": "#121317"
       },
       "package": "com.cruvo.app",
+      "versionCode": 5,
       "config": {
         "googleMaps": {
           "apiKey": ""
@@ -42,7 +44,9 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -52,9 +56,11 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow CRUVO to use your location for live ride tracking.",
-          "locationAlwaysPermission": "Allow CRUVO to use your location for live ride tracking.",
-          "locationWhenInUsePermission": "Allow CRUVO to use your location for live ride tracking."
+          "locationAlwaysAndWhenInUsePermission": "CRUVO needs background location access so your position continues to broadcast to your squad's live map when you minimise the app — for example, to answer a call or check navigation — preventing your marker from disappearing during an active group ride.",
+          "locationAlwaysPermission": "CRUVO needs background location access so your position continues to broadcast to your squad's live map when you minimise the app — for example, to answer a call or check navigation — preventing your marker from disappearing during an active group ride.",
+          "locationWhenInUsePermission": "CRUVO uses your precise location to display your position, heading, and speed on the live group-ride map so other riders in your squad can see you in real time.",
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
         }
       ],
       [

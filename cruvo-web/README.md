@@ -14,8 +14,7 @@ cruvo-web/
 ├── js/
 │   └── app.js            # QR code generator, modal & parallax
 ├── assets/
-│   ├── CRUVO LOGO.jpg    # Brand identity logo
-│   └── favicon.png       # Web favicon
+│   └── CRUVO LOGO.jpg    # Brand identity logo & web icon
 └── downloads/
     └── CRUVO.apk         # Direct production Android APK binary
 ```

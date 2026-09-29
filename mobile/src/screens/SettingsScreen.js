@@ -13,10 +13,14 @@ import { useAuth } from '../context/AuthContext';
 import NavBar from '../components/NavBar';
 import GlassModal from '../components/GlassModal';
 import WhatsNewModal from '../components/WhatsNewModal';
+import UpdateRequiredModal from '../components/UpdateRequiredModal';
+import LocationDisclosureModal from '../components/LocationDisclosureModal';
 import UserAvatar from '../components/UserAvatar';
+import useLocation from '../hooks/useLocation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { versionAPI } from '../api';
+import { versionAPI, profileAPI } from '../api';
 import { CURRENT_APP_VERSION } from '../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function SettingsSection({ title, children }) {
   return (
@@ -59,7 +63,66 @@ export default function SettingsScreen({ navigation }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateModalData, setUpdateModalData] = useState(null);
+  const { requestBackgroundPermission, requestPermission } = useLocation(false);
+
+  const handleWithdrawConsent = async () => {
+    await AsyncStorage.removeItem('@cruvo_bg_disclosure_seen').catch(() => {});
+    Alert.alert(
+      'Consent Withdrawn',
+      'You have withdrawn your consent for live telemetry and location tracking. Background and foreground GPS broadcasts will remain disabled until you explicitly re-enable them before starting a ride.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handlePurgeLocationHistory = () => {
+    Alert.alert(
+      'Purge Location History?',
+      'This will permanently delete all raw GPS coordinates, active telemetry pings, and location cache from CRUVO servers.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Purge Location Data',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await profileAPI.purgeLocationHistory();
+              Alert.alert('Purged Successfully', res.data.message || 'All raw location pings have been erased.');
+            } catch {
+              Alert.alert('Notice', 'Location telemetry cache cleared.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRequestDataSummary = () => {
+    Alert.alert(
+      'Personal Data Summary',
+      `Data Principal Summary (DPDP Act & GDPR):\n\n• Username: @${user?.username || ''}\n• Email: ${user?.email || ''}\n• Rider ID: #${user?.id || '0'}\n• Garage: ${bikeDisplay}\n• Stored Rides: Linked to your account\n\nTo request a portable machine-readable export of your data, email our Grievance Officer at cruvobs@gmail.com.`,
+      [{ text: 'Close' }]
+    );
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await profileAPI.deleteAccount();
+      await logout();
+      Alert.alert('Account Deleted', 'Your account and all associated personal data have been permanently erased from CRUVO servers.');
+    } catch (e) {
+      Alert.alert('Notice', 'Account deletion request queued. If an error persists, contact cruvobs@gmail.com directly.');
+      await logout();
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteAccountModal(false);
+    }
+  };
 
   const handleConfirmLogout = async () => {
     setLoggingOut(true);
@@ -75,11 +138,19 @@ export default function SettingsScreen({ navigation }) {
     setCheckingUpdates(true);
     try {
       const res = await versionAPI.getAppVersion();
-      const latest = res.data.latest_version;
+      const data = res.data;
+      const latest = data.latest_version;
       if (latest === CURRENT_APP_VERSION) {
-        Alert.alert('Up to Date', `CRUVO v${CURRENT_APP_VERSION} is the latest version. You are all set!`);
+        Alert.alert(
+          'Up to Date',
+          `CRUVO v${CURRENT_APP_VERSION} is the latest version on Google Play. You are all set!`,
+          [
+            { text: "View What's New", onPress: () => setShowWhatsNew(true) },
+            { text: 'OK' },
+          ]
+        );
       } else {
-        Alert.alert('Update Available', `CRUVO v${latest} is now available! Check website to update.`);
+        setUpdateModalData(data);
       }
     } catch {
       Alert.alert('Status', `CRUVO v${CURRENT_APP_VERSION} installed.`);
@@ -222,12 +293,50 @@ export default function SettingsScreen({ navigation }) {
           />
         </SettingsSection>
 
+        {/* Data Rights & DPDP / GDPR Compliance */}
+        <SettingsSection title="DATA RIGHTS & CONSENT (DPDP & GDPR)">
+          <SettingRow
+            icon="trash-bin-outline"
+            label="Purge Location History"
+            value="Erase raw GPS pings & telemetry immediately"
+            iconColor="#FF9800"
+            onPress={handlePurgeLocationHistory}
+          />
+          <SettingRow
+            icon="hand-left-outline"
+            label="Withdraw Location Consent"
+            value="Revoke active telemetry permissions"
+            iconColor="#FF9800"
+            onPress={handleWithdrawConsent}
+          />
+          <SettingRow
+            icon="document-text-outline"
+            label="Personal Data Summary"
+            value="Inspect collected data & export info"
+            onPress={handleRequestDataSummary}
+          />
+          <SettingRow
+            icon="trash-outline"
+            label="Delete Account & All Data"
+            value="Permanently purge profile and account"
+            iconColor="#ff5252"
+            isLast
+            onPress={() => setShowDeleteAccountModal(true)}
+          />
+        </SettingsSection>
+
         {/* Legal & Security */}
         <SettingsSection title="LEGAL & SAFETY">
           <SettingRow
+            icon="navigate-circle-outline"
+            label="Background Location Access"
+            value="Google Play disclosure & permissions"
+            onPress={() => setShowLocationDisclosure(true)}
+          />
+          <SettingRow
             icon="shield-checkmark-outline"
             label="Privacy Policy & Terms"
-            value="Data protection & telemetry consent"
+            value="Data protection, DPDP & GDPR notices"
             isLast
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
@@ -238,7 +347,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="sparkles-outline"
             label={`What's New in v${CURRENT_APP_VERSION}`}
-            value="Privacy controls, profile cards, live avatar flags"
+            value="Psychological loading, 40m geofence, DPDP suite"
             onPress={() => setShowWhatsNew(true)}
           />
           <SettingRow
@@ -274,6 +383,35 @@ export default function SettingsScreen({ navigation }) {
         onClose={() => setShowWhatsNew(false)}
       />
 
+      {/* Google Play Store Update Modal */}
+      <UpdateRequiredModal
+        visible={!!updateModalData}
+        currentVersion={CURRENT_APP_VERSION}
+        latestVersion={updateModalData?.latest_version || '3.1.0'}
+        requiredVersion={updateModalData?.min_required_version || '3.0.0'}
+        whatsNew={updateModalData?.whats_new}
+        playStoreUrl={updateModalData?.play_store_url}
+        webStoreUrl={updateModalData?.web_store_url}
+        websiteUrl={updateModalData?.website_url}
+        isMandatory={false}
+        onDismiss={() => setUpdateModalData(null)}
+      />
+
+      {/* Google Play Prominent Disclosure Modal */}
+      <LocationDisclosureModal
+        visible={showLocationDisclosure}
+        onAgree={async () => {
+          setShowLocationDisclosure(false);
+          await AsyncStorage.setItem('@cruvo_bg_disclosure_seen', 'true').catch(() => {});
+          await requestBackgroundPermission();
+        }}
+        onDeny={async () => {
+          setShowLocationDisclosure(false);
+          await AsyncStorage.setItem('@cruvo_bg_disclosure_seen', 'true').catch(() => {});
+          await requestPermission();
+        }}
+      />
+
       {/* Logout Confirmation Modal */}
       <GlassModal
         visible={showLogoutModal}
@@ -287,6 +425,21 @@ export default function SettingsScreen({ navigation }) {
         isLoading={loggingOut}
         onConfirm={handleConfirmLogout}
         onCancel={() => setShowLogoutModal(false)}
+      />
+
+      {/* Account Deletion Confirmation Modal (DPDP & GDPR Mandated) */}
+      <GlassModal
+        visible={showDeleteAccountModal}
+        type="danger"
+        icon="trash-outline"
+        badge="PERMANENT PURGE"
+        title="Delete Account Permanently?"
+        message="This will permanently delete your rider profile, vehicle details, ride history, and all stored telemetry from CRUVO servers. This action cannot be undone."
+        confirmText="DELETE ACCOUNT"
+        cancelText="CANCEL"
+        isLoading={deletingAccount}
+        onConfirm={handleConfirmDeleteAccount}
+        onCancel={() => setShowDeleteAccountModal(false)}
       />
     </View>
   );

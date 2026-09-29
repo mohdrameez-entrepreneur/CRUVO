@@ -21,11 +21,13 @@ import UserAvatar from '../components/UserAvatar';
 import useLocation from '../hooks/useLocation';
 import useRideSocket from '../hooks/useRideSocket';
 import GlassModal from '../components/GlassModal';
+import LocationDisclosureModal from '../components/LocationDisclosureModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 const ROLE_LABELS = { CREATOR: 'Lead', LEAD: 'Lead', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
-const ARRIVAL_THRESHOLD_M = 200;
+const ARRIVAL_THRESHOLD_M = 40; // Pinpoint destination geofence (40m)
 
 const STOP_TYPES = [
   { key: 'FUEL', icon: 'car', label: 'Fuel' },
@@ -67,8 +69,18 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [rideEndedBy, setRideEndedBy] = useState(null);
   const [showEndRideModal, setShowEndRideModal] = useState(false);
   const [showClearFlagModal, setShowClearFlagModal] = useState(false);
+  const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
+  const [locationPermLoading, setLocationPermLoading] = useState(false);
+  const [hasNotifiedArrival, setHasNotifiedArrival] = useState(false);
   const autoEndTriggered = useRef(false);
-  const { location, startWatching, stopWatching, requestPermission } = useLocation(true);
+  const {
+    location,
+    startWatching,
+    stopWatching,
+    requestPermission,
+    requestBackgroundPermission,
+    checkPermissions,
+  } = useLocation(true);
   const fallbackInterval = useRef(null);
   const timerInterval = useRef(null);
   const wsConnected = useRef(false);
@@ -179,32 +191,77 @@ export default function ActiveRideScreen({ navigation, route }) {
     }
   }, [ride?.id, ride?.origin_lat, ride?.route_polyline]);
 
-  useEffect(() => {
-    requestPermission().then(granted => {
-      if (granted) {
-        startWatching((coords) => {
-          const prevSpeed = currentSpeed.current;
-          currentSpeed.current = coords.speed || 0;
+  const initiateLocationTracking = useCallback(() => {
+    startWatching((coords) => {
+      const prevSpeed = currentSpeed.current;
+      currentSpeed.current = coords.speed || 0;
 
-          if (wsConnected.current) {
-            sendPosition(coords.latitude, coords.longitude, coords.heading || 0, coords.speed || 0);
-          } else {
-            ridesAPI.updatePosition(rideId, {
-              lat: coords.latitude,
-              lng: coords.longitude,
-              heading: coords.heading || 0,
-              speed: coords.speed || 0,
-            }).catch(() => { });
-          }
+      if (wsConnected.current) {
+        sendPosition(coords.latitude, coords.longitude, coords.heading || 0, coords.speed || 0);
+      } else {
+        ridesAPI.updatePosition(rideId, {
+          lat: coords.latitude,
+          lng: coords.longitude,
+          heading: coords.heading || 0,
+          speed: coords.speed || 0,
+        }).catch(() => { });
+      }
 
-          const speedDelta = Math.abs(coords.speed - prevSpeed);
-          if (!wsConnected.current && speedDelta > 2) {
-            const newInterval = getPollingInterval(coords.speed);
-            startFallbackPolling(newInterval);
-          }
-        });
+      const speedDelta = Math.abs(coords.speed - prevSpeed);
+      if (!wsConnected.current && speedDelta > 2) {
+        const newInterval = getPollingInterval(coords.speed);
+        startFallbackPolling(newInterval);
       }
     });
+  }, [rideId, sendPosition, startWatching]);
+
+  const permissionChecked = useRef(false);
+
+  const handleAgreeLocation = async () => {
+    setLocationPermLoading(true);
+    try {
+      setShowLocationDisclosure(false);
+      await AsyncStorage.setItem('@cruvo_bg_disclosure_seen', 'true').catch(() => {});
+      await requestBackgroundPermission();
+      initiateLocationTracking();
+    } finally {
+      setLocationPermLoading(false);
+    }
+  };
+
+  const handleDenyLocation = async () => {
+    setShowLocationDisclosure(false);
+    await AsyncStorage.setItem('@cruvo_bg_disclosure_seen', 'true').catch(() => {});
+    const fgGranted = await requestPermission();
+    if (fgGranted) {
+      initiateLocationTracking();
+    }
+  };
+
+  useEffect(() => {
+    if (!permissionChecked.current) {
+      permissionChecked.current = true;
+      checkPermissions().then(async (perms) => {
+        // If user already granted location permission (either "while using app" or "all the time")
+        if (perms.foregroundGranted || perms.backgroundGranted) {
+          initiateLocationTracking();
+          return;
+        }
+
+        // Neither permission is granted yet (e.g. first ride / fresh install).
+        // Check if disclosure was already acknowledged previously
+        const seen = await AsyncStorage.getItem('@cruvo_bg_disclosure_seen').catch(() => null);
+        if (!seen) {
+          setShowLocationDisclosure(true);
+        } else {
+          // If disclosure was already shown before, directly request standard foreground permission
+          const fgGranted = await requestPermission();
+          if (fgGranted) {
+            initiateLocationTracking();
+          }
+        }
+      });
+    }
 
     startFallbackPolling(getPollingInterval(0));
 
@@ -215,27 +272,45 @@ export default function ActiveRideScreen({ navigation, route }) {
       clearInterval(fallbackInterval.current);
       clearInterval(timerInterval.current);
     };
-  }, [rideId]);
+  }, [rideId, checkPermissions, initiateLocationTracking, stopWatching]);
 
   useEffect(() => {
-    if (!ride || !ride.destination_lat || rideFinished || autoEndTriggered.current) return;
-    if (positions.length === 0) return;
+    if (!ride || !ride.destination_lat || rideFinished) return;
+
+    const currentCoords = location || positions.find(p => p.user === user?.id);
+    if (!currentCoords) return;
+
+    const lat = currentCoords.latitude || currentCoords.lat;
+    const lng = currentCoords.longitude || currentCoords.lng;
+    if (!lat || !lng) return;
+
+    const distToDest = getDistanceMeters(lat, lng, ride.destination_lat, ride.destination_lng);
 
     const arrived = positions.filter(p => {
-      const dist = getDistanceMeters(p.lat, p.lng, ride.destination_lat, ride.destination_lng);
-      return dist <= ARRIVAL_THRESHOLD_M;
+      const d = getDistanceMeters(p.lat, p.lng, ride.destination_lat, ride.destination_lng);
+      return d <= ARRIVAL_THRESHOLD_M;
     });
 
     setArrivalCount(arrived.length);
 
-    const acceptedParticipants = (ride.participants || []).filter(p => p.status === 'ACCEPTED');
-    const allArrived = acceptedParticipants.length > 0 && arrived.length >= acceptedParticipants.length;
+    // When rider actually reaches within 40m of destination
+    if (distToDest <= ARRIVAL_THRESHOLD_M && !hasNotifiedArrival) {
+      setHasNotifiedArrival(true);
+      setFlagNotification({
+        userName: 'Destination Reached',
+        stopType: 'Arrival',
+        locationName: ride.destination_name || 'Destination',
+        isClear: true,
+      });
+      setTimeout(() => setFlagNotification(null), 6000);
 
-    if (allArrived) {
-      autoEndTriggered.current = true;
-      completeRide();
+      // If lead rider arrives, prompt them gracefully rather than abruptly cutting off tracking
+      if (isCreator && !autoEndTriggered.current) {
+        autoEndTriggered.current = true;
+        setShowEndRideModal(true);
+      }
     }
-  }, [positions, ride?.destination_lat, rideFinished]);
+  }, [positions, location, ride?.destination_lat, ride?.destination_lng, ride?.destination_name, rideFinished, hasNotifiedArrival, isCreator, user?.id]);
 
   const completeRide = async () => {
     try {
@@ -690,12 +765,15 @@ export default function ActiveRideScreen({ navigation, route }) {
       {/* Glassmorphic End Ride Modal */}
       <GlassModal
         visible={showEndRideModal}
-        type="danger"
-        icon="stop-circle-outline"
-        badge="LEAD ACTION"
-        title="End Active Ride?"
-        message={`Are you sure you want to end "${ride?.name}"? All riders will be transitioned to the ride summary.`}
-        confirmText="END RIDE"
+        type={hasNotifiedArrival ? "primary" : "danger"}
+        icon={hasNotifiedArrival ? "checkmark-circle-outline" : "stop-circle-outline"}
+        badge={hasNotifiedArrival ? "DESTINATION REACHED" : "LEAD ACTION"}
+        title={hasNotifiedArrival ? "Arrived at Destination!" : "End Active Ride?"}
+        message={hasNotifiedArrival
+          ? `You have reached ${ride?.destination_name || 'your destination'}! Complete the ride now to view your trip summary?`
+          : `Are you sure you want to end "${ride?.name}"? All riders will be transitioned to the ride summary.`
+        }
+        confirmText={hasNotifiedArrival ? "FINISH RIDE" : "END RIDE"}
         cancelText="KEEP RIDING"
         onConfirm={handleConfirmEndRide}
         onCancel={() => setShowEndRideModal(false)}
@@ -716,6 +794,14 @@ export default function ActiveRideScreen({ navigation, route }) {
           handleClearFlag();
         }}
         onCancel={() => setShowClearFlagModal(false)}
+      />
+
+      {/* Google Play Prominent Disclosure for Background Location */}
+      <LocationDisclosureModal
+        visible={showLocationDisclosure}
+        isLoading={locationPermLoading}
+        onAgree={handleAgreeLocation}
+        onDeny={handleDenyLocation}
       />
     </View>
   );

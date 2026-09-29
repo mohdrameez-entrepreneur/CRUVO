@@ -1,47 +1,80 @@
-// CRUVO Static Web Client Logic
+// CRUVO Static Web Client Logic (v3.1.0)
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Calculate Full APK Download URL
-  const apkRelativePath = 'downloads/CRUVO v2.zip';
-  const fullApkUrl = new URL(apkRelativePath, window.location.href).href;
+  // 1. Download URLs
+  const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.cruvo.app';
+  const zipRelativePath = 'downloads/CRUVO.zip';
+  const fullZipUrl = new URL(zipRelativePath, window.location.href).href;
+
+  let currentQrTarget = 'play'; // 'play' or 'zip'
 
   const shareLinkInput = document.getElementById('share-link-input');
-  if (shareLinkInput) {
-    shareLinkInput.value = fullApkUrl;
-  }
+  const qrInstructions = document.getElementById('qr-instructions');
+  const tabQrPlay = document.getElementById('tab-qr-play');
+  const tabQrZip = document.getElementById('tab-qr-zip');
 
-  // 2. QR Code Modal Handlers
-  const qrModal = document.getElementById('qr-modal');
-  const btnShowQr = document.getElementById('btn-show-qr');
-  const btnCloseModal = document.getElementById('btn-close-modal');
-  const qrCanvas = document.getElementById('qr-canvas');
-  const btnCopyLink = document.getElementById('btn-copy-link');
+  const updateQrDisplay = () => {
+    const activeUrl = currentQrTarget === 'play' ? playStoreUrl : fullZipUrl;
 
-  let qrGenerated = false;
+    if (shareLinkInput) {
+      shareLinkInput.value = activeUrl;
+    }
 
-  const generateQRCode = () => {
-    if (qrCanvas && window.QRCode && !qrGenerated) {
+    if (qrInstructions) {
+      if (currentQrTarget === 'play') {
+        qrInstructions.innerHTML = 'Scan with your phone to open <strong>CRUVO on Google Play Store</strong>.';
+      } else {
+        qrInstructions.innerHTML = 'Scan with your phone to directly download <strong>CRUVO.zip (v3.1.0)</strong>.';
+      }
+    }
+
+    const qrCanvas = document.getElementById('qr-canvas');
+    if (qrCanvas && window.QRCode) {
       window.QRCode.toCanvas(
         qrCanvas,
-        fullApkUrl,
+        activeUrl,
         {
           width: 200,
           margin: 1,
           color: {
             dark: '#121317',
-            light: '#ffffff'
-          }
+            light: '#ffffff',
+          },
         },
         (error) => {
-          if (!error) qrGenerated = true;
+          if (error) console.error('QR code generation error:', error);
         }
       );
     }
   };
 
+  // 2. QR Code Modal Handlers
+  const qrModal = document.getElementById('qr-modal');
+  const btnShowQr = document.getElementById('btn-show-qr');
+  const btnCloseModal = document.getElementById('btn-close-modal');
+  const btnCopyLink = document.getElementById('btn-copy-link');
+
+  if (tabQrPlay) {
+    tabQrPlay.addEventListener('click', () => {
+      currentQrTarget = 'play';
+      tabQrPlay.classList.add('active');
+      if (tabQrZip) tabQrZip.classList.remove('active');
+      updateQrDisplay();
+    });
+  }
+
+  if (tabQrZip) {
+    tabQrZip.addEventListener('click', () => {
+      currentQrTarget = 'zip';
+      tabQrZip.classList.add('active');
+      if (tabQrPlay) tabQrPlay.classList.remove('active');
+      updateQrDisplay();
+    });
+  }
+
   if (btnShowQr && qrModal) {
     btnShowQr.addEventListener('click', () => {
-      generateQRCode();
+      updateQrDisplay();
       qrModal.classList.add('open');
     });
   }
@@ -75,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
           btnCopyLink.style.background = '';
           btnCopyLink.style.color = '';
         }, 2000);
-      } catch (err) {
+      } catch {
         shareLinkInput.select();
         document.execCommand('copy');
       }
@@ -89,9 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (questionBtn) {
       questionBtn.addEventListener('click', () => {
         const isActive = item.classList.contains('active');
-        // Close all
         faqItems.forEach((other) => other.classList.remove('active'));
-        // Toggle current
         if (!isActive) {
           item.classList.add('active');
         }
@@ -105,10 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 5. Download Button Visual Feedback
-  const downloadButtons = document.querySelectorAll('a[download]');
+  const downloadButtons = document.querySelectorAll('a[download], .btn-cta-primary, .btn-cta-secondary, .btn-primary-sm');
   downloadButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const originalHtml = btn.innerHTML;
       btn.style.opacity = '0.9';
       btn.style.transform = 'scale(0.98)';
       setTimeout(() => {

@@ -39,6 +39,7 @@ const SECTIONS = [
       'Account Data: Username, email address, password hash, and display name.',
       'Rider Profile: Optional bio, phone, city, motorcycle make/model, riding style, and experience level.',
       'Active GPS Telemetry: Real-time latitude, longitude, speed, and heading broadcasted during ongoing rides.',
+      'Background Location: Precise location collected during an active ride even when the app is closed or not in use so your squad can track your position.',
       'Safety & Flag Stops: Road hazards, fuel, break, and issue stops created by you or your group.',
     ],
   },
@@ -46,7 +47,7 @@ const SECTIONS = [
     title: '2. How Your Data Is Used',
     icon: 'sync-outline',
     items: [
-      'Squad Coordination: Stream live locations on the group map so riders stay together.',
+      'Squad Coordination: Stream live locations on the group map so riders stay together, even when switching apps.',
       'Route Calculation: Calculate route distance, elevation, travel duration, and polyline directions.',
       'Safety Alerts: Notify members when someone flags a fuel stop, mechanical issue, or rest break.',
     ],
@@ -66,15 +67,26 @@ const SECTIONS = [
     items: [
       'Session Security: Authentication tokens are securely managed via hardware-level keychains.',
       'Location Pruning: High-frequency live coordinates update on a last-known basis to avoid excessive tracking trails.',
-      'Permissions: You can disable location tracking at any time via device system settings.',
+      'Permissions: You can manage or revoke foreground and background location access at any time via device system settings.',
     ],
   },
   {
-    title: '5. Contact & Inquiries',
+    title: '5. DPDP Act (India) & GDPR Compliance',
+    icon: 'shield-checkmark-outline',
+    items: [
+      'Unbundled Consent: Telemetry consent is gathered distinctly for explicit ride tracking purposes.',
+      'Withdrawal Rights: Withdraw location tracking consent anytime from App Settings (ease of withdrawal matches consent).',
+      'Data Principal Rights: Statutory rights to access summary, correct errors, or request erasure of personal data.',
+      'Designated Grievance Officer: Contact cruvobs@gmail.com (New Delhi, India) for statutory redressal within 30 days.',
+      'Escalation: Right to approach the Data Protection Board of India (DPBI) or relevant EU Data Protection Authority.',
+    ],
+  },
+  {
+    title: '6. Contact & Grievance Desk',
     icon: 'mail-outline',
     items: [
-      'Support & Inquiries: cruvobs@gmail.com',
-      'Account Requests: Contact support for data export or deletion inquiries.',
+      'Privacy Desk: cruvobs@gmail.com',
+      'Account Deletion & Data Portability: Requests acknowledged within 48 hours and processed within 30 days.',
     ],
   },
 ];

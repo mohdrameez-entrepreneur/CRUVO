@@ -1,10 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
-import { TOMTOM_API_KEY, TOMTOM_BASE_URL } from '../config';
 import * as Location from 'expo-location';
-import axios from 'axios';
+import { searchPlaces, reverseGeocode } from '../services/locationService';
 
 export default function LocationPicker({ label, icon, placeholder, value, onSelect, showCurrentLocation = true }) {
   const [query, setQuery] = useState(value || '');
@@ -12,21 +11,33 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
+  const debounceTimer = useRef(null);
 
-  const search = useCallback(async (text) => {
-    setQuery(text);
-    if (text.length < 3) {
+  useEffect(() => {
+    if (value !== undefined && value !== query) {
+      setQuery(value || '');
+    }
+  }, [value]);
+
+  const performSearch = useCallback(async (text) => {
+    if (!text || text.trim().length < 2) {
       setResults([]);
       setShowResults(false);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await axios.get(`${TOMTOM_BASE_URL}/search/${encodeURIComponent(text)}.json`, {
-        params: { key: TOMTOM_API_KEY, limit: 5 },
-      });
-      const items = res.data.results || [];
+      let userCoords = null;
+      try {
+        const lastLoc = await Location.getLastKnownPositionAsync();
+        if (lastLoc?.coords) {
+          userCoords = [lastLoc.coords.latitude, lastLoc.coords.longitude];
+        }
+      } catch {}
+
+      const items = await searchPlaces(text, { userCoords, limit: 6 });
       setResults(items);
       setShowResults(items.length > 0);
     } catch {
@@ -36,13 +47,37 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
     }
   }, []);
 
+  const handleChangeText = (text) => {
+    setQuery(text);
+    setUsingCurrentLocation(false);
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    if (!text || text.trim().length < 2) {
+      setResults([]);
+      setShowResults(false);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    debounceTimer.current = setTimeout(() => {
+      performSearch(text);
+    }, 250);
+  };
+
   const handleSelect = (item) => {
-    const name = item.address.freeformAddress || item.address.municipality || item.address.country || '';
-    const [lat, lng] = [item.position.lat, item.position.lon];
+    const name = item.name || item.fullAddress;
     setQuery(name);
     setUsingCurrentLocation(false);
     setShowResults(false);
-    onSelect({ name, lat, lng });
+    onSelect({
+      name: item.fullAddress || name,
+      lat: item.lat,
+      lng: item.lng,
+    });
   };
 
   const handleCurrentLocation = async () => {
@@ -57,18 +92,18 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
         return;
       }
 
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      let loc = await Location.getLastKnownPositionAsync();
+      if (!loc) {
+        loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      }
+
       const { latitude, longitude } = loc.coords;
+      const addressName = await reverseGeocode(latitude, longitude);
 
-      const reverseRes = await axios.get(`${TOMTOM_BASE_URL}/reverseGeocode/${longitude},${latitude}.json`, {
-        params: { key: TOMTOM_API_KEY },
-      });
-      const address = reverseRes.data.addresses?.[0];
-      const name = address?.freeformAddress || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-
-      setQuery(name);
+      setQuery(addressName);
       setUsingCurrentLocation(true);
-      onSelect({ name, lat: latitude, lng: longitude });
+      setShowResults(false);
+      onSelect({ name: addressName, lat: latitude, lng: longitude });
     } catch {
       Alert.alert('Error', 'Failed to get current location');
       setUsingCurrentLocation(false);
@@ -95,12 +130,12 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
           placeholder={placeholder}
           placeholderTextColor={colors.outline}
           value={query}
-          onChangeText={search}
+          onChangeText={handleChangeText}
           onFocus={() => results.length > 0 && setShowResults(true)}
         />
         {loading && <ActivityIndicator size="small" color={colors.primaryContainer} />}
         {query.length > 0 && !loading && (
-          <TouchableOpacity onPress={handleClear}>
+          <TouchableOpacity onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close-circle" size={20} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
         )}
@@ -130,14 +165,15 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
             data={results}
             keyExtractor={(item, i) => `${item.id}-${i}`}
             scrollEnabled={false}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.resultItem} onPress={() => handleSelect(item)} activeOpacity={0.7}>
                 <Ionicons name="location" size={16} color={colors.primaryContainer} />
                 <View style={styles.resultText}>
-                  <Text style={styles.resultAddress} numberOfLines={1}>{item.address.freeformAddress}</Text>
-                  {item.address.municipalitySubdivision && (
-                    <Text style={styles.resultSub} numberOfLines={1}>{item.address.municipalitySubdivision}</Text>
-                  )}
+                  <Text style={styles.resultAddress} numberOfLines={1}>{item.name}</Text>
+                  {item.subtitle ? (
+                    <Text style={styles.resultSub} numberOfLines={1}>{item.subtitle}</Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             )}
@@ -149,17 +185,26 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
 }
 
 const styles = StyleSheet.create({
-  container: { marginBottom: spacing.stackMd },
+  container: { marginBottom: spacing.stackMd, zIndex: 10 },
   label: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
-    height: spacing.touchTargetMin, paddingHorizontal: spacing.stackMd, gap: spacing.stackSm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg,
+    height: spacing.touchTargetMin,
+    paddingHorizontal: spacing.stackMd,
+    gap: spacing.stackSm,
   },
   input: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   currentLocationBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
-    paddingVertical: spacing.stackSm, marginTop: spacing.stackSm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.stackSm,
+    paddingVertical: spacing.stackSm,
+    marginTop: spacing.stackSm,
     alignSelf: 'flex-start',
   },
   currentLocationBtnActive: {
@@ -169,21 +214,36 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.stackSm,
   },
   currentLocationText: {
-    ...typography.labelMd, color: colors.primaryContainer,
+    ...typography.labelMd,
+    color: colors.primaryContainer,
   },
   currentLocationTextActive: {
     color: colors.onPrimaryContainer,
     fontWeight: '600',
   },
   dropdown: {
-    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.lg, marginTop: 4, maxHeight: 200, overflow: 'hidden',
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg,
+    marginTop: 4,
+    maxHeight: 220,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   resultItem: {
-    flexDirection: 'row', alignItems: 'center', padding: spacing.stackMd,
-    borderBottomWidth: 1, borderBottomColor: colors.outlineVariant, gap: spacing.stackSm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.stackMd,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outlineVariant,
+    gap: spacing.stackSm,
   },
   resultText: { flex: 1 },
-  resultAddress: { ...typography.bodyMd, color: colors.onSurface },
-  resultSub: { ...typography.labelSm, color: colors.onSurfaceVariant },
+  resultAddress: { ...typography.bodyMd, color: colors.onSurface, fontWeight: '600' },
+  resultSub: { ...typography.labelSm, color: colors.onSurfaceVariant, marginTop: 1 },
 });

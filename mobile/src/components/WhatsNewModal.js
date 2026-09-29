@@ -16,40 +16,40 @@ import { versionAPI } from '../api';
 
 const DEFAULT_WHATS_NEW = [
   {
-    title: 'Friends-Only Privacy Controls',
-    description: 'Select whether your Email and Phone number are kept private or shared strictly with confirmed friends.',
-    icon: 'shield-checkmark-outline',
+    title: 'Psychological Telemetry Loading Engine',
+    description: 'Dynamic multi-stage telemetry warm-up and perceived-progress feedback during server spin-ups.',
+    icon: 'flash-outline',
   },
   {
-    title: 'Rider Profile Summary & Garage Cards',
-    description: 'Inspect rider profiles, motorcycle specifications, and contact status badges directly from Explore.',
-    icon: 'person-outline',
+    title: 'High-Precision 40m Arrival Geofence',
+    description: 'Fixed premature ride auto-completion by narrowing geofence to 40m with lead rider arrival prompt.',
+    icon: 'navigate-circle-outline',
   },
   {
-    title: 'Ride Auto-Naming & Optional Fields',
-    description: 'Creating a ride is faster than ever with automatic ride naming based on your destination.',
-    icon: 'navigate-outline',
-  },
-  {
-    title: 'Real-Time Notifications & Instant Sync',
-    description: 'Instant notification alerts when riders accept requests and immediate Explore screen updates.',
+    title: 'Android Foreground Service & Sticky Notification',
+    description: 'Persistent live ride notification that protects background GPS telemetry from aggressive OS battery killers.',
     icon: 'notifications-outline',
   },
   {
-    title: 'Redesigned Luxury Dark Settings',
-    description: 'Sleek new settings screen for garage preferences, privacy badges, and account security.',
-    icon: 'options-outline',
+    title: 'DPDP Act 2023 & GDPR Privacy Suite',
+    description: 'One-tap in-app controls to purge location history, review stored data summaries, or delete your entire account.',
+    icon: 'shield-checkmark-outline',
   },
   {
-    title: 'Live Ride Avatar Stop Indicators',
-    description: 'Distinct visual stop badges on rider map avatars when flagging a stop during live rides.',
-    icon: 'location-outline',
+    title: 'Automated Stale Telemetry Purging',
+    description: 'Server automatically wipes raw location breadcrumbs upon ride completion to guarantee rider privacy.',
+    icon: 'trash-outline',
+  },
+  {
+    title: 'Google Play Prominent Location Disclosure',
+    description: 'Explicit, transparent privacy consent modal detailing why background GPS is required for squad tracking.',
+    icon: 'map-outline',
   },
 ];
 
 export default function WhatsNewModal({
   visible,
-  version = '2.0.0',
+  version = '3.1.0',
   whatsNewList = DEFAULT_WHATS_NEW,
   onClose,
 }) {

@@ -3,64 +3,462 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - CRUVO</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" href="assets/logo.png" type="image/png">
+  <title>Privacy Policy & Data Safety — CRUVO</title>
+  <meta name="description" content="Official Privacy Policy and Data Safety disclosures for the CRUVO motorcycle group riding and squad telemetry platform.">
+  <meta name="theme-color" content="#121317">
+  <link rel="icon" type="image/jpeg" href="assets/CRUVO LOGO.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
   <style>
-    body { background-color: #0b0c10; color: #e3e2e7; font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; padding: 20px; }
-    .container { max-width: 800px; margin: 40px auto; background: #14161b; padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); }
-    h1 { color: #ffd600; font-size: 2.2rem; margin-bottom: 8px; }
-    h2 { color: #fff; font-size: 1.4rem; margin-top: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
-    h3 { color: #ffd600; font-size: 1.1rem; margin-top: 20px; }
-    p, li { color: #a9a9b3; font-size: 0.95rem; }
-    ul { padding-left: 20px; }
-    a { color: #ffd600; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .back-link { display: inline-block; margin-bottom: 20px; color: #ffd600; font-weight: bold; }
+    :root {
+      --bg-dark: #0b0c10;
+      --surface-card: #14161b;
+      --surface-card-hover: #191c22;
+      --surface-accent: rgba(255, 214, 0, 0.08);
+      --primary: #ffd600;
+      --primary-border: rgba(255, 214, 0, 0.28);
+      --text-main: #f0f0f5;
+      --text-muted: #9a9ba8;
+      --text-dim: #6c6d7a;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(255, 214, 0, 0.4);
+      --success: #4caf50;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      line-height: 1.65;
+      padding: 32px 16px 80px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      text-decoration: none;
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 8px 16px;
+      background: rgba(255, 214, 0, 0.08);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+    .back-btn:hover {
+      background: var(--primary);
+      color: #000;
+      transform: translateX(-2px);
+    }
+
+    .brand-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .policy-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 40px 36px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    }
+
+    .policy-header {
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-accent);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 8px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-top: 8px;
+    }
+
+    .meta-item strong {
+      color: var(--primary);
+    }
+
+    .callout-box {
+      background: rgba(255, 214, 0, 0.05);
+      border: 1px solid var(--primary-border);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin: 24px 0;
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+    .callout-box strong { color: var(--primary); }
+
+    h2 {
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-top: 36px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+    li strong {
+      color: var(--text-main);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.9rem;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--primary);
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      color: var(--text-muted);
+    }
+    td strong {
+      color: var(--text-main);
+    }
+
+    .contact-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .contact-card a {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .contact-card a:hover {
+      text-decoration: underline;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 36px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    @media (max-width: 600px) {
+      .policy-card { padding: 24px 18px; }
+      h1 { font-size: 1.85rem; }
+      h2 { font-size: 1.25rem; }
+      table { font-size: 0.82rem; }
+      th, td { padding: 8px 10px; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <a href="index.html" class="back-link">&larr; Back to CRUVO Home</a>
-    <h1>PRIVACY POLICY</h1>
-    <p><strong>Last Updated:</strong> August 27, 2026</p>
+  <div class="wrapper">
+    <div class="nav-bar">
+      <a href="index.html" class="back-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Back to CRUVO Home
+      </a>
+      <span class="brand-tag">CRUVO TELEMETRY • COMPLIANCE</span>
+    </div>
 
-    <p>Welcome to <strong>CRUVO</strong> (the "App"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application and related backend services.</p>
+    <main class="policy-card">
+      <header class="policy-header">
+        <div class="badge">Google Play Data Safety & Privacy Disclosure</div>
+        <h1>Privacy Policy</h1>
+        <div class="meta-row">
+          <div class="meta-item"><strong>Effective Date:</strong> August 21, 2026</div>
+          <div class="meta-item"><strong>Last Updated:</strong> September 8, 2026</div>
+          <div class="meta-item"><strong>App Version:</strong> 3.0.0</div>
+        </div>
+      </header>
 
-    <h2>1. Information We Collect</h2>
-    <p>We collect information directly from you, automatically through your use of the App, and from third-party services.</p>
+      <div class="callout-box">
+        <strong>Summary of Core Principle:</strong> CRUVO is an active motorcycle group-riding and squad telemetry application built to keep squads connected and safe. We only collect telemetry data necessary for live ride coordination, route calculation, and stop notifications. We <strong>never sell your personal data</strong> or use your location for advertising.
+      </div>
 
-    <h3>A. Information You Provide to Us</h3>
-    <ul>
-      <li><strong>Account Registration Information:</strong> When you create an account or sign in via Google, we collect your <strong>Username</strong>, <strong>Email Address</strong>, and <strong>Display Name</strong>.</li>
-      <li><strong>Rider Profile Details:</strong> You may choose to complete a rider profile, providing optional details such as Bio, Phone Number, Location City, Motorcycle details (Make/Model), Riding Characteristics, and Profile Photo.</li>
-      <li><strong>Ride Metadata:</strong> Details of rides you schedule or join, including ride names, dates, times, and roles.</li>
-    </ul>
+      <h2>1. Information We Collect</h2>
+      <p>We collect information directly from you, automatically through your active participation in group rides, and through integrated cloud infrastructure:</p>
 
-    <h3>B. Location and Tracking Data</h3>
-    <p>Because CRUVO is a squad riding coordination utility, we collect precise location data:</p>
-    <ul>
-      <li><strong>Continuous Real-Time GPS Tracking:</strong> When you participate in an <strong>Active Ride</strong>, we collect your Latitude, Longitude, Heading, and Speed.</li>
-      <li><strong>Route & Navigation Paths:</strong> We store start locations, destinations, checkpoints, and route lines.</li>
-      <li><strong>Incident and Stop Flags:</strong> Coordinates and categories of stops flagged during trips.</li>
-    </ul>
+      <h3>A. Precise & Background Location Data (Restricted Permission Disclosure)</h3>
+      <p>Because CRUVO's core functionality is real-time squad tracking and rider safety, the app requests access to high-accuracy location services:</p>
+      <ul>
+        <li><strong>Precise GPS Telemetry:</strong> Latitude, Longitude, Heading (direction of travel), and Instantaneous Speed.</li>
+        <li><strong>Prominent Background Location Collection:</strong> When you start or join an <strong>Active Group Ride</strong>, CRUVO collects your precise location data <strong style="color: var(--primary);">even when the app is closed or not in use</strong>. This ensures your position marker remains updated on your squad's live map if you minimize the app to check turn-by-turn navigation, answer phone calls, or lock your device.</li>
+        <li><strong>Route & Waypoint Coordinates:</strong> Ride start locations, planned stops, checkpoints, and destination coordinates.</li>
+        <li><strong>Incident & Stop Flags:</strong> Coordinates and categories of stops flagged during trips (Fuel, Food, Rest Break, General, Road Hazard/Issue).</li>
+      </ul>
 
-    <h2>2. How We Use Your Information</h2>
-    <ul>
-      <li><strong>Authentication & Security:</strong> To verify user accounts, log you in securely, and handle password reset OTPs.</li>
-      <li><strong>Real-Time Squad Coordination:</strong> To stream your live position to other riders in your active ride.</li>
-      <li><strong>Route Calculation:</strong> To compute route distances and travel times using mapping services (TomTom API).</li>
-    </ul>
+      <h3>B. Account & Profile Information</h3>
+      <ul>
+        <li><strong>User Credentials:</strong> Username, Email address, Display Name, and encrypted password hash (or Google OAuth profile tokens).</li>
+        <li><strong>Rider Profile Details (Optional):</strong> Biography, Contact Phone Number, City, Motorcycle Make and Model, Riding Style (Adventure, Sport, Touring, Cruise, Commute), Experience Level (Beginner, Intermediate, Veteran, Expert), and Profile Avatar image.</li>
+      </ul>
 
-    <h2>3. How Your Information Is Shared</h2>
-    <ul>
-      <li><strong>With Other Riders:</strong> Display name, profile details, and active ride GPS position are visible to participants of your ride.</li>
-      <li><strong>Third-Party Services:</strong> Google API Services (OAuth login & transactional email), TomTom API (mapping), and Database Hosting (PostgreSQL).</li>
-    </ul>
+      <h3>C. Device & Notification Identifiers</h3>
+      <ul>
+        <li><strong>Push Notification Tokens:</strong> Device push registration tokens (via Expo Push Services & Firebase Cloud Messaging) utilized strictly to deliver real-time stop hazard alerts, squad invites, and friend notifications.</li>
+      </ul>
 
-    <h2>4. Contact Us</h2>
-    <p>If you have any questions or concerns regarding this Privacy Policy, please contact us at:</p>
-    <p>Email: <a href="mailto:cruvobs@gmail.com">cruvobs@gmail.com</a></p>
+      <h2>2. How Your Information Is Used</h2>
+      <p>Your data is processed strictly to provide the features you explicitly invoke:</p>
+      <ul>
+        <li><strong>Real-Time Squad Synchronization:</strong> To stream sub-second position coordinates to your joined squad members on the active ride map.</li>
+        <li><strong>Route & Navigation Intelligence:</strong> To compute route distances, durations, elevation profiles, and polyline directions via mapping APIs (TomTom API).</li>
+        <li><strong>Squad Safety Alerts:</strong> To notify all ride participants when a squad member flags a fuel stop, rest break, or emergency breakdown.</li>
+        <li><strong>Account Authentication:</strong> To establish secure login sessions and process verification OTP emails.</li>
+      </ul>
+
+      <h2>3. Third-Party Service Providers & Data Sharing</h2>
+      <p>We share specific technical data only with reputable service providers necessary to deliver core app functionality. We do not sell or broker personal data:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Provider / SDK</th>
+            <th>Data Shared</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>TomTom Developer APIs</strong></td>
+            <td>Start, stop & search coordinates</td>
+            <td>Route calculations, turn-by-turn geometry & geocoding</td>
+          </tr>
+          <tr>
+            <td><strong>Google OAuth & Gmail API</strong></td>
+            <td>Email address, basic profile name</td>
+            <td>Secure Single Sign-On (SSO) & password reset emails</td>
+          </tr>
+          <tr>
+            <td><strong>Expo / FCM Notification Services</strong></td>
+            <td>Device push token, alert payload</td>
+            <td>Real-time stop alerts and squad ride notifications</td>
+          </tr>
+          <tr>
+            <td><strong>Render Platform / PostgreSQL</strong></td>
+            <td>Encrypted database records</td>
+            <td>Cloud infrastructure & encrypted persistent storage</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>4. Data Retention & Lifecycle Policy</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Data Category</th>
+            <th>Retention Period</th>
+            <th>Lifecycle & Purging</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Active GPS Telemetry</strong></td>
+            <td>Duration of active ride only</td>
+            <td>Live positions are updated on a last-known basis and purged upon ride completion.</td>
+          </tr>
+          <tr>
+            <td><strong>Completed Ride Summary</strong></td>
+            <td>Until account deletion</td>
+            <td>Total distance, duration, and route polyline saved to user's ride history.</td>
+          </tr>
+          <tr>
+            <td><strong>Push Notification Tokens</strong></td>
+            <td>Active session lifecycle</td>
+            <td>Invalidated and cleared upon logout or app uninstallation.</td>
+          </tr>
+          <tr>
+            <td><strong>Account & Profile Records</strong></td>
+            <td>Until deletion request</td>
+            <td>Retained in secure encrypted cloud database while account is active.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>5. Security & Storage Standards</h2>
+      <ul>
+        <li><strong>Transit & Rest Encryption:</strong> All client-to-server communications use HTTPS/WSS with TLS 1.3 encryption. Database storage is protected with volume encryption.</li>
+        <li><strong>Device-Level Security:</strong> Authentication tokens are stored in hardware-backed secure storage on mobile devices (via OS keychain / Keystore).</li>
+        <li><strong>Zero Third-Party Advertising:</strong> No behavioral tracking, advertising SDKs, or commercial data brokers are integrated into the application.</li>
+      </ul>
+
+      <h2>6. User Controls, Permissions & Account Deletion</h2>
+      <p>You have full autonomy over your data and device permissions:</p>
+      <ul>
+        <li><strong>Location Permission Management:</strong> You can grant or revoke foreground and background location permissions at any time through your device operating system settings.</li>
+        <li><strong>Profile Visibility Controls:</strong> You can choose whether your email and phone number are visible to friends or kept strictly private in the Profile Edit screen.</li>
+      </ul>
+
+      <div class="contact-card">
+        <h3 style="margin-top:0;">Requesting Complete Account & Data Deletion</h3>
+        <p>You have the right to request permanent deletion of your CRUVO account and all associated data (including ride history, profile information, and telemetry logs) at any time:</p>
+        <ul>
+          <li><strong>Email Request:</strong> Send an email from your registered account to <a href="mailto:cruvobs@gmail.com?subject=Account%20Deletion%20Request">cruvobs@gmail.com</a> with the subject line <code>Account Deletion Request</code>.</li>
+          <li><strong>Processing Timeline:</strong> Your account, credentials, ride logs, and associated records will be permanently purged within <strong>30 calendar days</strong> of receiving your request.</li>
+        </ul>
+      </div>
+
+      <h2>7. Compliance with Digital Personal Data Protection Act, 2023 (India)</h2>
+      <p>For users residing in India, CRUVO processes personal data in strict compliance with the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act)</strong>:</p>
+      <ul>
+        <li><strong>Unbundled, Specific Consent:</strong> Consent for sensitive telemetry (such as background and foreground GPS location) is collected separately from general account terms, for specified, clear purposes only.</li>
+        <li><strong>Right to Withdraw Consent:</strong> Under Section 6(4) of the DPDP Act, you may withdraw your consent for location tracking or data processing at any time directly through the app settings or by contacting us. The ease of withdrawal matches the ease of giving consent.</li>
+        <li><strong>Right to Access Summary:</strong> You may request a summary of the personal data being processed and the processing activities undertaken by CRUVO.</li>
+        <li><strong>Right to Correction & Erasure:</strong> You have the statutory right to rectify inaccurate personal data, complete incomplete records, or request complete erasure of your profile and telemetry logs.</li>
+        <li><strong>Right to Nominate:</strong> You have the right to nominate any individual who shall, in the event of death or incapacity, exercise your data rights.</li>
+        <li><strong>Designated Grievance Redressal Officer:</strong> In compliance with Section 6(2)(i) and Section 12 of the DPDP Act, we have designated an official Grievance Officer for privacy matters:
+          <div class="contact-card" style="margin-top:10px;">
+            <p><strong>Grievance Officer:</strong> Data Protection & Privacy Desk</p>
+            <p><strong>Platform:</strong> CRUVO Telemetry Engine</p>
+            <p><strong>Email:</strong> <a href="mailto:cruvobs@gmail.com?subject=DPDP%20Grievance%20Redressal">cruvobs@gmail.com</a></p>
+            <p><strong>Registered Jurisdiction:</strong> New Delhi, Delhi, India</p>
+            <p><strong>Statutory SLA:</strong> Grievance requests acknowledged within <strong>48 hours</strong> and resolved within <strong>30 calendar days</strong>.</p>
+            <p><strong>Escalation:</strong> If you are unsatisfied with our response, you have the right to lodge a complaint with the <em>Data Protection Board of India (DPBI)</em>.</p>
+          </div>
+        </li>
+      </ul>
+
+      <h2>8. Compliance with General Data Protection Regulation (GDPR - EU/EEA)</h2>
+      <p>For users within the European Economic Area (EEA) and the United Kingdom, CRUVO operates as the <strong>Data Controller</strong> under the GDPR:</p>
+      <ul>
+        <li><strong>Lawful Bases for Processing:</strong>
+          <ul>
+            <li><em>Explicit Consent (Art. 6(1)(a)):</em> For active and background GPS location telemetry and push notifications.</li>
+            <li><em>Performance of Contract (Art. 6(1)(b)):</em> To operate user accounts, group rides, and route calculations.</li>
+            <li><em>Legitimate Interests (Art. 6(1)(f)):</em> To maintain security, verify accounts, and prevent platform misuse.</li>
+          </ul>
+        </li>
+        <li><strong>Your GDPR Rights:</strong>
+          <ul>
+            <li><strong>Right of Access (Art. 15):</strong> Request a complete copy of all personal data held about you in portable JSON format.</li>
+            <li><strong>Right to Rectification (Art. 16):</strong> Update any inaccurate data in your garage profile.</li>
+            <li><strong>Right to Erasure / Right to be Forgotten (Art. 17):</strong> Permanently delete your account and ride logs via the app or email.</li>
+            <li><strong>Right to Restriction & Objection (Arts. 18, 21):</strong> Object to processing of specific data categories.</li>
+            <li><strong>Right to Data Portability (Art. 20):</strong> Receive your ride history and telemetry in a structured, machine-readable format.</li>
+          </ul>
+        </li>
+        <li><strong>Supervisory Authority:</strong> You have the right to lodge a complaint with your local EU Data Protection Authority if you believe our data processing breaches applicable laws.</li>
+      </ul>
+
+      <h2>9. Contact & Official Inquiries</h2>
+      <p>If you have any questions, concerns, or inquiries regarding this Privacy Policy or our data handling practices, please contact our team:</p>
+      <div class="contact-card">
+        <p><strong>CRUVO Team / Privacy Operations & Grievance Desk</strong></p>
+        <p>Email: <a href="mailto:cruvobs@gmail.com">cruvobs@gmail.com</a></p>
+        <p>Website: <a href="https://cruvo-web.onrender.com" target="_blank">cruvo-web.onrender.com</a></p>
+      </div>
+    </main>
+
+    <footer class="footer">
+      &copy; 2026 CRUVO Telemetry Engine. All rights reserved.
+    </footer>
   </div>
 </body>
 </html>

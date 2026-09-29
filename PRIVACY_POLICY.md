@@ -2,7 +2,7 @@
 
 **Last Updated:** August 21, 2026
 
-Welcome to **GRIDE** (the "App"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application and related backend services.
+Welcome to **CRUVO** (the "App"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application and related backend services.
 
 ---
 
@@ -22,8 +22,8 @@ We collect information directly from you, automatically through your use of the 
 - **Ride Metadata**: Details of rides you schedule or join, including ride names, dates, times, and roles.
 
 ### B. Location and Tracking Data (Real-time and Static)
-Because GRIDE is a group riding coordination and tracking utility, we collect precise location data:
-- **Continuous Real-Time GPS Tracking**: When you participate in an **Active Ride**, the App requests high-accuracy background and foreground location permissions. We collect your **Latitude**, **Longitude**, **Heading (direction)**, and **Speed**.
+Because CRUVO is a group riding coordination and tracking utility, we collect precise location data:
+- **Continuous Real-Time GPS Tracking**: When you participate in an **Active Ride**, CRUVO collects your precise location data (**Latitude**, **Longitude**, **Heading**, and **Speed**) **even when the app is closed or not in use**, ensuring your position remains visible to your squad on the live map if you minimize the app to answer calls, check navigation, or lock your screen.
 - **Route and Navigation Paths**: We store start locations, destinations, checkpoints, and complete route polylines.
 - **Incident and Stop Flags**: Coordinates, category types (`FUEL`, `FOOD`, `BREAK`, `GENERAL`, `ISSUE`), and details of stops flagged by you or other riders during a trip.
 
@@ -36,7 +36,7 @@ Because GRIDE is a group riding coordination and tracking utility, we collect pr
 
 We use the collected information to deliver and enhance the core ride-sharing experience:
 - **Authentication & Security**: To verify user accounts, establish secure sessions, and log you in.
-- **Real-Time Group Coordination**: To stream your live position coordinates to other riders in your active squad so they can see your status, heading, and speed on the live map.
+- **Real-Time Group Coordination**: To stream your live position coordinates to other riders in your active squad so they can see your status, heading, and speed on the live map, even when switching between applications.
 - **Route calculation**: To query third-party routing agents (TomTom API) to calculate and cache route distances, durations, and maps for your scheduled rides.
 - **Roster & Invite Management**: To manage invitations and group notifications.
 - **Stop Alerts**: To display user-flagged stops (breaks, fuel, hazard reports) on the active group map.
@@ -65,15 +65,29 @@ We share information with other users and third-party services to make the App f
 
 ---
 
-## 5. Your Choices and Controls
+## 5. Your Choices, Consent Controls and Data Rights
 
-- **Location Permissions**: You can disable location tracking at any time by withdrawing location permissions via your device settings. However, doing so will prevent you from participating in active tracking during group rides.
+- **Consent Withdrawal (DPDP & GDPR)**: You can revoke location tracking consent at any time directly through the app settings or device settings.
 - **Account Modifications**: You can edit your username, email, display name, and vehicle details within the profile settings screen.
-- **Account Deletion**: You can request to delete your account, which removes your profile and associated data from our servers.
+- **Permanent Account & Data Erasure**: You can permanently delete your account and all associated personal data directly within the app settings or by emailing `cruvobs@gmail.com`. All records will be erased within 30 days.
 
 ---
 
-## 6. Contact Us
+## 6. Compliance with DPDP Act, 2023 (India) & GDPR (EU)
+
+- **Unbundled Specific Consent**: Sensitive telemetry consent is obtained separately for specific ride tracking purposes only.
+- **Designated Grievance Officer (India)**:
+  - **Officer / Desk**: Privacy & Grievance Desk, CRUVO Telemetry Engine
+  - **Email**: `cruvobs@gmail.com`
+  - **Jurisdiction**: New Delhi, Delhi, India
+  - **SLA**: Acknowledged within 48 hours, resolved within 30 days.
+  - **Escalation**: You may lodge unresolved grievances with the Data Protection Board of India (DPBI).
+- **GDPR Rights (EU/EEA)**: Access (Art. 15), Rectification (Art. 16), Erasure (Art. 17), Portability (Art. 20), and Right to lodge a complaint with an EU Supervisory Authority.
+
+---
+
+## 7. Contact Us
 
 If you have any questions or concerns regarding this Privacy Policy, please contact us at:
 - **Email**: cruvobs@gmail.com
+- **Website**: https://cruvo-web.onrender.com/privacy.html

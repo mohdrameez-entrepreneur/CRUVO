@@ -23,10 +23,10 @@ import * as Location from 'expo-location';
 
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { ridesAPI } from '../api';
-import { TOMTOM_API_KEY, TOMTOM_BASE_URL } from '../config';
 import AlertCard from '../components/AlertCard';
 import GlassModal from '../components/GlassModal';
 import CreateRideMap from '../components/CreateRideMap';
+import { searchPlaces as fetchLocationSuggestions, reverseGeocode } from '../services/locationService';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAP_BASE_HEIGHT = SCREEN_HEIGHT * 0.42;
@@ -79,6 +79,9 @@ export default function CreateRideScreen({ navigation }) {
   const [locatingUser, setLocatingUser] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
 
+  const originDebounceRef = useRef(null);
+  const destDebounceRef = useRef(null);
+
   // Auto-acquire user location on mount and center map
   useEffect(() => {
     let mounted = true;
@@ -87,7 +90,10 @@ export default function CreateRideScreen({ navigation }) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return;
 
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        let loc = await Location.getLastKnownPositionAsync();
+        if (!loc) {
+          loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        }
         if (!mounted || !loc?.coords) return;
 
         const { latitude, longitude } = loc.coords;
@@ -99,14 +105,10 @@ export default function CreateRideScreen({ navigation }) {
 
         // Auto-populate Start Point with current location
         try {
-          const reverseRes = await axios.get(`${TOMTOM_BASE_URL}/reverseGeocode/${longitude},${latitude}.json`, {
-            params: { key: TOMTOM_API_KEY },
-          });
-          const address = reverseRes.data.addresses?.[0];
-          const name = address?.freeformAddress || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          const addressName = await reverseGeocode(latitude, longitude);
           if (mounted) {
-            setOrigin({ name, lat: latitude, lng: longitude });
-            setOriginQuery(name);
+            setOrigin({ name: addressName, lat: latitude, lng: longitude });
+            setOriginQuery(addressName.split(',')[0].trim());
             setActivePinMode('destination');
           }
         } catch {
@@ -124,6 +126,8 @@ export default function CreateRideScreen({ navigation }) {
 
     return () => {
       mounted = false;
+      if (originDebounceRef.current) clearTimeout(originDebounceRef.current);
+      if (destDebounceRef.current) clearTimeout(destDebounceRef.current);
     };
   }, []);
 
@@ -183,61 +187,74 @@ export default function CreateRideScreen({ navigation }) {
     })
   ).current;
 
-  // Search places via TomTom API
-  const searchPlaces = useCallback(async (text, isOrigin = true) => {
+  // Search places with debounced auto-suggestions
+  const searchPlaces = useCallback((text, isOrigin = true) => {
     if (isOrigin) {
       setOriginQuery(text);
-      if (text.length < 3) {
+      if (originDebounceRef.current) clearTimeout(originDebounceRef.current);
+
+      if (!text || text.trim().length < 2) {
         setOriginResults([]);
         setShowOriginResults(false);
+        setOriginLoading(false);
         return;
       }
+
       setOriginLoading(true);
+      originDebounceRef.current = setTimeout(async () => {
+        try {
+          const items = await fetchLocationSuggestions(text, { userCoords, limit: 6 });
+          setOriginResults(items);
+          setShowOriginResults(items.length > 0);
+        } catch {
+          setOriginResults([]);
+          setShowOriginResults(false);
+        } finally {
+          setOriginLoading(false);
+        }
+      }, 220);
     } else {
       setDestQuery(text);
-      if (text.length < 3) {
+      if (destDebounceRef.current) clearTimeout(destDebounceRef.current);
+
+      if (!text || text.trim().length < 2) {
         setDestResults([]);
         setShowDestResults(false);
+        setDestLoading(false);
         return;
       }
-      setDestLoading(true);
-    }
 
-    try {
-      const res = await axios.get(`${TOMTOM_BASE_URL}/search/${encodeURIComponent(text)}.json`, {
-        params: { key: TOMTOM_API_KEY, limit: 5 },
-      });
-      const items = res.data.results || [];
-      if (isOrigin) {
-        setOriginResults(items);
-        setShowOriginResults(items.length > 0);
-      } else {
-        setDestResults(items);
-        setShowDestResults(items.length > 0);
-      }
-    } catch {
-      if (isOrigin) setOriginResults([]);
-      else setDestResults([]);
-    } finally {
-      if (isOrigin) setOriginLoading(false);
-      else setDestLoading(false);
+      setDestLoading(true);
+      destDebounceRef.current = setTimeout(async () => {
+        try {
+          const items = await fetchLocationSuggestions(text, { userCoords, limit: 6 });
+          setDestResults(items);
+          setShowDestResults(items.length > 0);
+        } catch {
+          setDestResults([]);
+          setShowDestResults(false);
+        } finally {
+          setDestLoading(false);
+        }
+      }, 220);
     }
-  }, []);
+  }, [userCoords]);
 
   // Handle Autocomplete Selection
   const handleSelectSearchResult = (item, isOrigin = true) => {
-    const name = item.address.freeformAddress || item.address.municipality || item.address.country || '';
-    const lat = item.position.lat;
-    const lng = item.position.lon;
+    const mainTitle = item.name || item.fullAddress;
+    const fullAddr = item.fullAddress || mainTitle;
+    const lat = item.lat;
+    const lng = item.lng;
 
     if (isOrigin) {
-      setOrigin({ name, lat, lng });
-      setOriginQuery(name);
+      setOrigin({ name: fullAddr, lat, lng });
+      setOriginQuery(mainTitle);
       setShowOriginResults(false);
       setActivePinMode('destination');
     } else {
-      setDestination({ name, lat, lng });
-      setDestQuery(name);
+      setDestination({ name: fullAddr, lat, lng });
+      setDestQuery(mainTitle);
       setShowDestResults(false);
     }
 
@@ -249,21 +266,18 @@ export default function CreateRideScreen({ navigation }) {
   // Reverse Geocoding when Pin is Tapped/Dropped on Map
   const handlePinDropped = useCallback(async ({ mode, lat, lng }) => {
     try {
-      const res = await axios.get(`${TOMTOM_BASE_URL}/reverseGeocode/${lng},${lat}.json`, {
-        params: { key: TOMTOM_API_KEY },
-      });
-      const address = res.data.addresses?.[0];
-      const name = address?.freeformAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      const addressName = await reverseGeocode(lat, lng);
+      const shortName = addressName.split(',')[0].trim();
 
       if (mode === 'origin') {
-        setOrigin({ name, lat, lng });
-        setOriginQuery(name);
+        setOrigin({ name: addressName, lat, lng });
+        setOriginQuery(shortName);
         if (!destination) {
           setActivePinMode('destination');
         }
       } else {
-        setDestination({ name, lat, lng });
-        setDestQuery(name);
+        setDestination({ name: addressName, lat, lng });
+        setDestQuery(shortName);
       }
     } catch {
       const fallbackName = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -302,23 +316,21 @@ export default function CreateRideScreen({ navigation }) {
       }
 
       const { latitude, longitude } = loc.coords;
+      setUserCoords([latitude, longitude]);
 
       let name = `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
       try {
-        const reverseRes = await axios.get(`${TOMTOM_BASE_URL}/reverseGeocode/${longitude},${latitude}.json`, {
-          params: { key: TOMTOM_API_KEY },
-          timeout: 5000,
-        });
-        const address = reverseRes.data.addresses?.[0];
-        if (address?.freeformAddress) {
-          name = address.freeformAddress;
+        const addressName = await reverseGeocode(latitude, longitude);
+        if (addressName) {
+          name = addressName;
         }
       } catch (geocodeErr) {
         console.log('[CreateRide] Reverse geocode notice:', geocodeErr?.message);
       }
 
       setOrigin({ name, lat: latitude, lng: longitude });
-      setOriginQuery(name);
+      setOriginQuery(name.split(',')[0].trim());
+      setShowOriginResults(false);
       setActivePinMode('destination');
 
       if (mapRef.current?.flyTo) {
@@ -626,10 +638,17 @@ export default function CreateRideScreen({ navigation }) {
                         onPress={() => handleSelectSearchResult(item, true)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="location" size={14} color="#4CAF50" />
-                        <Text style={styles.dropdownText} numberOfLines={1}>
-                          {item.address.freeformAddress}
-                        </Text>
+                        <Ionicons name="location" size={16} color="#4CAF50" />
+                        <View style={styles.dropdownTextWrap}>
+                          <Text style={styles.dropdownText} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          {item.subtitle ? (
+                            <Text style={styles.dropdownSubtext} numberOfLines={1}>
+                              {item.subtitle}
+                            </Text>
+                          ) : null}
+                        </View>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -658,7 +677,7 @@ export default function CreateRideScreen({ navigation }) {
                   />
                   {destLoading && <ActivityIndicator size="small" color={colors.primaryContainer} style={{ marginRight: 4 }} />}
                   {destQuery.length > 0 && !destLoading && (
-                    <TouchableOpacity onPress={() => { setDestination(null); setDestQuery(''); }} style={styles.inputActionIcon}>
+                    <TouchableOpacity onPress={() => { setDestination(null); setDestQuery(''); setDestResults([]); setShowDestResults(false); }} style={styles.inputActionIcon}>
                       <Ionicons name="close-circle" size={16} color={colors.onSurfaceVariant} />
                     </TouchableOpacity>
                   )}
@@ -674,10 +693,17 @@ export default function CreateRideScreen({ navigation }) {
                         onPress={() => handleSelectSearchResult(item, false)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="flag" size={14} color={colors.primaryContainer} />
-                        <Text style={styles.dropdownText} numberOfLines={1}>
-                          {item.address.freeformAddress}
-                        </Text>
+                        <Ionicons name="flag" size={16} color={colors.primaryContainer} />
+                        <View style={styles.dropdownTextWrap}>
+                          <Text style={styles.dropdownText} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          {item.subtitle ? (
+                            <Text style={styles.dropdownSubtext} numberOfLines={1}>
+                              {item.subtitle}
+                            </Text>
+                          ) : null}
+                        </View>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -1126,22 +1152,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   dropdown: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: 'rgba(18, 19, 23, 0.98)',
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: borderRadius.md,
     marginTop: 4,
+    maxHeight: 220,
     overflow: 'hidden',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.outlineVariant,
-    gap: 8,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 10,
   },
-  dropdownText: { ...typography.bodyMd, color: colors.onSurface, fontSize: 13, flex: 1 },
+  dropdownTextWrap: {
+    flex: 1,
+  },
+  dropdownText: {
+    ...typography.bodyMd,
+    color: colors.onSurface,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dropdownSubtext: {
+    ...typography.labelSm,
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    marginTop: 1,
+  },
   inputGroup: { marginBottom: spacing.stackMd },
   sectionLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
   inputContainer: {

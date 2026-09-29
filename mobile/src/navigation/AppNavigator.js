@@ -21,6 +21,7 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import WhatsNewModal from '../components/WhatsNewModal';
 import UpdateRequiredModal from '../components/UpdateRequiredModal';
+import PsychologicalLoadingScreen from '../components/PsychologicalLoadingScreen';
 import MainTabs from './MainTabs';
 import { versionAPI } from '../api';
 import { CURRENT_APP_VERSION } from '../config';
@@ -48,6 +49,7 @@ export default function AppNavigator() {
   const [updateRequiredData, setUpdateRequiredData] = useState(null);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [whatsNewList, setWhatsNewList] = useState([]);
+  const [isWarmupComplete, setIsWarmupComplete] = useState(false);
 
   useEffect(() => {
     SecureStore.getItemAsync('has_agreed_privacy_policy')
@@ -68,8 +70,13 @@ export default function AppNavigator() {
           setWhatsNewList(data.whats_new);
         }
 
-        if (isVersionOutdated(CURRENT_APP_VERSION, data.min_required_version)) {
-          setUpdateRequiredData(data);
+        const isMandatory = isVersionOutdated(CURRENT_APP_VERSION, data.min_required_version);
+        const isOutdated = isVersionOutdated(CURRENT_APP_VERSION, data.latest_version);
+
+        if (isMandatory) {
+          setUpdateRequiredData({ ...data, isMandatory: true });
+        } else if (isOutdated) {
+          setUpdateRequiredData({ ...data, isMandatory: false });
         } else if (user) {
           const seenKey = `seen_whats_new_v${CURRENT_APP_VERSION}`;
           const seen = await SecureStore.getItemAsync(seenKey);
@@ -92,23 +99,22 @@ export default function AppNavigator() {
     } catch {}
   };
 
-  if (loading || hasAgreedPolicy === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primaryContainer} />
-      </View>
-    );
+  if (!isWarmupComplete || loading || hasAgreedPolicy === null) {
+    return <PsychologicalLoadingScreen onFinish={() => setIsWarmupComplete(true)} />;
   }
 
-  if (updateRequiredData) {
+  if (updateRequiredData && updateRequiredData.isMandatory) {
     return (
       <UpdateRequiredModal
         visible
         currentVersion={CURRENT_APP_VERSION}
-        requiredVersion={updateRequiredData.min_required_version}
-        downloadUrl={updateRequiredData.download_url}
+        latestVersion={updateRequiredData.latest_version || '3.1.0'}
+        requiredVersion={updateRequiredData.min_required_version || '3.0.0'}
+        whatsNew={updateRequiredData.whats_new}
+        playStoreUrl={updateRequiredData.play_store_url}
+        webStoreUrl={updateRequiredData.web_store_url}
         websiteUrl={updateRequiredData.website_url}
-        updateSteps={updateRequiredData.update_steps}
+        isMandatory={true}
       />
     );
   }
@@ -162,6 +168,19 @@ export default function AppNavigator() {
         version={CURRENT_APP_VERSION}
         whatsNewList={whatsNewList.length > 0 ? whatsNewList : undefined}
         onClose={handleDismissWhatsNew}
+      />
+
+      <UpdateRequiredModal
+        visible={!!updateRequiredData && !updateRequiredData.isMandatory}
+        currentVersion={CURRENT_APP_VERSION}
+        latestVersion={updateRequiredData?.latest_version || '3.1.0'}
+        requiredVersion={updateRequiredData?.min_required_version || '3.0.0'}
+        whatsNew={updateRequiredData?.whats_new}
+        playStoreUrl={updateRequiredData?.play_store_url}
+        webStoreUrl={updateRequiredData?.web_store_url}
+        websiteUrl={updateRequiredData?.website_url}
+        isMandatory={false}
+        onDismiss={() => setUpdateRequiredData(null)}
       />
     </NavigationContainer>
   );

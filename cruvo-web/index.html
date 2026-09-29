@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CRUVO — Real-Time Group Motorcycle Touring & Squad Radar</title>
-  <meta name="description" content="CRUVO is the ultimate real-time squad tracking, turn-by-turn navigation, and group ride telemetry app for motorcyclists. Download the official Android APK directly.">
-  <meta name="theme-color" content="#121317">
+  <meta name="description" content="CRUVO is the real-time squad tracking, turn-by-turn navigation, and group ride telemetry app for motorcyclists. Download on Google Play Store or get the direct ZIP package.">
+  <meta name="theme-color" content="#0e1014">
   
   <!-- Open Graph / Social Meta -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="CRUVO — Lead the Pack. Never Lose a Rider.">
-  <meta property="og:description" content="Sub-second squad GPS radar, pitstop flagging, and turn-by-turn route intelligence. Download the Android APK directly.">
+  <meta property="og:description" content="Sub-second squad GPS radar, pitstop flagging, and turn-by-turn route intelligence. Available on Google Play Store.">
   <meta property="og:image" content="assets/CRUVO LOGO.jpg">
 
   <!-- Favicon -->
@@ -19,7 +19,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
@@ -33,41 +33,40 @@
   <!-- Header Navigation -->
   <header class="navbar-container">
     <nav class="navbar glass-card">
-      <div class="brand-group">
+      <a href="#" class="brand-group">
         <img src="assets/CRUVO LOGO.jpg" alt="CRUVO Logo" class="brand-logo">
         <div class="brand-text-wrap">
           <span class="brand-name">CRUVO</span>
-          <span class="brand-tag">RIDER TELEMETRY</span>
+          <span class="brand-tag">SQUAD TELEMETRY</span>
         </div>
-      </div>
+      </a>
 
       <div class="nav-links">
         <a href="#features" class="nav-link">Features</a>
-        <a href="#install" class="nav-link">Install Guide</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="#faq" class="nav-link">FAQ</a>
       </div>
 
-      <div class="nav-cta-wrap">
-        <span class="version-badge"><span class="pulse-dot"></span> v3.0.0</span>
-        <a href="downloads/CRUVO.zip" download="CRUVO.zip" id="nav-download-btn" class="btn-primary-sm">
-          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
+      <div class="nav-actions">
+        <span class="version-badge"><span class="pulse-dot"></span> v3.1.0</span>
+        <a href="https://play.google.com/store/apps/details?id=com.cruvo.app" target="_blank" rel="noopener noreferrer" class="btn-primary-sm">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3.609 1.814L13.792 12 3.61 22.186a2.38 2.38 0 0 1-.61-.986V2.8a2.38 2.38 0 0 1 .61-.986zM15.207 13.414l2.586 2.586-12.012 6.864 9.426-9.45zm2.586-5.414l-2.586 2.586L5.781 1.136l12.012 6.864zm1.414 1.414l3.182 1.818a1.59 1.59 0 0 1 0 2.768l-3.182 1.818-2.121-2.122 2.121-2.282z"/>
           </svg>
-          <span>Get APK</span>
+          <span>Get App</span>
         </a>
       </div>
     </nav>
   </header>
 
-  <!-- Hero Section -->
+  <!-- Main Content -->
   <main>
+    <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-content">
         <div class="hero-badge">
-          <span class="lightning-icon">⚡</span>
-          <span>CRUVO v3.0.0 • SQUAD RADAR</span>
+          <span class="badge-icon">⚡</span>
+          <span>REAL-TIME MOTORCYCLE SQUAD RADAR</span>
         </div>
 
         <h1 class="hero-title">
@@ -76,128 +75,144 @@
         </h1>
 
         <p class="hero-subtitle">
-          Real-time squad GPS radar, pitstop flagging, turn-by-turn route sync, and battery-efficient telemetry built for motorcycle touring crews.
+          Live squad GPS radar, sub-second telemetry sync, and one-tap emergency pitstop flags engineered for motorcycle touring crews.
         </p>
 
-        <!-- Download Action Hub -->
-        <div class="download-hub glass-card">
-          <div class="download-primary-row">
-            <a href="downloads/CRUVO.zip" download="CRUVO.zip" id="main-download-btn" class="btn-download-hero">
-              <div class="btn-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              </div>
-              <div class="btn-text-content">
-                <span class="btn-label-top">INSTANT INSTALLATION</span>
-                <span class="btn-label-action">DOWNLOAD CRUVO v3.0.0</span>
-                <span class="btn-subtext">Direct Download • CRUVO v3.zip (Single APK) • Android 8.0+</span>
+        <!-- Streamlined Download Hub -->
+        <div class="hero-cta-card glass-card">
+          <div class="cta-buttons-row">
+            <!-- Primary Action: Google Play Store -->
+            <a href="https://play.google.com/store/apps/details?id=com.cruvo.app" target="_blank" rel="noopener noreferrer" id="playstore-download-btn" class="btn-cta-primary">
+              <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3.609 1.814L13.792 12 3.61 22.186a2.38 2.38 0 0 1-.61-.986V2.8a2.38 2.38 0 0 1 .61-.986zM15.207 13.414l2.586 2.586-12.012 6.864 9.426-9.45zm2.586-5.414l-2.586 2.586L5.781 1.136l12.012 6.864zm1.414 1.414l3.182 1.818a1.59 1.59 0 0 1 0 2.768l-3.182 1.818-2.121-2.122 2.121-2.282z"/>
+              </svg>
+              <div class="btn-label-group">
+                <span class="btn-micro-label">OFFICIAL STORE</span>
+                <span class="btn-main-label">Get on Google Play</span>
               </div>
             </a>
 
-            <button id="btn-show-qr" class="btn-secondary-hero" title="Scan QR Code to Download on Phone">
+            <!-- Secondary Action: Direct ZIP Archive -->
+            <a href="downloads/CRUVO.zip" download="CRUVO.zip" id="main-download-btn" class="btn-cta-secondary" title="Download direct APK ZIP package">
+              <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <div class="btn-label-group">
+                <span class="btn-micro-label">MANUAL PACKAGE</span>
+                <span class="btn-main-label">Direct ZIP</span>
+              </div>
+            </a>
+
+            <!-- QR Code Button -->
+            <button id="btn-show-qr" class="btn-cta-icon" title="Scan QR Code with Phone" aria-label="Scan QR code to install">
               <svg class="icon-qr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
                 <rect x="14" y="14" width="7" height="7"></rect>
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              <span>QR Code</span>
             </button>
           </div>
 
-          <div class="meta-specs-row">
-            <div class="meta-item">
-              <span class="meta-dot green"></span>
-              <span>Single APK (v3.0)</span>
+          <!-- Trust Badges Bar -->
+          <div class="trust-bar">
+            <div class="trust-item">
+              <span class="trust-dot green"></span>
+              <span>Verified by Play Protect</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-dot yellow"></span>
-              <span>Official Release</span>
+            <div class="trust-item">
+              <span class="trust-dot yellow"></span>
+              <span>v3.1.0 • Android 8.0+</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-dot blue"></span>
-              <span>100% Ad-Free</span>
+            <div class="trust-item">
+              <span class="trust-dot cyan"></span>
+              <span>100% Free & Ad-Free</span>
             </div>
           </div>
         </div>
 
-        <!-- Quick feature badges -->
-        <div class="hero-stats">
-          <div class="stat-pill">
-            <span class="stat-num">Live</span>
-            <span class="stat-lbl">GPS Radar</span>
+        <!-- Quick Stats Row -->
+        <div class="hero-stats-row">
+          <div class="stat-item">
+            <span class="stat-value">Live</span>
+            <span class="stat-caption">GPS Radar</span>
           </div>
-          <div class="stat-divider"></div>
-          <div class="stat-pill">
-            <span class="stat-num">100%</span>
-            <span class="stat-lbl">Free App</span>
+          <div class="stat-sep"></div>
+          <div class="stat-item">
+            <span class="stat-value">&lt;100ms</span>
+            <span class="stat-caption">WebSocket Sync</span>
           </div>
-          <div class="stat-divider"></div>
-          <div class="stat-pill">
-            <span class="stat-num">Zero</span>
-            <span class="stat-lbl">Ad Tracking</span>
+          <div class="stat-sep"></div>
+          <div class="stat-item">
+            <span class="stat-value">Zero</span>
+            <span class="stat-caption">Ad Trackers</span>
           </div>
         </div>
       </div>
 
-      <!-- Hero Phone Interactive Preview -->
+      <!-- Hero Phone Live Preview -->
       <div class="hero-preview-wrapper">
         <div class="phone-mockup-frame glass-card">
           <div class="phone-speaker"></div>
-          <div class="phone-camera"></div>
           
           <div class="phone-screen">
-            <!-- Simulated CRUVO App Interface -->
+            <!-- Top Status Bar -->
             <div class="app-topbar">
               <span class="app-time">09:41</span>
-              <div class="app-badges">
-                <span class="app-status-badge">ACTIVE RIDE</span>
+              <div class="app-status-badge">
+                <span class="pulse-dot"></span>
+                <span>ACTIVE RIDE</span>
               </div>
             </div>
 
+            <!-- Interactive Radar Map Simulation -->
             <div class="app-map-area">
               <div class="radar-pulse-center"></div>
               <div class="radar-ring ring-1"></div>
               <div class="radar-ring ring-2"></div>
               
-              <!-- Map Rider Markers -->
-              <div class="rider-marker marker-me" style="top: 52%; left: 48%;">
-                <div class="marker-halo"></div>
-                <div class="marker-dot me"></div>
+              <!-- Rider Pins -->
+              <div class="rider-marker marker-lead" style="top: 52%; left: 48%;">
+                <div class="marker-dot lead"></div>
                 <span class="marker-label">You (Lead)</span>
               </div>
 
-              <div class="rider-marker marker-squad-1" style="top: 38%; left: 62%;">
+              <div class="rider-marker marker-squad-1" style="top: 36%; left: 64%;">
                 <div class="marker-dot squad"></div>
                 <span class="marker-label">Kabir (0.2km)</span>
               </div>
 
-              <div class="rider-marker marker-squad-2" style="top: 66%; left: 34%;">
+              <div class="rider-marker marker-squad-2" style="top: 68%; left: 32%;">
                 <div class="marker-dot squad"></div>
                 <span class="marker-label">Alex (0.4km)</span>
               </div>
 
-              <div class="flag-marker" style="top: 25%; left: 45%;">
+              <!-- Flag Notification -->
+              <div class="flag-marker" style="top: 24%; left: 46%;">
                 <span class="flag-icon">⛽</span>
                 <span class="flag-badge">Fuel Stop (1.2 km)</span>
               </div>
             </div>
 
+            <!-- Bottom Telemetry Sheet -->
             <div class="app-bottom-sheet glass-card">
-              <div class="sheet-drag-handle"></div>
-              <div class="sheet-ride-title-row">
+              <div class="sheet-handle"></div>
+              <div class="sheet-header">
                 <div>
-                  <h4 class="sheet-ride-name">Lonavala Valley Ride</h4>
-                  <p class="sheet-ride-route">Mumbai → Tiger Point</p>
+                  <h4 class="sheet-ride-title">Lonavala Valley Ride</h4>
+                  <p class="sheet-route-name">Mumbai → Tiger Point</p>
                 </div>
-                <span class="speed-badge">84 <small>KM/H</small></span>
+                <div class="speed-pill">84 <small>KM/H</small></div>
               </div>
 
-              <div class="sheet-telemetry-grid">
-                <div class="telem-card">
+              <div class="sheet-metrics-row">
+                <div class="telem-box">
                   <span class="telem-val">4 / 4</span>
                   <span class="telem-lbl">RIDERS SYNCED</span>
                 </div>
-                <div class="telem-card">
+                <div class="telem-box">
                   <span class="telem-val">128 km</span>
                   <span class="telem-lbl">REMAINING</span>
                 </div>
@@ -208,83 +223,87 @@
       </div>
     </section>
 
-    <!-- Key Features Bento Grid -->
-    <section id="features" class="section-padding">
-      <div class="section-header text-center">
-        <span class="section-kicker">ENGINEERED FOR THE ROAD</span>
+    <!-- Features Bento Grid -->
+    <section id="features" class="section-container">
+      <div class="section-heading text-center">
+        <span class="section-kicker">ENGINEERED FOR THE OPEN ROAD</span>
         <h2 class="section-title">Built for Real Motorcycle Crews</h2>
-        <p class="section-desc">Designed with high-contrast glassmorphism for daylight readability and helmet-friendly touch controls.</p>
+        <p class="section-desc">High-contrast daylight interface designed for handlebar mounts and glove-friendly touch controls.</p>
       </div>
 
       <div class="bento-grid">
+        <!-- Feature 1 -->
         <div class="bento-card bento-wide glass-card">
-          <div class="bento-icon-box yellow">
-            <svg class="bento-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="bento-icon-halo yellow">
+            <svg class="bento-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
             </svg>
           </div>
           <h3 class="bento-title">Sub-Second Live GPS Radar</h3>
-          <p class="bento-text">Broadcast and receive your entire squad's exact coordinates, heading, and speed over persistent WebSocket telemetry. Spot stragglers instantly without taking your hands off the handlebars.</p>
-          <div class="bento-tag-row">
-            <span class="tech-tag">WebSocket 2.0</span>
-            <span class="tech-tag">Sub-100ms Ping</span>
-            <span class="tech-tag">Offline Buffering</span>
+          <p class="bento-text">Broadcast and receive your entire squad's exact coordinates, heading, and speed over persistent WebSocket telemetry. Spot stragglers instantly without glancing away from the road.</p>
+          <div class="bento-tags">
+            <span class="tag-pill">WebSocket 2.0</span>
+            <span class="tag-pill">Sub-100ms Telemetry</span>
+            <span class="tag-pill">Live Speed &amp; Heading</span>
           </div>
         </div>
 
+        <!-- Feature 2 -->
         <div class="bento-card glass-card">
-          <div class="bento-icon-box cyan">
-            <svg class="bento-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="bento-icon-halo red">
+            <svg class="bento-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
               <line x1="4" y1="22" x2="4" y2="15"></line>
             </svg>
           </div>
-          <h3 class="bento-title">One-Tap Hazard & Stop Flags</h3>
-          <p class="bento-text">Flag emergency pitstops for Fuel, Food, Break, Hazard, or Mechanical issues with one tap. Broadcasts immediate visual alerts to the squad.</p>
+          <h3 class="bento-title">One-Tap Pitstop Flags</h3>
+          <p class="bento-text">Flag emergency stops for Fuel, Food, Break, Hazard, or Mechanical issues with a single tap. Alerts every rider instantly.</p>
         </div>
 
+        <!-- Feature 3 -->
         <div class="bento-card glass-card">
-          <div class="bento-icon-box green">
-            <svg class="bento-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="bento-icon-halo green">
+            <svg class="bento-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
               <line x1="8" y1="2" x2="8" y2="18"></line>
               <line x1="16" y1="6" x2="16" y2="22"></line>
             </svg>
           </div>
-          <h3 class="bento-title">Route Sync & Dropped Pins</h3>
-          <p class="bento-text">Interactive pin-drop route planning powered by OpenStreetMap and TomTom with instant elevation and waypoint synchronization.</p>
+          <h3 class="bento-title">Interactive Route Sync</h3>
+          <p class="bento-text">Pin-drop route planning powered by OpenStreetMap and TomTom with instant elevation and waypoint synchronization.</p>
         </div>
 
+        <!-- Feature 4 -->
         <div class="bento-card bento-wide glass-card">
-          <div class="bento-icon-box red">
-            <svg class="bento-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="bento-icon-halo cyan">
+            <svg class="bento-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
           </div>
-          <h3 class="bento-title">Privacy-First & Secure Auth</h3>
-          <p class="bento-text">No ad tracking or third-party data brokers. Sign in with Google or email, with credentials safely protected inside your device's hardware keychain.</p>
-          <div class="bento-tag-row">
-            <span class="tech-tag">Google Login</span>
-            <span class="tech-tag">Encrypted Auth</span>
-            <span class="tech-tag">Zero Trackers</span>
+          <h3 class="bento-title">Hardware-Grade Privacy</h3>
+          <p class="bento-text">Zero third-party advertising or telemetry sale. Sign in with Google or email, with credentials securely managed in your device keychain.</p>
+          <div class="bento-tags">
+            <span class="tag-pill">Google Sign-In</span>
+            <span class="tag-pill">Keychain Encrypted</span>
+            <span class="tag-pill">DPDP &amp; GDPR Ready</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Visual Install Guide Section -->
-    <section id="install" class="section-padding install-section">
-      <div class="section-header text-center">
-        <span class="section-kicker">HOW TO INSTALL</span>
-        <h2 class="section-title">Get Riding in 3 Easy Steps</h2>
-        <p class="section-desc">Direct APK distribution gives you the latest, uncompressed production build instantly.</p>
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="section-container">
+      <div class="section-heading text-center">
+        <span class="section-kicker">QUICK SETUP</span>
+        <h2 class="section-title">Get Riding in 3 Steps</h2>
+        <p class="section-desc">Install in seconds and sync with your riding crew.</p>
       </div>
 
       <div class="steps-grid">
         <div class="step-card glass-card">
-          <div class="step-badge">STEP 01</div>
+          <span class="step-counter">01</span>
           <div class="step-icon-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -292,79 +311,69 @@
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
           </div>
-          <h4 class="step-title">Download CRUVO.zip</h4>
-          <p class="step-desc">Tap <a href="downloads/CRUVO.zip" download="CRUVO.zip" class="inline-link">Download</a> to save <code>CRUVO.zip</code>. Unzipping reveals the single <strong>CRUVO.apk</strong> file.</p>
+          <h3 class="step-title">Download</h3>
+          <p class="step-text">Get CRUVO from Google Play Store or download the direct ZIP package.</p>
         </div>
 
         <div class="step-card glass-card">
-          <div class="step-badge">STEP 02</div>
+          <span class="step-counter">02</span>
           <div class="step-icon-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <h4 class="step-title">Tap to Install</h4>
-          <p class="step-desc">Tap the APK in your Files/Downloads folder. If prompted, toggle <strong>"Allow from this source"</strong>.</p>
+          <h3 class="step-title">Install</h3>
+          <p class="step-text">Complete 1-tap install on your Android device (Android 8.0 or newer).</p>
         </div>
 
         <div class="step-card glass-card">
-          <div class="step-badge">STEP 03</div>
+          <span class="step-counter">03</span>
           <div class="step-icon-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
           </div>
-          <h4 class="step-title">Launch & Hit the Road</h4>
-          <p class="step-desc">Open CRUVO, log in with Google or email, create or join a group ride, and lead the pack.</p>
+          <h3 class="step-title">Ride</h3>
+          <p class="step-text">Sign in, create or join a group ride with a share link, and lead the pack.</p>
         </div>
-      </div>
-
-      <div class="download-cta-box glass-card text-center">
-        <h3>Ready to ride together?</h3>
-        <p>Get the latest production build instantly with no accounts needed to download.</p>
-        <a href="downloads/CRUVO.zip" download="CRUVO.zip" class="btn-primary-lg">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          <span>Download CRUVO v3.0.0 APK</span>
-        </a>
       </div>
     </section>
 
-    <!-- FAQ Accordion -->
-    <section id="faq" class="section-padding">
-      <div class="section-header text-center">
-        <span class="section-kicker">QUESTIONS & ANSWERS</span>
+    <!-- FAQ Section -->
+    <section id="faq" class="section-container">
+      <div class="section-heading text-center">
+        <span class="section-kicker">QUESTIONS &amp; ANSWERS</span>
         <h2 class="section-title">Frequently Asked Questions</h2>
       </div>
 
-      <div class="faq-accordion-wrap">
-        <div class="faq-item glass-card">
+      <div class="faq-container">
+        <div class="faq-item glass-card active">
           <button class="faq-question">
             <span>Is CRUVO free to download and use?</span>
-            <span class="faq-toggle-icon">+</span>
+            <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer">
-            <p>Yes! CRUVO is 100% free for individual riders, clubs, and touring enthusiasts with zero ads or subscriptions.</p>
+            <p>Yes! CRUVO is 100% free for riders, clubs, and touring enthusiasts with zero ads, subscriptions, or paywalls.</p>
           </div>
         </div>
 
         <div class="faq-item glass-card">
           <button class="faq-question">
             <span>What Android versions are supported?</span>
-            <span class="faq-toggle-icon">+</span>
+            <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer">
-            <p>CRUVO supports Android 8.0 (Oreo) and above across all ARM64 and Universal Android devices.</p>
+            <p>CRUVO supports Android 8.0 (Oreo) and above across all ARM64 and Universal Android smartphones.</p>
           </div>
         </div>
 
         <div class="faq-item glass-card">
           <button class="faq-question">
-            <span>How does CRUVO handle battery consumption during long rides?</span>
-            <span class="faq-toggle-icon">+</span>
+            <span>How does CRUVO preserve battery during long tours?</span>
+            <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer">
-            <p>CRUVO employs adaptive location intervals and hardware wake-lock throttling to ensure maximum battery efficiency on full-day tours.</p>
+            <p>CRUVO employs adaptive location intervals and background foreground services to ensure battery efficiency on full-day rides.</p>
           </div>
         </div>
       </div>
@@ -373,42 +382,24 @@
 
   <!-- Footer -->
   <footer class="footer-container">
-    <div class="footer-content glass-card">
-      <div class="footer-brand-row">
+    <div class="footer-card glass-card">
+      <div class="footer-top">
         <div class="brand-group">
           <img src="assets/CRUVO LOGO.jpg" alt="CRUVO Logo" class="brand-logo">
           <span class="brand-name">CRUVO</span>
         </div>
-        <p class="footer-tagline">Real-Time Group Motorcycle Touring & Fleet Radar</p>
+        <p class="footer-tagline">Real-Time Group Motorcycle Touring &amp; Squad Radar</p>
       </div>
 
-      <div class="footer-bottom-row">
+      <div class="footer-bottom">
         <span class="copyright">© 2026 Essenziat Digital. All rights reserved.</span>
+        
         <div class="footer-links">
-          <a href="https://www.linkedin.com/in/mohdram33z" target="_blank" rel="noopener noreferrer" class="footer-link social-link" title="LinkedIn">
-            <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
-              <rect x="2" y="9" width="4" height="12"></rect>
-              <circle cx="4" cy="4" r="2"></circle>
-            </svg>
-            <span>LinkedIn</span>
-          </a>
-          <a href="https://www.instagram.com/essenziat.digital/" target="_blank" rel="noopener noreferrer" class="footer-link social-link" title="Instagram">
-            <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-            </svg>
-            <span>Instagram</span>
-          </a>
-          <a href="https://github.com/mohdrameez-entrepreneur/" target="_blank" rel="noopener noreferrer" class="footer-link social-link" title="GitHub">
-            <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-            </svg>
-            <span>GitHub</span>
-          </a>
+          <a href="https://www.linkedin.com/in/mohdram33z" target="_blank" rel="noopener noreferrer" class="footer-link">LinkedIn</a>
+          <a href="https://www.instagram.com/essenziat.digital/" target="_blank" rel="noopener noreferrer" class="footer-link">Instagram</a>
+          <a href="https://github.com/mohdrameez-entrepreneur/" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a>
           <a href="privacy.html" class="footer-link">Privacy Policy</a>
-          <a href="terms.html" class="footer-link">Terms of Service</a>
+          <a href="terms.html" class="footer-link">Terms</a>
           <a href="mailto:cruvobs@gmail.com" class="footer-link">Support</a>
         </div>
       </div>
@@ -419,14 +410,20 @@
   <div id="qr-modal" class="modal-overlay">
     <div class="modal-card glass-card">
       <div class="modal-header">
-        <h3 class="modal-title">Scan to Download</h3>
-        <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+        <h3 class="modal-title">Scan to Install CRUVO</h3>
+        <button id="btn-close-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
       </div>
-      <div class="modal-body text-center">
+
+      <div class="qr-tab-row">
+        <button id="tab-qr-play" class="qr-tab active">Google Play</button>
+        <button id="tab-qr-zip" class="qr-tab">Direct ZIP</button>
+      </div>
+
+      <div class="modal-body">
         <div class="qr-canvas-box">
           <canvas id="qr-canvas"></canvas>
         </div>
-        <p class="modal-instructions">Scan with your phone's camera to download <strong>CRUVO v3.apk</strong> directly.</p>
+        <p id="qr-instructions" class="modal-instructions">Scan with your phone to open <strong>CRUVO on Google Play Store</strong>.</p>
         <div class="copy-link-row">
           <input type="text" id="share-link-input" readonly value="" class="share-input">
           <button id="btn-copy-link" class="btn-copy">Copy</button>
@@ -435,7 +432,7 @@
     </div>
   </div>
 
-  <!-- Vanilla JS QR Code & Interactivity -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="js/app.js"></script>
 </body>

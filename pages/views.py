@@ -96,3 +96,28 @@ def flag_stop(request):
 @login_required
 def ride_summary(request):
     return render(request, 'pages/ride_summary.html')
+
+
+def privacy_policy_view(request):
+    from django.http import HttpResponse
+    from django.conf import settings
+    import os
+
+    privacy_file = os.path.join(settings.BASE_DIR, 'cruvo-web', 'privacy.html')
+    if os.path.exists(privacy_file):
+        with open(privacy_file, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='text/html; charset=utf-8')
+    return HttpResponse("<h1>CRUVO Privacy Policy</h1><p>DPDP Act 2023 & GDPR Compliant.</p>", content_type='text/html; charset=utf-8')
+
+
+def terms_view(request):
+    from django.http import HttpResponse
+    from django.conf import settings
+    import os
+
+    terms_file = os.path.join(settings.BASE_DIR, 'cruvo-web', 'terms.html')
+    if os.path.exists(terms_file):
+        with open(terms_file, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='text/html; charset=utf-8')
+    return HttpResponse("<h1>CRUVO Terms of Service</h1>", content_type='text/html; charset=utf-8')
+
