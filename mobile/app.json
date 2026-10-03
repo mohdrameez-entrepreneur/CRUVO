@@ -6,7 +6,7 @@
       "cruvo",
       "com.googleusercontent.apps.226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj"
     ],
-    "version": "3.1.0",
+    "version": "3.1.2",
     "orientation": "portrait",
     "icon": "./assets/CRUVO LOGO.jpg",
     "userInterfaceStyle": "dark",
@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cruvo.app",
-      "buildNumber": "3.1.0",
+      "buildNumber": "3.1.2",
       "config": {
         "googleMapsApiKey": ""
       },
@@ -34,7 +34,7 @@
         "backgroundColor": "#121317"
       },
       "package": "com.cruvo.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "config": {
         "googleMaps": {
           "apiKey": ""

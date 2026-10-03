@@ -1,4 +1,4 @@
-// CRUVO Static Web Client Logic (v3.1.0)
+// CRUVO Static Web Client Logic (v3.1.2)
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Download URLs
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentQrTarget === 'play') {
         qrInstructions.innerHTML = 'Scan with your phone to open <strong>CRUVO on Google Play Store</strong>.';
       } else {
-        qrInstructions.innerHTML = 'Scan with your phone to directly download <strong>CRUVO.zip (v3.1.0)</strong>.';
+        qrInstructions.innerHTML = 'Scan with your phone to directly download <strong>CRUVO.zip (v3.1.2)</strong>.';
       }
     }
 

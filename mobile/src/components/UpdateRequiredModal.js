@@ -48,7 +48,7 @@ const DEFAULT_WHATS_NEW = [
 export default function UpdateRequiredModal({
   visible,
   currentVersion = '3.0.0',
-  latestVersion = '3.1.0',
+  latestVersion = '3.1.2',
   requiredVersion = '3.0.0',
   whatsNew = DEFAULT_WHATS_NEW,
   playStoreUrl = 'market://details?id=com.cruvo.app',

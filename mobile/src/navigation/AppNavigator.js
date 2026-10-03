@@ -108,7 +108,7 @@ export default function AppNavigator() {
       <UpdateRequiredModal
         visible
         currentVersion={CURRENT_APP_VERSION}
-        latestVersion={updateRequiredData.latest_version || '3.1.0'}
+        latestVersion={updateRequiredData.latest_version || '3.1.2'}
         requiredVersion={updateRequiredData.min_required_version || '3.0.0'}
         whatsNew={updateRequiredData.whats_new}
         playStoreUrl={updateRequiredData.play_store_url}
@@ -173,7 +173,7 @@ export default function AppNavigator() {
       <UpdateRequiredModal
         visible={!!updateRequiredData && !updateRequiredData.isMandatory}
         currentVersion={CURRENT_APP_VERSION}
-        latestVersion={updateRequiredData?.latest_version || '3.1.0'}
+        latestVersion={updateRequiredData?.latest_version || '3.1.2'}
         requiredVersion={updateRequiredData?.min_required_version || '3.0.0'}
         whatsNew={updateRequiredData?.whats_new}
         playStoreUrl={updateRequiredData?.play_store_url}

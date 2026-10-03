@@ -6,4 +6,4 @@ export const WS_BASE = process.env.EXPO_PUBLIC_WS_URL || 'wss://cruvo.onrender.c
 
 export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://gskjxtxmdidxyzavamby.supabase.co';
 
-export const CURRENT_APP_VERSION = '3.1.0';
+export const CURRENT_APP_VERSION = '3.1.2';

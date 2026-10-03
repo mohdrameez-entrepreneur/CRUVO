@@ -49,7 +49,7 @@ const DEFAULT_WHATS_NEW = [
 
 export default function WhatsNewModal({
   visible,
-  version = '3.1.0',
+  version = '3.1.2',
   whatsNewList = DEFAULT_WHATS_NEW,
   onClose,
 }) {

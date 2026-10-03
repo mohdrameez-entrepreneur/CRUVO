@@ -1014,49 +1014,44 @@ def list_friend_requests_view(request):
 @permission_classes([permissions.AllowAny])
 def app_version_view(request):
     return Response({
-        'latest_version': '3.1.0',
+        'latest_version': '3.1.2',
         'min_required_version': '3.0.0',
         'play_store_url': 'market://details?id=com.cruvo.app',
         'web_store_url': 'https://play.google.com/store/apps/details?id=com.cruvo.app',
         'download_url': 'https://play.google.com/store/apps/details?id=com.cruvo.app',
         'website_url': 'https://cruvo-web.onrender.com',
-        'release_date': '2026-09-08',
+        'release_date': '2026-10-03',
         'whats_new': [
             {
-                'title': 'Psychological Telemetry Loading Engine',
-                'description': 'Dynamic multi-stage telemetry warm-up and perceived-progress feedback during server spin-ups.',
+                'title': 'Smart Debounced Destination Autocomplete',
+                'description': 'Multi-provider real-time search suggestions with rapid debounced geocoding for effortless route creation.',
+                'icon': 'search-outline'
+            },
+            {
+                'title': 'Universal Location Consent Modal',
+                'description': 'Redesigned scrollable location disclosure with pinned action buttons and persistent permission state.',
+                'icon': 'shield-checkmark-outline'
+            },
+            {
+                'title': 'Optimized Squad Telemetry Engine',
+                'description': 'Enhanced background GPS broadcast and battery conservation during extended group rides.',
                 'icon': 'flash-outline'
             },
             {
                 'title': 'High-Precision 40m Arrival Geofence',
-                'description': 'Fixed premature ride auto-completion by narrowing geofence to 40m with lead rider arrival prompt.',
+                'description': 'Accurate arrival detection and waypoint prompts for lead and squad riders.',
                 'icon': 'navigate-circle-outline'
             },
             {
-                'title': 'Android Foreground Service & Sticky Notification',
-                'description': 'Persistent live ride notification that protects background GPS telemetry from aggressive OS battery killers.',
-                'icon': 'notifications-outline'
-            },
-            {
                 'title': 'DPDP Act 2023 & GDPR Privacy Suite',
-                'description': 'One-tap in-app controls to purge location history, review stored data summaries, or delete your entire account.',
-                'icon': 'shield-checkmark-outline'
-            },
-            {
-                'title': 'Automated Stale Telemetry Purging',
-                'description': 'Server automatically wipes raw location breadcrumbs upon ride completion to guarantee rider privacy.',
-                'icon': 'trash-outline'
-            },
-            {
-                'title': 'Google Play Prominent Location Disclosure',
-                'description': 'Explicit, transparent privacy consent modal detailing why background GPS is required for squad tracking.',
-                'icon': 'map-outline'
+                'description': 'Full rider controls to purge ride history, manage telemetry consent, or export profile summaries.',
+                'icon': 'lock-closed-outline'
             }
         ],
         'update_steps': [
             'Tap "UPDATE ON GOOGLE PLAY" below to open the official Google Play Store page.',
-            'Tap "Update" on the Google Play Store to install the latest CRUVO release.',
-            'Open CRUVO v3.1.0 to experience our high-precision ride tracking and new privacy controls!'
+            'Tap "Update" on Google Play to install CRUVO v3.1.2.',
+            'Open CRUVO v3.1.2 to enjoy our latest stable squad navigation and real-time telemetry!'
         ]
     })
 

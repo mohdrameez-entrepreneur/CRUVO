@@ -387,7 +387,7 @@ export default function SettingsScreen({ navigation }) {
       <UpdateRequiredModal
         visible={!!updateModalData}
         currentVersion={CURRENT_APP_VERSION}
-        latestVersion={updateModalData?.latest_version || '3.1.0'}
+        latestVersion={updateModalData?.latest_version || '3.1.2'}
         requiredVersion={updateModalData?.min_required_version || '3.0.0'}
         whatsNew={updateModalData?.whats_new}
         playStoreUrl={updateModalData?.play_store_url}
