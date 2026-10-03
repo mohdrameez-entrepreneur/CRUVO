@@ -34,7 +34,7 @@
         "backgroundColor": "#121317"
       },
       "package": "com.cruvo.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "config": {
         "googleMaps": {
           "apiKey": ""
