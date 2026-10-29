@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
+import { showError, showSuccess, showWarning } from '../utils/alert';
 import { useAuth } from '../context/AuthContext';
 import { profileAPI } from '../api';
 import NavBar from '../components/NavBar';
@@ -86,7 +87,7 @@ export default function ProfileEditScreen({ navigation }) {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permission needed', 'Allow photo library access to change your avatar.');
+        showWarning('Allow photo library access to change your avatar.', 'Permission needed');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -108,15 +109,15 @@ export default function ProfileEditScreen({ navigation }) {
       setUploadingAvatar(true);
       await profileAPI.uploadAvatar(formData);
       await refreshProfile();
-      Alert.alert('Success', 'Avatar updated');
+      showSuccess('Avatar updated');
     } catch (err) {
       console.log('AVATAR UPLOAD ERROR:', err.message, err.response?.data);
       const msg = err.response?.data;
       if (msg && typeof msg === 'object') {
         const firstError = Object.values(msg)[0];
-        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : String(firstError));
+        showError(Array.isArray(firstError) ? firstError[0] : String(firstError));
       } else {
-        Alert.alert('Error', 'Failed to upload avatar');
+        showError('Failed to upload avatar');
       }
     } finally {
       setUploadingAvatar(false);
@@ -139,11 +140,11 @@ export default function ProfileEditScreen({ navigation }) {
   const handleAccountSubmit = async () => {
     if (!modal) return;
     if (!modalValue.trim()) {
-      Alert.alert('Error', modal === 'username' ? 'Username is required' : 'Email is required');
+      showError(modal === 'username' ? 'Username is required' : 'Email is required');
       return;
     }
     if (!modalPassword) {
-      Alert.alert('Error', 'Please enter your password to confirm');
+      showError('Please enter your password to confirm');
       return;
     }
     setModalLoading(true);
@@ -155,7 +156,7 @@ export default function ProfileEditScreen({ navigation }) {
       }
       await refreshProfile();
       setModal(null);
-      Alert.alert('Success', `${modal === 'username' ? 'Username' : 'Email'} updated successfully`);
+      showSuccess(`${modal === 'username' ? 'Username' : 'Email'} updated successfully`);
     } catch (err) {
       console.log('ACCOUNT CHANGE ERROR:', err.message, err.response?.data);
       const msg = err.response?.data;
@@ -164,7 +165,7 @@ export default function ProfileEditScreen({ navigation }) {
         const firstError = Object.values(msg)[0];
         message = Array.isArray(firstError) ? firstError[0] : String(firstError);
       }
-      Alert.alert('Error', message);
+      showError(message);
     } finally {
       setModalLoading(false);
     }
@@ -172,7 +173,7 @@ export default function ProfileEditScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!form.display_name) {
-      Alert.alert('Error', 'Display name is required');
+      showError('Display name is required');
       return;
     }
     setLoading(true);
@@ -194,9 +195,9 @@ export default function ProfileEditScreen({ navigation }) {
       const msg = err.response?.data;
       if (msg && typeof msg === 'object') {
         const firstError = Object.values(msg)[0];
-        Alert.alert('Error', Array.isArray(firstError) ? firstError[0] : String(firstError));
+        showError(Array.isArray(firstError) ? firstError[0] : String(firstError));
       } else {
-        Alert.alert('Error', 'Failed to update profile');
+        showError('Failed to update profile');
       }
     } finally {
       setLoading(false);
@@ -297,8 +298,8 @@ export default function ProfileEditScreen({ navigation }) {
               </View>
             )}
             <View style={styles.avatarOverlay}>
-              <Ionicons name={uploadingAvatar ? undefined : 'camera'} size={14} color={colors.black} />
-              {uploadingAvatar && <ActivityIndicator size="small" color={colors.black} />}
+              <Ionicons name={uploadingAvatar ? undefined : 'camera'} size={14} color={colors.onPrimaryContainer} />
+              {uploadingAvatar && <ActivityIndicator size="small" color={colors.onPrimaryContainer} />}
             </View>
           </TouchableOpacity>
           <Text style={styles.avatarHint}>{uploadingAvatar ? 'UPLOADING...' : 'TAP TO CHANGE PHOTO'}</Text>
@@ -450,8 +451,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.outlineVariant,
   },
   topBarButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { ...typography.headlineLgMobile, color: colors.primaryContainer, fontSize: 20, textTransform: 'uppercase', letterSpacing: -0.5 },
-  saveText: { ...typography.labelTechnical, color: colors.primaryContainer },
+  topBarTitle: { ...typography.headlineLgMobile, color: colors.primary, fontSize: 20, textTransform: 'uppercase', letterSpacing: -0.5 },
+  saveText: { ...typography.labelTechnical, color: '#B45309' },
   content: { flex: 1 },
   contentContainer: { padding: spacing.marginMobile, paddingBottom: 100 },
   avatarSection: { alignItems: 'center', marginBottom: spacing.stackLg },
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
     width: 26, height: 26, borderRadius: 13,
     backgroundColor: colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: colors.background,
+    borderWidth: 2, borderColor: colors.surface,
   },
   avatarHint: { ...typography.labelSm, color: colors.onSurfaceVariant, marginTop: spacing.stackMd, letterSpacing: 1 },
   sectionHeader: {
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: spacing.stackMd },
   label: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceContainerLowest,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
     minHeight: spacing.touchTargetMin, paddingHorizontal: spacing.stackMd, gap: spacing.stackSm,
   },
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
     borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surfaceDim,
   },
   chipActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer },
   chipText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 12 },
@@ -498,6 +499,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.stackMd,
     paddingVertical: 6,
     borderRadius: borderRadius.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   saveBtnText: {
     ...typography.labelTechnical,
@@ -507,13 +513,18 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(10, 25, 47, 0.55)',
     justifyContent: 'center', alignItems: 'center',
   },
   modalCard: {
-    width: '88%', backgroundColor: colors.surfaceContainerLowest,
+    width: '88%', backgroundColor: colors.surface,
     borderRadius: borderRadius.xl, padding: spacing.stackMd,
-    borderWidth: 1, borderColor: colors.outlineVariant,
+    borderWidth: 1, borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
   },
   modalTitle: { ...typography.titleMd, color: colors.onSurface, textAlign: 'center', marginBottom: spacing.stackSm, textTransform: 'uppercase' },
   modalSubtitle: { ...typography.bodyMd, color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.stackMd },
@@ -525,12 +536,17 @@ const styles = StyleSheet.create({
   modalCancelButton: {
     flex: 1, height: spacing.touchTargetMin,
     borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.outlineVariant,
-    justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceContainerLow,
+    justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceDim,
   },
   modalConfirmButton: {
     flex: 1, height: spacing.touchTargetMin,
     borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
     backgroundColor: colors.primaryContainer,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   modalCancelText: { ...typography.labelTechnical, color: colors.onSurfaceVariant },
   modalConfirmText: { ...typography.labelTechnical, color: colors.onPrimaryContainer },
@@ -547,7 +563,7 @@ const styles = StyleSheet.create({
   },
   privacySegmentRow: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.surfaceDim,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
@@ -565,9 +581,9 @@ const styles = StyleSheet.create({
   },
   privacySegmentActive: {
     backgroundColor: colors.primaryContainer,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 2,
   },

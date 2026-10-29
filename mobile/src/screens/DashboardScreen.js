@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { ridesAPI, friendsAPI } from '../api';
@@ -100,10 +101,14 @@ export default function DashboardScreen({ navigation }) {
 
   const loadRides = async () => {
     try {
-      const res = await ridesAPI.list();
+      const res = await ridesAPI.list({ exclude_status: 'COMPLETED,CANCELLED' });
       setRides(res.data);
     } catch {}
   };
+
+  const upcomingRides = useMemo(() => {
+    return (rides || []).filter(ride => ride.status !== 'COMPLETED' && ride.status !== 'CANCELLED');
+  }, [rides]);
 
   const loadFriendNotifications = async () => {
     try {
@@ -134,7 +139,12 @@ export default function DashboardScreen({ navigation }) {
   useEffect(() => {
     loadRides();
     loadFriendNotifications();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadRides();
+      loadFriendNotifications();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleJoinRide = async (rideId) => {
     try {
@@ -242,9 +252,21 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {rides.length > 0 ? (
-            rides.map(ride => (
-              <TouchableOpacity key={ride.id} onPress={() => {
+          {upcomingRides.length > 0 ? (
+            upcomingRides.map(ride => (
+              <TouchableOpacity key={ride.id} onPress={async () => {
+                if (ride.status === 'COMPLETED' || ride.status === 'CANCELLED') {
+                  navigation.navigate('RideSummary', { rideId: ride.id });
+                  return;
+                }
+                try {
+                  const localStatus = await AsyncStorage.getItem(`@cruvo_ride_status_${ride.id}`);
+                  if (localStatus === 'COMPLETED') {
+                    navigation.navigate('RideSummary', { rideId: ride.id });
+                    return;
+                  }
+                } catch {}
+
                 if (ride.status === 'ACTIVE') {
                   navigation.navigate('ActiveRide', { rideId: ride.id });
                 } else {
@@ -277,11 +299,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.outlineVariant,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   content: { flex: 1 },
   contentContainer: { padding: spacing.marginMobile, paddingBottom: moderateScale(100) },
@@ -299,34 +326,36 @@ const styles = StyleSheet.create({
   primaryCta: {
     backgroundColor: colors.primaryContainer, padding: spacing.stackLg, borderRadius: borderRadius.xl,
     borderWidth: 1, borderColor: colors.outlineVariant, gap: spacing.stackMd,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 4,
   },
-  ctaIconContainer: { width: scale(48), height: scale(48), borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center' },
+  ctaIconContainer: { width: scale(48), height: scale(48), borderRadius: 24, backgroundColor: 'rgba(10, 25, 47, 0.12)', justifyContent: 'center', alignItems: 'center' },
   ctaTitle: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase', letterSpacing: 1 },
   ctaSubtitle: { ...typography.bodyMd, color: colors.onPrimaryContainer, opacity: 0.8 },
   secondaryCta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: moderateScale(64),
-    borderWidth: 2, borderColor: colors.outlineVariant, borderRadius: borderRadius.xl, gap: spacing.stackSm,
+    borderWidth: 1.5, borderColor: colors.outlineVariant, borderRadius: borderRadius.xl, gap: spacing.stackSm,
+    backgroundColor: colors.surface, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
-  ctaSecondaryText: { ...typography.labelTechnical, color: colors.onSurface },
+  ctaSecondaryText: { ...typography.labelTechnical, color: colors.onSurface, fontWeight: '700' },
   ridesSection: { gap: spacing.stackMd },
   ridesSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { ...typography.titleMd, color: colors.onSurface },
-  viewAll: { ...typography.labelTechnical, color: colors.primaryContainer },
+  viewAll: { ...typography.labelTechnical, color: '#B45309', fontWeight: '700' },
   rideCard: {
-    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackMd, gap: spacing.stackMd, overflow: 'hidden',
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
   },
   rideCardGrid: { ...StyleSheet.absoluteFillObject, opacity: 0.03, backgroundColor: colors.outline },
   rideCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 },
   rideCardInfo: { gap: moderateScale(2) },
-  rideCardTime: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: moderateScale(12) },
+  rideCardTime: { ...typography.labelTechnical, color: '#B45309', fontSize: moderateScale(12), fontWeight: '600' },
   rideCardName: { ...typography.titleMd, color: colors.onSurface },
   rideStatusBadge: {
-    backgroundColor: 'rgba(255,214,0,0.15)', paddingHorizontal: moderateScale(8), paddingVertical: moderateScale(4),
-    borderRadius: borderRadius.sm, borderWidth: 1, borderColor: 'rgba(255,214,0,0.3)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)', paddingHorizontal: moderateScale(8), paddingVertical: moderateScale(4),
+    borderRadius: borderRadius.sm, borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)',
   },
-  rideStatusText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: moderateScale(10) },
+  rideStatusText: { ...typography.labelTechnical, color: '#B45309', fontSize: moderateScale(10), fontWeight: '600' },
   rideCardDetails: { gap: spacing.stackSm, zIndex: 1 },
   rideDetailRow: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(4) },
   rideDetailText: { ...typography.bodyMd, color: colors.onSurfaceVariant },
@@ -354,29 +383,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
   },
   publicBadgeText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(9),
-    fontWeight: '800',
+    fontWeight: '600',
   },
   privateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.surfaceDim,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.outlineVariant,
   },
   privateBadgeText: {
     ...typography.labelTechnical,
@@ -398,7 +427,7 @@ const styles = StyleSheet.create({
     ...typography.labelTechnical,
     color: colors.onPrimaryContainer,
     fontSize: moderateScale(11),
-    fontWeight: '800',
+    fontWeight: '600',
   },
   emptyState: {
     borderWidth: 1, borderColor: colors.outlineVariant, borderStyle: 'dashed', borderRadius: borderRadius.xl,
@@ -414,13 +443,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.35)',
+    borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.stackMd,
     paddingVertical: 10,
     marginBottom: spacing.stackMd,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   friendNotificationLeft: {
     flex: 1,
@@ -434,21 +468,21 @@ const styles = StyleSheet.create({
     ...typography.bodyMd,
     color: colors.onSurface,
     fontSize: moderateScale(13),
-    fontWeight: '600',
+    fontWeight: '500',
   },
   friendNotificationAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: 'rgba(255, 214, 0, 0.2)',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
   },
   friendNotificationActionText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: colors.onSurface,
     fontSize: moderateScale(10),
-    fontWeight: '800',
+    fontWeight: '600',
   },
 });

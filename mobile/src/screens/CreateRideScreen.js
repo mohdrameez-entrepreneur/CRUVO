@@ -27,6 +27,7 @@ import AlertCard from '../components/AlertCard';
 import GlassModal from '../components/GlassModal';
 import CreateRideMap from '../components/CreateRideMap';
 import { searchPlaces as fetchLocationSuggestions, reverseGeocode } from '../services/locationService';
+import { showError, showWarning } from '../utils/alert';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAP_BASE_HEIGHT = SCREEN_HEIGHT * 0.42;
@@ -298,7 +299,7 @@ export default function CreateRideScreen({ navigation }) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to use current location');
+        showError('Location permission is required to use current location', 'Permission Denied');
         setLocatingUser(false);
         return;
       }
@@ -338,7 +339,7 @@ export default function CreateRideScreen({ navigation }) {
       }
     } catch (err) {
       console.log('[CreateRide] Location error:', err?.message);
-      Alert.alert('Location Notice', 'Could not get high-accuracy position. Make sure GPS is enabled on your phone.');
+      showWarning('Could not get high-accuracy position. Make sure GPS is enabled on your phone.', 'Location Notice');
     } finally {
       setLocatingUser(false);
     }
@@ -467,7 +468,7 @@ export default function CreateRideScreen({ navigation }) {
             <Ionicons
               name={isMinimized ? "options" : "map"}
               size={18}
-              color={isMinimized ? colors.onPrimaryContainer : colors.primaryContainer}
+              color={isMinimized ? colors.onPrimaryContainer : '#B45309'}
             />
           </TouchableOpacity>
         </View>
@@ -912,15 +913,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(20, 21, 26, 0.88)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: colors.glassBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
     elevation: 4,
   },
   glassCircleBtnActive: {
@@ -929,7 +930,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     ...typography.displayLg,
-    color: colors.primaryContainer,
+    color: colors.primary,
     fontSize: 20,
     letterSpacing: -0.5,
     textTransform: 'uppercase',
@@ -950,42 +951,42 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 13,
     borderRadius: 20,
-    backgroundColor: 'rgba(24, 25, 30, 0.9)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: colors.black,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   pinChipOriginActive: {
-    backgroundColor: 'rgba(76, 175, 80, 0.22)',
-    borderColor: '#4CAF50',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: '#10B981',
   },
   pinChipDestActive: {
-    backgroundColor: 'rgba(255, 214, 0, 0.22)',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     borderColor: colors.primaryContainer,
   },
   dotIndicator: { width: 8, height: 8, borderRadius: 4 },
   pinChipText: { ...typography.labelSm, color: colors.onSurfaceVariant, fontSize: 11, fontWeight: '700' },
-  pinChipTextActive: { color: '#81C784' },
-  pinChipTextActiveDest: { color: colors.primaryContainer },
+  pinChipTextActive: { color: '#15803D' },
+  pinChipTextActiveDest: { color: '#B45309' },
   locateBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(24, 25, 30, 0.9)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: colors.glassBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 'auto',
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   mapHintBadge: {
     position: 'absolute',
@@ -993,15 +994,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(18, 19, 23, 0.88)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
     zIndex: 8,
   },
-  mapHintText: { ...typography.labelSm, color: colors.onSurface, fontSize: 11 },
+  mapHintText: { ...typography.labelSm, color: colors.onSurface, fontSize: 11, fontWeight: '600' },
 
   // SLIDING SHEET STYLES
   slidingSheet: {
@@ -1009,17 +1015,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 19, 23, 0.95)',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: colors.glassBorder,
     borderBottomWidth: 0,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.65,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
     shadowRadius: 16,
-    elevation: 12,
+    elevation: 10,
     zIndex: 20,
   },
   dragHeaderArea: {
@@ -1034,7 +1040,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: colors.outlineVariant,
     marginBottom: 6,
   },
   dragHintRow: {
@@ -1055,14 +1061,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(28, 29, 35, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.25)',
+    borderColor: colors.glassBorder,
     borderRadius: borderRadius.xl,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginTop: 4,
     gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   minimizedPinsRow: {
     flex: 1,
@@ -1075,7 +1086,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(18, 19, 23, 0.7)',
+    backgroundColor: colors.surfaceDim,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1091,16 +1102,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: colors.primaryContainer + '25',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.primaryContainer + '50',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   expandPillText: {
     ...typography.labelSm,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -1108,17 +1119,17 @@ const styles = StyleSheet.create({
   scrollArea: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.marginMobile, paddingTop: 6 },
   routeGlassCard: {
-    backgroundColor: 'rgba(26, 27, 31, 0.85)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl,
     padding: spacing.stackMd,
     marginBottom: spacing.stackMd,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
   },
   locationRow: { flexDirection: 'row', alignItems: 'flex-start' },
   pinIconCol: { width: 24, alignItems: 'center', paddingTop: 8 },
@@ -1152,17 +1163,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   dropdown: {
-    backgroundColor: 'rgba(18, 19, 23, 0.98)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: colors.outlineVariant,
     borderRadius: borderRadius.md,
     marginTop: 4,
     maxHeight: 220,
     overflow: 'hidden',
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
   },
   dropdownItem: {
@@ -1171,7 +1182,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: colors.outlineVariant,
     gap: 10,
   },
   dropdownTextWrap: {
@@ -1194,9 +1205,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 27, 31, 0.85)',
+    backgroundColor: colors.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
     height: spacing.touchTargetMin,
     paddingHorizontal: spacing.stackMd,
@@ -1207,9 +1218,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 27, 31, 0.85)',
+    backgroundColor: colors.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
     padding: spacing.stackMd,
     marginBottom: spacing.stackMd,
@@ -1227,7 +1238,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.stackSm,
-    backgroundColor: 'rgba(26, 27, 31, 0.85)',
+    backgroundColor: colors.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: colors.primaryContainer,
     borderRadius: borderRadius.lg,
@@ -1235,8 +1246,9 @@ const styles = StyleSheet.create({
   },
   pickerButtonText: {
     ...typography.titleMd,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: 14,
+    fontWeight: '700',
   },
   primaryButton: {
     flexDirection: 'row',
@@ -1246,11 +1258,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryContainer,
     height: 56,
     borderRadius: borderRadius.lg,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 0,
-    elevation: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
     marginTop: spacing.stackSm,
   },
   disabled: { opacity: 0.6 },

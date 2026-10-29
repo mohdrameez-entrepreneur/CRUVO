@@ -48,7 +48,7 @@ const DEFAULT_WHATS_NEW = [
 export default function UpdateRequiredModal({
   visible,
   currentVersion = '3.0.0',
-  latestVersion = '3.1.2',
+  latestVersion = '3.2',
   requiredVersion = '3.0.0',
   whatsNew = DEFAULT_WHATS_NEW,
   playStoreUrl = 'market://details?id=com.cruvo.app',
@@ -134,7 +134,7 @@ export default function UpdateRequiredModal({
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.playStoreBtn} onPress={handleOpenPlayStore} activeOpacity={0.85}>
-              <Ionicons name="logo-google-playstore" size={20} color={colors.black} />
+              <Ionicons name="logo-google-playstore" size={20} color={colors.onPrimaryContainer} />
               <Text style={styles.playStoreBtnText}>UPDATE ON GOOGLE PLAY</Text>
             </TouchableOpacity>
 
@@ -158,25 +158,25 @@ export default function UpdateRequiredModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+    backgroundColor: 'rgba(10, 25, 47, 0.55)',
     justifyContent: 'center',
     padding: spacing.marginMobile,
   },
   card: {
     maxHeight: '88%',
-    backgroundColor: '#14161b',
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(10, 25, 47, 0.08)',
     padding: spacing.marginMobile,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
   },
   cardMandatory: {
-    borderColor: 'rgba(255, 82, 82, 0.45)',
+    borderColor: 'rgba(239, 68, 68, 0.45)',
   },
   header: {
     marginBottom: 8,
@@ -193,12 +193,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   badgeRecommended: {
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
-    borderColor: 'rgba(255, 214, 0, 0.35)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
   },
   badgeMandatory: {
-    backgroundColor: 'rgba(255, 82, 82, 0.15)',
-    borderColor: 'rgba(255, 82, 82, 0.4)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
   },
   badgeText: {
     ...typography.labelTechnical,
@@ -207,16 +207,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   badgeTextRecommended: {
-    color: colors.primaryContainer,
+    color: '#B45309',
   },
   badgeTextMandatory: {
-    color: '#ff5252',
+    color: '#DC2626',
   },
   title: {
     ...typography.headlineLgMobile,
-    color: colors.onSurface,
+    color: colors.primary,
     fontSize: moderateScale(19),
-    fontWeight: '900',
+    fontWeight: '800',
   },
   subtitle: {
     ...typography.bodyMd,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   whatsNewTitle: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: colors.primary,
     fontSize: moderateScale(10.5),
     fontWeight: '800',
     letterSpacing: 0.6,
@@ -242,10 +242,10 @@ const styles = StyleSheet.create({
   featuresScroll: {
     maxHeight: 250,
     marginVertical: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.025)',
+    backgroundColor: colors.surfaceDim,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: colors.outlineVariant,
     padding: 10,
   },
   featureItem: {
@@ -258,9 +258,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.25)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   featureItemDesc: {
     ...typography.bodyMd,
-    color: colors.outline,
+    color: colors.onSurfaceVariant,
     fontSize: moderateScale(10.5),
     lineHeight: 14,
     marginTop: 1,
@@ -292,16 +292,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryContainer,
     height: 48,
     borderRadius: borderRadius.md,
-    shadowColor: colors.primaryContainer,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 3,
   },
   playStoreBtnText: {
     ...typography.labelSm,
-    color: colors.black,
-    fontWeight: '900',
+    color: colors.onPrimaryContainer,
+    fontWeight: '800',
     fontSize: moderateScale(12.5),
     letterSpacing: 0.4,
   },
@@ -310,11 +310,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.surfaceDim,
     height: 40,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.outlineVariant,
   },
   secondaryBtnText: {
     ...typography.labelSm,

@@ -20,7 +20,7 @@ function buildCreateMapHtml({ initialCenter, initialZoom, activePinMode, origin,
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
-  html, body, #map { width:100%; height:100%; background:#121317; overflow:hidden; }
+  html, body, #map { width:100%; height:100%; background:#F8F9FA; overflow:hidden; }
   .maplibregl-ctrl-attrib { display:none !important; }
   .maplibregl-ctrl-group { box-shadow: none !important; }
   
@@ -31,15 +31,15 @@ function buildCreateMapHtml({ initialCenter, initialZoom, activePinMode, origin,
   }
 
   @keyframes pulse-ring {
-    0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6); }
-    70% { box-shadow: 0 0 0 12px rgba(76, 175, 80, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+    70% { box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
   }
 
   @keyframes pulse-dest {
-    0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.7); }
-    70% { box-shadow: 0 0 0 12px rgba(255, 214, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75); }
+    70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
   }
 
   .pin-marker {
@@ -60,20 +60,20 @@ function buildCreateMapHtml({ initialCenter, initialZoom, activePinMode, origin,
     justify-content: center;
     font-size: 16px;
     color: #ffffff;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    box-shadow: 0 4px 14px rgba(10, 25, 47, 0.25);
     border: 3px solid #ffffff;
     font-weight: 800;
   }
 
   .pin-origin .pin-bubble {
-    background: #4CAF50;
+    background: #059669;
     border-color: #ffffff;
     animation: pulse-ring 2s infinite;
   }
 
   .pin-destination .pin-bubble {
-    background: #ffd600;
-    color: #121317;
+    background: #F59E0B;
+    color: #0A192F;
     border-color: #ffffff;
     animation: pulse-dest 2s infinite;
   }
@@ -82,7 +82,7 @@ function buildCreateMapHtml({ initialCenter, initialZoom, activePinMode, origin,
     margin-top: 2px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: rgba(18, 19, 23, 0.88);
+    background: rgba(10, 25, 47, 0.88);
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -107,12 +107,14 @@ try {
     layers: [{ id: 'osm', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }]
   };
 
+  var DEFAULT_PITCH = 28;
+
   var map = new maplibregl.Map({
     container: 'map',
     style: style,
     center: [${centerLng}, ${centerLat}],
     zoom: ${zoomLevel},
-    pitch: 0,
+    pitch: DEFAULT_PITCH,
     bearing: 0,
     attributionControl: false
   });
@@ -152,7 +154,7 @@ try {
       var bounds = new maplibregl.LngLatBounds();
       bounds.extend([orig.lng, orig.lat]);
       bounds.extend([dest.lng, dest.lat]);
-      map.fitBounds(bounds, { padding: { top: 70, bottom: 90, left: 60, right: 60 }, maxZoom: 15, duration: 800 });
+      map.fitBounds(bounds, { padding: { top: 70, bottom: 90, left: 60, right: 60 }, maxZoom: 15, duration: 800, pitch: DEFAULT_PITCH });
     } else {
       map.getSource('create-route').setData({
         type: 'FeatureCollection',
@@ -200,7 +202,15 @@ try {
       type: 'line',
       source: 'create-route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#ffd600', 'line-width': 8, 'line-opacity': 0.3 }
+      paint: { 'line-color': '#F59E0B', 'line-width': 10, 'line-opacity': 0.25, 'line-blur': 3 }
+    });
+
+    map.addLayer({
+      id: 'create-route-casing',
+      type: 'line',
+      source: 'create-route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#0A192F', 'line-width': 7, 'line-opacity': 0.3 }
     });
 
     map.addLayer({
@@ -208,7 +218,7 @@ try {
       type: 'line',
       source: 'create-route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#ffd600', 'line-width': 4, 'line-dasharray': [2, 1.5] }
+      paint: { 'line-color': '#F59E0B', 'line-width': 4.5, 'line-dasharray': [2, 1.5] }
     });
 
     var initOrigin = ${originJson};
@@ -270,6 +280,7 @@ try {
         map.flyTo({
           center: [msg.lng, msg.lat],
           zoom: msg.zoom || 14,
+          pitch: DEFAULT_PITCH,
           essential: true,
           duration: 900
         });

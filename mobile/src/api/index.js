@@ -89,7 +89,7 @@ export const profileAPI = {
 };
 
 export const ridesAPI = {
-  list: () => api.get('/rides/'),
+  list: (params) => api.get('/rides/', { params }),
   create: (data) => api.post('/rides/', data),
   get: (id) => api.get(`/rides/${id}/`),
   update: (id, data) => api.patch(`/rides/${id}/`, data),

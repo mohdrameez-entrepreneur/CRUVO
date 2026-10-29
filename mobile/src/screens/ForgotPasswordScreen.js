@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   },
   backButton: { width: scale(48), height: scale(48), justifyContent: 'center', alignItems: 'center' },
   headerTitle: {
-    ...typography.displayLg, color: colors.primaryContainer,
+    ...typography.displayLg, color: colors.primary,
     fontSize: moderateScale(24), textTransform: 'uppercase', letterSpacing: -0.8,
   },
   scroll: { flex: 1 },
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   pillInactive: { backgroundColor: colors.outlineVariant },
   iconCircle: {
     width: moderateScale(64), height: moderateScale(64), borderRadius: moderateScale(32),
-    backgroundColor: colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.surfaceDim, justifyContent: 'center', alignItems: 'center',
     marginBottom: spacing.stackMd, borderWidth: 1, borderColor: colors.outlineVariant,
   },
   title: { ...typography.headlineLgMobile, color: colors.onSurface, marginBottom: spacing.stackSm },
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     ...typography.bodyMd, color: colors.onSurfaceVariant,
     marginBottom: spacing.stackLg, lineHeight: moderateScale(22),
   },
-  emailHighlight: { color: colors.primaryContainer, fontWeight: '700' },
+  emailHighlight: { color: '#B45309', fontWeight: '700' },
   inputGroup: { marginBottom: spacing.stackMd },
   label: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
   inputContainer: {
@@ -534,11 +534,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
     height: spacing.touchTargetMin, paddingHorizontal: spacing.stackMd,
   },
-  inputError: { borderColor: '#e53935', backgroundColor: 'rgba(229,57,53,0.05)' },
+  inputError: { borderColor: colors.error, backgroundColor: 'rgba(239,68,68,0.05)' },
   inputIcon: { marginRight: spacing.stackSm },
   input: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   eyeButton: { padding: spacing.stackSm },
-  errorText: { ...typography.labelSm, color: '#e53935', marginTop: moderateScale(6), marginLeft: moderateScale(4) },
+  errorText: { ...typography.labelSm, color: colors.error, marginTop: moderateScale(6), marginLeft: moderateScale(4) },
   otpRow: {
     flexDirection: 'row', justifyContent: 'space-between',
     marginBottom: spacing.stackMd, gap: moderateScale(8),
@@ -548,12 +548,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
     textAlign: 'center', color: colors.onSurface, fontSize: moderateScale(22), fontWeight: '800',
   },
-  otpBoxFilled: { borderColor: colors.primaryContainer, backgroundColor: 'rgba(255,214,0,0.08)' },
+  otpBoxFilled: { borderColor: colors.primaryContainer, backgroundColor: 'rgba(245,158,11,0.08)' },
   countdownRow: { alignItems: 'center', marginBottom: spacing.stackLg },
   countdownText: { ...typography.labelSm, color: colors.onSurfaceVariant },
-  countdownTimer: { color: colors.primaryContainer, fontWeight: '700' },
-  countdownTimerUrgent: { color: '#e53935' },
-  resendLink: { ...typography.labelSm, color: colors.primaryContainer, fontWeight: '700' },
+  countdownTimer: { color: '#B45309', fontWeight: '700' },
+  countdownTimerUrgent: { color: colors.error },
+  resendLink: { ...typography.labelSm, color: '#B45309', fontWeight: '700' },
   strengthContainer: {
     flexDirection: 'row', alignItems: 'center',
     marginTop: moderateScale(8), gap: moderateScale(8),
@@ -567,15 +567,15 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: colors.primaryContainer, height: spacing.touchTargetMin,
     borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
-    marginBottom: spacing.stackMd, shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
+    marginBottom: spacing.stackMd, shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3,
   },
   buttonDisabled: { opacity: 0.5 },
-  primaryButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
+  primaryButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase', fontWeight: '700' },
   successContainer: { alignItems: 'flex-start' },
   successIconRing: {
     width: moderateScale(80), height: moderateScale(80), borderRadius: moderateScale(40),
-    backgroundColor: 'rgba(255,214,0,0.12)', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(245,158,11,0.12)', justifyContent: 'center', alignItems: 'center',
     marginBottom: spacing.stackMd, borderWidth: 2, borderColor: colors.primaryContainer,
   },
   // Progressive loading card
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   },
   retryHintText: {
     ...typography.labelSm,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontWeight: '700',
   },
   spamNotice: {

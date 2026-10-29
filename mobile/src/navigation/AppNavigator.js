@@ -30,7 +30,9 @@ const Stack = createNativeStackNavigator();
 
 function parseVersion(v) {
   if (!v) return [0, 0, 0];
-  return v.split('.').map(n => parseInt(n, 10) || 0);
+  const parts = v.toString().split('.').map(n => parseInt(n, 10) || 0);
+  while (parts.length < 3) parts.push(0);
+  return parts;
 }
 
 function isVersionOutdated(current, minRequired) {
@@ -108,7 +110,7 @@ export default function AppNavigator() {
       <UpdateRequiredModal
         visible
         currentVersion={CURRENT_APP_VERSION}
-        latestVersion={updateRequiredData.latest_version || '3.1.2'}
+        latestVersion={updateRequiredData.latest_version || '3.2'}
         requiredVersion={updateRequiredData.min_required_version || '3.0.0'}
         whatsNew={updateRequiredData.whats_new}
         playStoreUrl={updateRequiredData.play_store_url}
@@ -173,7 +175,7 @@ export default function AppNavigator() {
       <UpdateRequiredModal
         visible={!!updateRequiredData && !updateRequiredData.isMandatory}
         currentVersion={CURRENT_APP_VERSION}
-        latestVersion={updateRequiredData?.latest_version || '3.1.2'}
+        latestVersion={updateRequiredData?.latest_version || '3.2'}
         requiredVersion={updateRequiredData?.min_required_version || '3.0.0'}
         whatsNew={updateRequiredData?.whats_new}
         playStoreUrl={updateRequiredData?.play_store_url}

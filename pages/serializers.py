@@ -223,30 +223,32 @@ class RideCreateSerializer(serializers.ModelSerializer):
     destination_name = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
     date = serializers.DateField(required=False)
     time = serializers.TimeField(required=False)
+    status = serializers.ChoiceField(choices=Ride.STATUS_CHOICES, required=False)
 
     class Meta:
         model = Ride
         fields = [
             'name', 'origin_name', 'origin_lat', 'origin_lng',
             'destination_name', 'destination_lat', 'destination_lng',
-            'date', 'time', 'is_public', 'route_polyline',
+            'date', 'time', 'is_public', 'status', 'distance_km', 'route_polyline',
             'route_distance_m', 'route_duration_s',
         ]
 
     def validate(self, attrs):
         from datetime import date as today_date, datetime
-        if not attrs.get('date'):
-            attrs['date'] = today_date.today()
-        if not attrs.get('time'):
-            attrs['time'] = datetime.now().time()
-        if not attrs.get('name') or not str(attrs['name']).strip():
-            dest = attrs.get('destination_name', '').strip()
-            attrs['name'] = f"Ride to {dest}" if dest else "CRUVO Ride"
+        if not self.instance:
+            if not attrs.get('date'):
+                attrs['date'] = today_date.today()
+            if not attrs.get('time'):
+                attrs['time'] = datetime.now().time()
+            if not attrs.get('name') or not str(attrs['name']).strip():
+                dest = attrs.get('destination_name', '').strip()
+                attrs['name'] = f"Ride to {dest}" if dest else "CRUVO Ride"
         return attrs
 
     def validate_date(self, value):
         from datetime import date as today_date
-        if value < today_date.today():
+        if not self.instance and value < today_date.today():
             raise serializers.ValidationError('Ride date cannot be in the past.')
         return value
 

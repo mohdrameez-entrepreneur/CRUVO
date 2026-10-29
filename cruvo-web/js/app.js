@@ -1,38 +1,26 @@
-// CRUVO Static Web Client Logic (v3.1.2)
+// CRUVO Static Web Client Logic (v3.2)
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Download URLs
   const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.cruvo.app';
-  const zipRelativePath = 'downloads/CRUVO.zip';
-  const fullZipUrl = new URL(zipRelativePath, window.location.href).href;
-
-  let currentQrTarget = 'play'; // 'play' or 'zip'
 
   const shareLinkInput = document.getElementById('share-link-input');
   const qrInstructions = document.getElementById('qr-instructions');
-  const tabQrPlay = document.getElementById('tab-qr-play');
-  const tabQrZip = document.getElementById('tab-qr-zip');
 
   const updateQrDisplay = () => {
-    const activeUrl = currentQrTarget === 'play' ? playStoreUrl : fullZipUrl;
-
     if (shareLinkInput) {
-      shareLinkInput.value = activeUrl;
+      shareLinkInput.value = playStoreUrl;
     }
 
     if (qrInstructions) {
-      if (currentQrTarget === 'play') {
-        qrInstructions.innerHTML = 'Scan with your phone to open <strong>CRUVO on Google Play Store</strong>.';
-      } else {
-        qrInstructions.innerHTML = 'Scan with your phone to directly download <strong>CRUVO.zip (v3.1.2)</strong>.';
-      }
+      qrInstructions.innerHTML = 'Scan with your phone to open <strong>CRUVO on Google Play Store</strong>.';
     }
 
     const qrCanvas = document.getElementById('qr-canvas');
     if (qrCanvas && window.QRCode) {
       window.QRCode.toCanvas(
         qrCanvas,
-        activeUrl,
+        playStoreUrl,
         {
           width: 200,
           margin: 1,
@@ -53,24 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnShowQr = document.getElementById('btn-show-qr');
   const btnCloseModal = document.getElementById('btn-close-modal');
   const btnCopyLink = document.getElementById('btn-copy-link');
-
-  if (tabQrPlay) {
-    tabQrPlay.addEventListener('click', () => {
-      currentQrTarget = 'play';
-      tabQrPlay.classList.add('active');
-      if (tabQrZip) tabQrZip.classList.remove('active');
-      updateQrDisplay();
-    });
-  }
-
-  if (tabQrZip) {
-    tabQrZip.addEventListener('click', () => {
-      currentQrTarget = 'zip';
-      tabQrZip.classList.add('active');
-      if (tabQrPlay) tabQrPlay.classList.remove('active');
-      updateQrDisplay();
-    });
-  }
 
   if (btnShowQr && qrModal) {
     btnShowQr.addEventListener('click', () => {

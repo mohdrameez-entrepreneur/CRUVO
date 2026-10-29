@@ -73,11 +73,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   mapBackground: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surfaceContainerLowest },
   mapGrid: { ...StyleSheet.absoluteFillObject, opacity: 0.05 },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 25, 47, 0.55)' },
   sheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: colors.surfaceContainerLow, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)', borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl,
+    borderWidth: 1, borderColor: colors.glassBorder,
     paddingHorizontal: spacing.marginMobile, paddingBottom: 34,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.outlineVariant, alignSelf: 'center', marginVertical: spacing.stackMd },
   sheetTitle: { ...typography.headlineLgMobile, color: colors.onSurface, marginBottom: spacing.stackSm },
@@ -86,7 +89,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm, marginBottom: spacing.stackLg,
   },
   stopCard: {
-    width: '48%', aspectRatio: 1.8, backgroundColor: colors.surfaceContainer,
+    width: '48%', aspectRatio: 1.8, backgroundColor: colors.surfaceDim,
     borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
     justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
   },
@@ -95,14 +98,15 @@ const styles = StyleSheet.create({
   stopLabelActive: { color: colors.onPrimaryContainer },
   buttonRow: { flexDirection: 'row', gap: spacing.stackMd },
   cancelButton: {
-    flex: 1, height: spacing.touchTargetMin, borderWidth: 2, borderColor: colors.outlineVariant,
+    flex: 1, height: spacing.touchTargetMin, borderWidth: 1, borderColor: colors.outlineVariant,
+    backgroundColor: colors.surfaceDim,
     borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
   },
   cancelText: { ...typography.labelTechnical, color: colors.onSurface },
   flagButton: {
     flex: 2, height: spacing.touchTargetMin, backgroundColor: colors.error,
     borderRadius: borderRadius.lg, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4,
   },
   flagText: { ...typography.titleMd, color: colors.white, textTransform: 'uppercase' },
 });

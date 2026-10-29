@@ -6,35 +6,35 @@ import { colors, spacing, typography, borderRadius, moderateScale } from '../the
 const TYPE_CONFIG = {
   error: {
     icon: 'alert-circle',
-    iconColor: '#ff8a80',
-    bg: 'rgba(44, 21, 23, 0.88)',
-    border: 'rgba(255, 138, 128, 0.35)',
-    glow: 'rgba(255, 82, 82, 0.15)',
-    textColor: '#ffdad6',
+    iconColor: '#DC2626',
+    bg: '#FEF2F2',
+    border: 'rgba(239, 68, 68, 0.3)',
+    glow: 'rgba(239, 68, 68, 0.12)',
+    textColor: '#991B1B',
   },
   warning: {
     icon: 'warning',
-    iconColor: '#ffd600',
-    bg: 'rgba(42, 36, 14, 0.88)',
-    border: 'rgba(255, 214, 0, 0.35)',
-    glow: 'rgba(255, 214, 0, 0.15)',
-    textColor: '#fff5dc',
+    iconColor: '#D97706',
+    bg: '#FFFBEB',
+    border: 'rgba(245, 158, 11, 0.35)',
+    glow: 'rgba(245, 158, 11, 0.12)',
+    textColor: '#92400E',
   },
   success: {
     icon: 'checkmark-circle',
-    iconColor: '#81c784',
-    bg: 'rgba(20, 41, 24, 0.88)',
-    border: 'rgba(129, 199, 132, 0.35)',
-    glow: 'rgba(76, 175, 80, 0.15)',
-    textColor: '#e8f5e9',
+    iconColor: '#059669',
+    bg: '#ECFDF5',
+    border: 'rgba(16, 185, 129, 0.3)',
+    glow: 'rgba(16, 185, 129, 0.12)',
+    textColor: '#065F46',
   },
   info: {
     icon: 'information-circle',
-    iconColor: '#90caf9',
-    bg: 'rgba(18, 35, 56, 0.88)',
-    border: 'rgba(144, 202, 249, 0.35)',
-    glow: 'rgba(33, 150, 243, 0.15)',
-    textColor: '#e3f2fd',
+    iconColor: '#0284C7',
+    bg: '#F0F9FF',
+    border: 'rgba(56, 189, 248, 0.35)',
+    glow: 'rgba(56, 189, 248, 0.12)',
+    textColor: '#075985',
   },
 };
 
@@ -128,7 +128,7 @@ export default function AlertCard({
       </View>
       {onAction && (
         <TouchableOpacity
-          style={[styles.actionBtn, { borderColor: config.border, backgroundColor: 'rgba(0,0,0,0.3)' }]}
+          style={[styles.actionBtn, { borderColor: config.border, backgroundColor: config.glow }]}
           onPress={onAction}
           activeOpacity={0.7}
         >
@@ -153,10 +153,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     borderWidth: 1,
     marginVertical: spacing.stackSm,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 6,
+    elevation: 3,
   },
   iconContainer: {
     width: 34,
@@ -199,6 +200,6 @@ const styles = StyleSheet.create({
     padding: 6,
     marginLeft: spacing.stackSm - 2,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(10, 25, 47, 0.05)',
   },
 });

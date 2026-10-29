@@ -11,7 +11,18 @@ import {
   Modal,
   LayoutAnimation,
   Platform,
+  UIManager,
 } from 'react-native';
+
+if (
+  Platform.OS === 'android' &&
+  typeof UIManager.setLayoutAnimationEnabledExperimental === 'function' &&
+  !global?.nativeFabricUIManager
+) {
+  try {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  } catch {}
+}
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { ridesAPI } from '../api';
@@ -24,6 +35,7 @@ import GlassModal from '../components/GlassModal';
 import LocationDisclosureModal from '../components/LocationDisclosureModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showError } from '../utils/alert';
 
 const { width, height } = Dimensions.get('window');
 const ROLE_LABELS = { CREATOR: 'Lead', LEAD: 'Lead', SWEEP: 'Sweep', WINGMAN: 'Wingman', RIDER: 'Rider' };
@@ -55,8 +67,12 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rosterExpanded, setRosterExpanded] = useState(false);
+  const [headerMinimized, setHeaderMinimized] = useState(false);
   const [recenterTrigger, setRecenterTrigger] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [actualDuration, setActualDuration] = useState(null);
+  const [actualDistance, setActualDistance] = useState(null);
+  const [distanceCoveredM, setDistanceCoveredM] = useState(0);
   const [rideFinished, setRideFinished] = useState(false);
   const [arrivalCount, setArrivalCount] = useState(0);
   const [showFlagModal, setShowFlagModal] = useState(false);
@@ -73,6 +89,9 @@ export default function ActiveRideScreen({ navigation, route }) {
   const [locationPermLoading, setLocationPermLoading] = useState(false);
   const [hasNotifiedArrival, setHasNotifiedArrival] = useState(false);
   const autoEndTriggered = useRef(false);
+  const lastUserLocation = useRef(null);
+  const distanceCoveredMeters = useRef(0);
+  const lastSavedDistance = useRef(0);
   const {
     location,
     startWatching,
@@ -141,12 +160,28 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   const handleRideEnded = useCallback((data) => {
     if (data.ended_by === user?.id) return;
+    const dur = data?.actual_duration_s != null ? Number(data.actual_duration_s) : elapsed;
+    const myDistKm = Number((distanceCoveredMeters.current / 1000).toFixed(2));
+    const dist = myDistKm > 0
+      ? myDistKm
+      : (data?.actual_distance_km != null ? Number(data.actual_distance_km) : null);
+
+    setActualDuration(dur);
+    if (dist != null) setActualDistance(dist);
+    setRide(prev => prev ? { ...prev, status: 'COMPLETED' } : prev);
+
+    AsyncStorage.setItem(`@cruvo_ride_actual_duration_${rideId}`, String(dur)).catch(() => {});
+    if (dist != null) {
+      AsyncStorage.setItem(`@cruvo_ride_actual_distance_${rideId}`, String(dist)).catch(() => {});
+    }
+    AsyncStorage.setItem(`@cruvo_ride_status_${rideId}`, 'COMPLETED').catch(() => {});
+
     stopWatching();
     clearInterval(fallbackInterval.current);
     clearInterval(timerInterval.current);
     setRideEndedBy(data.ended_by_name);
     setRideFinished(true);
-  }, [user?.id]);
+  }, [user?.id, elapsed, rideId]);
 
   const { connected, wsError, sendPosition, sendFlag, sendClearFlag } = useRideSocket(rideId, {
     onPositionsUpdate: handlePositionsUpdate,
@@ -166,7 +201,12 @@ export default function ActiveRideScreen({ navigation, route }) {
         ridesAPI.get(rideId),
         ridesAPI.getFlagStops(rideId).catch(() => ({ data: [] })),
       ]);
-      setRide(rideRes.data);
+      const rideData = rideRes.data;
+      if (rideData && (rideData.status === 'COMPLETED' || rideData.status === 'CANCELLED')) {
+        navigation.replace('RideSummary', { rideId });
+        return;
+      }
+      setRide(rideData);
       const flags = (flagsRes.data || []).filter(f => !f.resolved_at);
       setAllFlags(flags);
       const mine = flags.find(f => String(f.flagged_by || f.user) === String(user?.id));
@@ -176,6 +216,20 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   useEffect(() => {
     loadRideAndFlags().finally(() => setLoading(false));
+    if (rideId) {
+      AsyncStorage.getItem(`@cruvo_ride_actual_distance_${rideId}`).then(val => {
+        if (val) {
+          const km = parseFloat(val);
+          if (!isNaN(km) && km > 0) {
+            const meters = km * 1000;
+            if (meters > distanceCoveredMeters.current) {
+              distanceCoveredMeters.current = meters;
+              setDistanceCoveredM(meters);
+            }
+          }
+        }
+      }).catch(() => {});
+    }
   }, [rideId]);
 
   useEffect(() => {
@@ -195,6 +249,30 @@ export default function ActiveRideScreen({ navigation, route }) {
     startWatching((coords) => {
       const prevSpeed = currentSpeed.current;
       currentSpeed.current = coords.speed || 0;
+
+      if (coords?.latitude && coords?.longitude) {
+        if (lastUserLocation.current) {
+          const dist = getDistanceMeters(
+            lastUserLocation.current.latitude,
+            lastUserLocation.current.longitude,
+            coords.latitude,
+            coords.longitude
+          );
+          if (dist >= 2 && dist < 2000) {
+            distanceCoveredMeters.current += dist;
+            setDistanceCoveredM(distanceCoveredMeters.current);
+            if (distanceCoveredMeters.current - lastSavedDistance.current >= 50) {
+              lastSavedDistance.current = distanceCoveredMeters.current;
+              const kmStr = (distanceCoveredMeters.current / 1000).toFixed(2);
+              AsyncStorage.setItem(`@cruvo_ride_actual_distance_${rideId}`, kmStr).catch(() => {});
+            }
+          }
+        }
+        lastUserLocation.current = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        };
+      }
 
       if (wsConnected.current) {
         sendPosition(coords.latitude, coords.longitude, coords.heading || 0, coords.speed || 0);
@@ -314,12 +392,32 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   const completeRide = async () => {
     try {
-      await ridesAPI.update(rideId, { status: 'COMPLETED' });
+      const finalDistKm = Number((distanceCoveredMeters.current / 1000).toFixed(2));
+      setActualDuration(elapsed);
+      setActualDistance(finalDistKm);
+      setRide(prev => prev ? { ...prev, status: 'COMPLETED' } : prev);
+
+      await Promise.all([
+        AsyncStorage.setItem(`@cruvo_ride_actual_duration_${rideId}`, String(elapsed)).catch(() => {}),
+        AsyncStorage.setItem(`@cruvo_ride_actual_distance_${rideId}`, String(finalDistKm)).catch(() => {}),
+        AsyncStorage.setItem(`@cruvo_ride_status_${rideId}`, 'COMPLETED').catch(() => {}),
+      ]);
+      await ridesAPI.update(rideId, {
+        status: 'COMPLETED',
+        route_duration_s: elapsed,
+        actual_duration_s: elapsed,
+        distance_km: finalDistKm > 0 ? finalDistKm : ride?.distance_km,
+        actual_distance_km: finalDistKm > 0 ? finalDistKm : ride?.distance_km,
+      });
       stopWatching();
       clearInterval(fallbackInterval.current);
       clearInterval(timerInterval.current);
       setRideFinished(true);
-    } catch { }
+    } catch (err) {
+      console.log('[ActiveRide] completeRide error:', err?.response?.data || err.message);
+      setRide(prev => prev ? { ...prev, status: 'COMPLETED' } : prev);
+      setRideFinished(true);
+    }
   };
 
   const endRide = () => {
@@ -333,7 +431,12 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   const handleViewSummary = () => {
     setRideFinished(false);
-    navigation.navigate('RideSummary', { rideId });
+    const finalDist = actualDistance != null ? actualDistance : Number((distanceCoveredMeters.current / 1000).toFixed(2));
+    navigation.replace('RideSummary', {
+      rideId,
+      actualDurationS: actualDuration != null ? actualDuration : elapsed,
+      actualDistanceKm: finalDist,
+    });
   };
 
   const handleFlagPress = () => {
@@ -346,7 +449,7 @@ export default function ActiveRideScreen({ navigation, route }) {
 
   const handleFlagStop = async () => {
     if (!location) {
-      Alert.alert('Location Required', 'Cannot flag a stop without location access');
+      showError('Cannot flag a stop without location access', 'Location Required');
       return;
     }
     setFlagging(true);
@@ -369,7 +472,7 @@ export default function ActiveRideScreen({ navigation, route }) {
         setMyFlag(mine || null);
       }
     } catch {
-      Alert.alert('Error', 'Failed to flag stop');
+      showError('Failed to flag stop');
     } finally {
       setFlagging(false);
     }
@@ -386,7 +489,7 @@ export default function ActiveRideScreen({ navigation, route }) {
       setMyFlag(null);
       setAllFlags(prev => prev.filter(f => String(f.flagged_by || f.user) !== String(user?.id)));
     } catch {
-      Alert.alert('Error', 'Failed to clear flag');
+      showError('Failed to clear flag');
     } finally {
       setClearingFlag(false);
     }
@@ -399,8 +502,20 @@ export default function ActiveRideScreen({ navigation, route }) {
     return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
   };
 
+  const formatDistance = (d) => {
+    if (d == null) return '0.0 km';
+    const num = Number(d);
+    if (isNaN(num) || num <= 0) return '0.0 km';
+    if (num < 1) return `${num.toFixed(2)} km`;
+    return `${num.toFixed(1)} km`;
+  };
+
+  const liveDistKm = distanceCoveredM > 0
+    ? (distanceCoveredM / 1000 < 1 ? (distanceCoveredM / 1000).toFixed(2) : (distanceCoveredM / 1000).toFixed(1))
+    : (ride?.distance_km ? `${ride.distance_km}` : null);
+
   const participants = ride?.participants || [];
-  const isCreator = Boolean(user && ride?.creator === user.id);
+  const isCreator = Boolean(user && String(ride?.creator) === String(user.id));
   const flagIcon = myFlag ? (FLAG_ICONS[myFlag.stop_type] || 'flag') : 'flag';
   const flagLabel = myFlag ? myFlag.stop_type : null;
 
@@ -445,6 +560,16 @@ export default function ActiveRideScreen({ navigation, route }) {
     setRosterExpanded(expand);
   };
 
+  const toggleHeaderMinimized = () => {
+    LayoutAnimation.configureNext({
+      duration: 250,
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      update: { type: LayoutAnimation.Types.spring, springDamping: 0.85 },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    });
+    setHeaderMinimized(prev => !prev);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -477,70 +602,115 @@ export default function ActiveRideScreen({ navigation, route }) {
         />
       </View>
 
-      {/* Top Floating Header - Aesthetic Matching Rider Roster */}
-      <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
+      {/* Top Floating Header - Minimizable Clean Glassmorphic Bar */}
+      <TouchableOpacity
+        activeOpacity={headerMinimized ? 0.85 : 1}
+        onPress={headerMinimized ? toggleHeaderMinimized : undefined}
+        style={[
+          styles.floatingHeader,
+          headerMinimized && styles.floatingHeaderMinimized,
+          { top: insets.top + 8 }
+        ]}
+      >
         <View style={styles.headerMain}>
           <View style={styles.headerTopRow}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            {headerMinimized && <View style={styles.miniLiveDot} />}
+            <Text
+              style={[styles.headerTitle, headerMinimized && styles.headerTitleMinimized]}
+              numberOfLines={1}
+            >
               {ride.name}
             </Text>
-            {isCreator && (
-              <TouchableOpacity style={styles.endRideButton} onPress={endRide} activeOpacity={0.8}>
-                <Ionicons name="stop" size={10} color={colors.white} />
-                <Text style={styles.endRideText}>END</Text>
-              </TouchableOpacity>
+
+            {headerMinimized && (
+              <View style={styles.miniStatsWrap}>
+                <Ionicons name="time-outline" size={11} color={colors.onSurfaceVariant} />
+                <Text style={styles.miniStatsText}>{formatTime(elapsed)}</Text>
+                {liveDistKm ? (
+                  <Text style={styles.miniStatsText}>• {liveDistKm} km</Text>
+                ) : null}
+                {positions.length > 0 && (
+                  <Text style={styles.miniLiveCount}>• {positions.length} LIVE</Text>
+                )}
+              </View>
             )}
+
+            <View style={styles.headerActionsRow}>
+              {isCreator && (
+                <TouchableOpacity style={styles.endRideButton} onPress={endRide} activeOpacity={0.8}>
+                  <Ionicons name="stop" size={10} color="#DC2626" />
+                  <Text style={styles.endRideText}>END</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.toggleHeaderBtn}
+                onPress={toggleHeaderMinimized}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={headerMinimized ? "Expand top menu" : "Minimize top menu"}
+              >
+                <Ionicons
+                  name={headerMinimized ? "chevron-down" : "chevron-up"}
+                  size={16}
+                  color={colors.onSurfaceVariant}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Route path (From -> To in small clean text) */}
-          {(ride.origin_name || ride.destination_name) ? (
-            <View style={styles.headerRouteRow}>
-              <View style={styles.originDot} />
-              <Text style={styles.headerRouteText} numberOfLines={1}>
-                {ride.origin_name || 'Start'}
-              </Text>
-              <Ionicons name="arrow-forward" size={10} color={colors.primaryContainer} style={styles.routeArrow} />
-              <View style={styles.destDot} />
-              <Text style={styles.headerRouteText} numberOfLines={1}>
-                {ride.destination_name || 'End'}
-              </Text>
-            </View>
-          ) : null}
+          {!headerMinimized && (
+            <>
+              {/* Route path (From -> To in small clean text) */}
+              {(ride.origin_name || ride.destination_name) ? (
+                <View style={styles.headerRouteRow}>
+                  <View style={styles.originDot} />
+                  <Text style={styles.headerRouteText} numberOfLines={1}>
+                    {ride.origin_name || 'Start'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={10} color="#B45309" style={styles.routeArrow} />
+                  <View style={styles.destDot} />
+                  <Text style={styles.headerRouteText} numberOfLines={1}>
+                    {ride.destination_name || 'End'}
+                  </Text>
+                </View>
+              ) : null}
 
-          {/* Subtitle / Live stats row */}
-          <View style={styles.headerStatsRow}>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveBadgeText}>{positions.length} LIVE</Text>
-            </View>
-            <Text style={styles.statsDot}>·</Text>
-            <View style={styles.elapsedBadge}>
-              <Ionicons name="time-outline" size={11} color={colors.onSurfaceVariant} />
-              <Text style={styles.elapsedText}>{formatTime(elapsed)}</Text>
-            </View>
-            {ride?.distance_km ? (
-              <>
+              {/* Subtitle / Live stats row */}
+              <View style={styles.headerStatsRow}>
+                <View style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveBadgeText}>{positions.length} LIVE</Text>
+                </View>
                 <Text style={styles.statsDot}>·</Text>
-                <Text style={styles.distanceBadgeText}>{ride.distance_km} km</Text>
-              </>
-            ) : null}
-            {wsError ? (
-              <>
-                <Text style={styles.statsDot}>·</Text>
-                <Text style={styles.offlineStatusText}>{wsError}</Text>
-              </>
-            ) : !connected ? (
-              <>
-                <Text style={styles.statsDot}>·</Text>
-                <Text style={styles.offlineStatusText}>OFFLINE</Text>
-              </>
-            ) : null}
-          </View>
+                <View style={styles.elapsedBadge}>
+                  <Ionicons name="time-outline" size={11} color={colors.onSurfaceVariant} />
+                  <Text style={styles.elapsedText}>{formatTime(elapsed)}</Text>
+                </View>
+                {liveDistKm ? (
+                  <>
+                    <Text style={styles.statsDot}>·</Text>
+                    <Text style={styles.distanceBadgeText}>{liveDistKm} km</Text>
+                  </>
+                ) : null}
+                {wsError ? (
+                  <>
+                    <Text style={styles.statsDot}>·</Text>
+                    <Text style={styles.offlineStatusText}>{wsError}</Text>
+                  </>
+                ) : !connected ? (
+                  <>
+                    <Text style={styles.statsDot}>·</Text>
+                    <Text style={styles.offlineStatusText}>OFFLINE</Text>
+                  </>
+                ) : null}
+              </View>
+            </>
+          )}
         </View>
-      </View>
+      </TouchableOpacity>
 
       {flagNotification && (
-        <View style={[styles.flagBanner, flagNotification.isClear && { backgroundColor: '#4CAF50' }]}>
+        <View style={[styles.flagBanner, { top: insets.top + (headerMinimized ? 56 : 104) }, flagNotification.isClear && { backgroundColor: '#059669' }]}>
           <Ionicons name={flagNotification.isClear ? "checkmark-circle" : "flag"} size={18} color={colors.white} />
           <Text style={styles.flagBannerText}>
             <Text style={styles.flagBannerName}>{flagNotification.userName}</Text>
@@ -726,14 +896,16 @@ export default function ActiveRideScreen({ navigation, route }) {
             <View style={styles.completeStats}>
               <View style={styles.completeStat}>
                 <Ionicons name="time" size={20} color={colors.primaryContainer} />
-                <Text style={styles.completeStatValue}>{formatTime(elapsed)}</Text>
-                <Text style={styles.completeStatLabel}>DURATION</Text>
+                <Text style={styles.completeStatValue}>{formatTime(actualDuration != null ? actualDuration : elapsed)}</Text>
+                <Text style={styles.completeStatLabel}>ACTUAL DURATION</Text>
               </View>
               <View style={styles.completeStatDivider} />
               <View style={styles.completeStat}>
                 <Ionicons name="navigate" size={20} color={colors.primaryContainer} />
-                <Text style={styles.completeStatValue}>{ride?.distance_km ? `${ride.distance_km} km` : 'N/A'}</Text>
-                <Text style={styles.completeStatLabel}>DISTANCE</Text>
+                <Text style={styles.completeStatValue}>
+                  {formatDistance(actualDistance != null ? actualDistance : (distanceCoveredM / 1000))}
+                </Text>
+                <Text style={styles.completeStatLabel}>DISTANCE TRAVELLED</Text>
               </View>
               <View style={styles.completeStatDivider} />
               <View style={styles.completeStat}>
@@ -817,18 +989,23 @@ const styles = StyleSheet.create({
     top: spacing.stackLg,
     left: spacing.marginMobile,
     right: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     borderRadius: borderRadius.xl,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
     zIndex: 50,
+  },
+  floatingHeaderMinimized: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: borderRadius.lg + 4,
   },
   headerMain: {
     width: '100%',
@@ -846,10 +1023,55 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  endRideButton: {
-    backgroundColor: 'rgba(229,57,53,0.18)',
+  headerTitleMinimized: {
+    fontSize: 13,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  miniLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#10B981',
+    marginRight: 6,
+  },
+  miniStatsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginRight: 8,
+  },
+  miniStatsText: {
+    ...typography.labelTechnical,
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  miniLiveCount: {
+    ...typography.labelTechnical,
+    color: '#10B981',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  headerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  toggleHeaderBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.surfaceDim,
     borderWidth: 1,
-    borderColor: 'rgba(229,57,53,0.5)',
+    borderColor: colors.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  endRideButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.35)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: borderRadius.md,
@@ -859,7 +1081,7 @@ const styles = StyleSheet.create({
   },
   endRideText: {
     ...typography.labelTechnical,
-    color: '#ff6b6b',
+    color: '#DC2626',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -907,7 +1129,7 @@ const styles = StyleSheet.create({
   },
   liveBadgeText: {
     ...typography.labelTechnical,
-    color: '#4CAF50',
+    color: '#10B981',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -923,8 +1145,9 @@ const styles = StyleSheet.create({
   },
   distanceBadgeText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: 10,
+    fontWeight: '600',
   },
   statsDot: {
     color: colors.outlineVariant,
@@ -946,16 +1169,16 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.outlineVariant,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   flagFab: {
     width: 44,
@@ -964,11 +1187,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   flagFabActive: {
     backgroundColor: '#FF9800',
@@ -987,18 +1210,18 @@ const styles = StyleSheet.create({
     right: spacing.marginMobile,
     height: 46,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.stackMd,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
     zIndex: 40,
   },
   rosterPillLeft: {
@@ -1025,18 +1248,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingBottom: 34,
     maxHeight: height * 0.45,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     zIndex: 45,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
     elevation: 10,
   },
   panelMinimizeBtn: {
@@ -1070,48 +1293,49 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: colors.surfaceContainerLowest,
   },
   riderAvatar: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceContainerHigh,
+    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceDim,
     justifyContent: 'center', alignItems: 'center',
   },
   riderAvatarLead: { backgroundColor: colors.primaryContainer },
-  riderAvatarText: { ...typography.labelTechnical, color: colors.onSurface, fontSize: 12 },
+  riderAvatarText: { ...typography.labelTechnical, color: colors.primary, fontSize: 12 },
   riderInfo: { flex: 1 },
   riderName: { ...typography.bodyMd, color: colors.onSurface },
-  youBadge: { ...typography.labelSm, color: colors.primaryContainer },
+  youBadge: { ...typography.labelSm, color: '#B45309', fontWeight: '700' },
   riderRole: { ...typography.labelSm, color: colors.onSurfaceVariant },
   flagTag: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4,
-    backgroundColor: 'rgba(229,57,53,0.15)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start',
   },
-  flagTagText: { ...typography.labelSm, color: '#e53935', fontSize: 10, textTransform: 'uppercase' },
+  flagTagText: { ...typography.labelSm, color: '#DC2626', fontSize: 10, textTransform: 'uppercase' },
   riderStatus: { alignItems: 'flex-end' },
   liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' },
-  liveText: { ...typography.labelTechnical, color: '#4CAF50', fontSize: 10 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+  liveText: { ...typography.labelTechnical, color: '#10B981', fontSize: 10 },
   offlineText: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 10 },
   flagBanner: {
     position: 'absolute', top: 110, left: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#e53935', borderRadius: borderRadius.lg,
+    backgroundColor: '#DC2626', borderRadius: borderRadius.lg,
     paddingHorizontal: 16, paddingVertical: 12,
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8, elevation: 8,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
     zIndex: 60,
   },
   flagBannerText: { ...typography.bodyMd, color: colors.white, flex: 1 },
   flagBannerName: { ...typography.bodyMd, color: colors.white, fontWeight: '700' },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center',
+    flex: 1, backgroundColor: 'rgba(10, 25, 47, 0.55)', justifyContent: 'center', alignItems: 'center',
     padding: spacing.stackLg,
   },
   modalCard: {
-    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outlineVariant,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder,
     borderRadius: borderRadius.xl, padding: spacing.stackLg, width: '100%', gap: spacing.stackMd,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 12,
   },
   modalTitle: { ...typography.headlineLgMobile, color: colors.onSurface },
   modalSubtitle: { ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.stackSm },
   flagGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.stackSm },
   flagOption: {
-    width: '48%', aspectRatio: 1.8, backgroundColor: colors.surfaceContainer,
+    width: '48%', aspectRatio: 1.8, backgroundColor: colors.surfaceDim,
     borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.lg,
     justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
   },
@@ -1120,37 +1344,38 @@ const styles = StyleSheet.create({
   flagOptionLabelActive: { color: colors.onPrimaryContainer },
   flagButtonRow: { flexDirection: 'row', gap: spacing.stackMd, marginTop: spacing.stackSm },
   flagCancelBtn: {
-    flex: 1, height: spacing.touchTargetMin, borderWidth: 2, borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center',
+    flex: 1, height: spacing.touchTargetMin, borderWidth: 1.5, borderColor: colors.outlineVariant,
+    borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceDim,
   },
   flagCancelText: { ...typography.labelTechnical, color: colors.onSurface },
   flagSubmitBtn: {
     flex: 2, height: spacing.touchTargetMin, backgroundColor: colors.error,
     borderRadius: borderRadius.lg, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3,
   },
-  flagSubmitText: { ...typography.titleMd, color: colors.white, textTransform: 'uppercase' },
+  flagSubmitText: { ...typography.titleMd, color: colors.white, textTransform: 'uppercase', fontWeight: '700' },
   completeIcon: { alignItems: 'center', marginBottom: spacing.stackSm },
   completeTitle: { ...typography.headlineLgMobile, color: colors.onSurface, textAlign: 'center' },
-  completeRideName: { ...typography.labelTechnical, color: colors.primaryContainer, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
+  completeRideName: { ...typography.labelTechnical, color: colors.primary, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center', fontWeight: '800' },
   completeStats: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceContainerHigh, borderRadius: borderRadius.lg,
-    padding: spacing.stackMd, gap: spacing.stackMd,
+    backgroundColor: colors.surfaceDim, borderRadius: borderRadius.lg,
+    padding: spacing.stackMd, gap: spacing.stackMd, borderWidth: 1, borderColor: colors.outlineVariant,
   },
   completeStat: { flex: 1, alignItems: 'center', gap: 4 },
-  completeStatValue: { ...typography.headlineLg, color: colors.primaryContainer, fontSize: 22 },
+  completeStatValue: { ...typography.headlineLg, color: '#B45309', fontSize: 22, fontWeight: '800' },
   completeStatLabel: { ...typography.labelTechnical, color: colors.onSurfaceVariant, fontSize: 10 },
   completeStatDivider: { width: 1, height: 36, backgroundColor: colors.outlineVariant },
   completeRoute: {
-    gap: 6, backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: borderRadius.lg, padding: spacing.stackMd,
+    gap: 6, backgroundColor: colors.surfaceDim,
+    borderRadius: borderRadius.lg, padding: spacing.stackMd, borderWidth: 1, borderColor: colors.outlineVariant,
   },
   completeRouteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm },
   completeRouteText: { ...typography.bodyMd, color: colors.onSurface, flex: 1 },
   completeButton: {
     height: 52, borderRadius: borderRadius.lg, backgroundColor: colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 0, elevation: 4,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3,
   },
-  completeButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
+  completeButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase', fontWeight: '700' },
 });

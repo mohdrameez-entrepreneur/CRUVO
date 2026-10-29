@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
 import { ridesAPI, invitationsAPI } from '../api';
 import { useAuth } from '../context/AuthContext';
 import NavBar from '../components/NavBar';
 import GlassModal from '../components/GlassModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showError } from '../utils/alert';
 
 function InvitationCard({ invitation, onAccept, onDecline, loading }) {
   const dateStr = new Date(invitation.ride_date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -70,11 +72,11 @@ function RideCard({ ride, onPress, onInvite, onDelete, onJoin, isCreator }) {
   const timeStr = new Date(`2000-01-01T${ride.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   const statusColors = {
-    SCHEDULED: { bg: 'rgba(255,214,0,0.15)', border: 'rgba(255,214,0,0.3)', text: colors.primaryContainer },
-    ACTIVE: { bg: 'rgba(76,175,80,0.15)', border: 'rgba(76,175,80,0.3)', text: '#4CAF50' },
-    COMPLETED: { bg: 'rgba(158,158,158,0.15)', border: 'rgba(158,158,158,0.3)', text: '#9E9E9E' },
-    DRAFT: { bg: 'rgba(255,255,255,0.1)', border: 'rgba(255,255,255,0.2)', text: colors.onSurfaceVariant },
-    CANCELLED: { bg: 'rgba(244,67,54,0.15)', border: 'rgba(244,67,54,0.3)', text: '#F44336' },
+    SCHEDULED: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', text: '#B45309' },
+    ACTIVE: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: '#059669' },
+    COMPLETED: { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)', text: '#475569' },
+    DRAFT: { bg: 'rgba(10,25,47,0.05)', border: colors.outlineVariant, text: colors.onSurfaceVariant },
+    CANCELLED: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', text: '#DC2626' },
   };
 
   const sc = statusColors[ride.status] || statusColors.SCHEDULED;
@@ -197,7 +199,7 @@ export default function RidesListScreen({ navigation }) {
       setInvitations(prev => prev.filter(i => i.id !== invitation.id));
       loadAll();
     } catch (err) {
-      Alert.alert('Error', 'Failed to accept invitation');
+      showError('Failed to accept invitation');
     } finally {
       setRespondingId(null);
     }
@@ -222,7 +224,19 @@ export default function RidesListScreen({ navigation }) {
     }
   };
 
-  const handleRidePress = (ride) => {
+  const handleRidePress = async (ride) => {
+    if (ride.status === 'COMPLETED' || ride.status === 'CANCELLED') {
+      navigation.navigate('RideSummary', { rideId: ride.id });
+      return;
+    }
+    try {
+      const localStatus = await AsyncStorage.getItem(`@cruvo_ride_status_${ride.id}`);
+      if (localStatus === 'COMPLETED') {
+        navigation.navigate('RideSummary', { rideId: ride.id });
+        return;
+      }
+    } catch {}
+
     if (ride.status === 'ACTIVE') {
       navigation.navigate('ActiveRide', { rideId: ride.id });
     } else {
@@ -397,7 +411,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
     marginBottom: spacing.stackMd,
   },
-  inviteSectionTitle: { ...typography.labelTechnical, color: colors.primaryContainer, flex: 1 },
+  inviteSectionTitle: { ...typography.labelTechnical, color: colors.primary, flex: 1, fontWeight: '700' },
   inviteCount: {
     backgroundColor: colors.primaryContainer, borderRadius: 10,
     paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center',
@@ -405,15 +419,20 @@ const styles = StyleSheet.create({
   inviteCountText: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 12 },
 
   inviteCard: {
-    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1,
-    borderColor: colors.primaryContainer, borderRadius: borderRadius.xl,
+    backgroundColor: colors.surface, borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)', borderRadius: borderRadius.xl,
     padding: spacing.stackMd, marginBottom: spacing.stackSm,
     gap: spacing.stackSm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   inviteHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackMd },
   inviteIcon: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,214,0,0.15)', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)', justifyContent: 'center', alignItems: 'center',
   },
   inviteInfo: { flex: 1 },
   inviteRideName: { ...typography.titleMd, color: colors.onSurface },
@@ -427,16 +446,21 @@ const styles = StyleSheet.create({
     height: 44, borderRadius: borderRadius.lg, gap: 6,
   },
   acceptBtn: { backgroundColor: colors.primaryContainer },
-  acceptBtnText: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 13 },
-  declineBtn: { borderWidth: 1, borderColor: colors.error },
-  declineBtnText: { ...typography.labelTechnical, color: colors.error, fontSize: 13 },
+  acceptBtnText: { ...typography.labelTechnical, color: colors.onPrimaryContainer, fontSize: 13, fontWeight: '700' },
+  declineBtn: { borderWidth: 1, borderColor: colors.error, backgroundColor: 'rgba(239,68,68,0.05)' },
+  declineBtnText: { ...typography.labelTechnical, color: colors.error, fontSize: 13, fontWeight: '700' },
 
   listHeader: { ...typography.labelTechnical, color: colors.onSurfaceVariant, marginBottom: spacing.stackMd },
 
   rideCard: {
-    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.xl, padding: spacing.stackMd, marginBottom: spacing.stackMd,
     gap: spacing.stackSm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   rideCardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm },
   deleteBtn: {
@@ -445,13 +469,13 @@ const styles = StyleSheet.create({
   },
   rideCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   rideCardInfo: { flex: 1, gap: 2 },
-  rideCardTime: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 12 },
+  rideCardTime: { ...typography.labelTechnical, color: '#B45309', fontSize: 12, fontWeight: '600' },
   rideCardName: { ...typography.titleMd, color: colors.onSurface },
   statusBadge: {
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: borderRadius.sm,
     borderWidth: 1,
   },
-  statusText: { ...typography.labelTechnical, fontSize: 10 },
+  statusText: { ...typography.labelTechnical, fontSize: 10, fontWeight: '600' },
   rideRoute: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
     paddingTop: spacing.stackSm, borderTopWidth: 1, borderTopColor: colors.outlineVariant,
@@ -467,7 +491,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
     borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.primaryContainer,
   },
-  inviteBtnText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 12 },
+  inviteBtnText: { ...typography.labelTechnical, color: '#B45309', fontSize: 12, fontWeight: '600' },
   joinBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.primaryContainer,
@@ -483,29 +507,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
   },
   publicBadgeText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(9),
-    fontWeight: '800',
+    fontWeight: '600',
   },
   privateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.surfaceDim,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.outlineVariant,
   },
   privateBadgeText: {
     ...typography.labelTechnical,
@@ -517,7 +541,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.marginMobile,
   },
   emptyIcon: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surfaceContainerHigh,
+    width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surfaceDim,
     justifyContent: 'center', alignItems: 'center', marginBottom: spacing.stackLg,
   },
   emptyTitle: { ...typography.headlineLgMobile, color: colors.onSurface, marginBottom: spacing.stackSm },
@@ -526,8 +550,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.stackSm,
     backgroundColor: colors.primaryContainer, height: 56, paddingHorizontal: spacing.stackLg,
     borderRadius: borderRadius.lg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  createButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
+  createButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase', fontWeight: '700' },
   emptyState: {
     flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
   },

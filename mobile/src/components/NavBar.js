@@ -42,7 +42,7 @@ export default function NavBar({
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="arrow-back" size={22} color={colors.primaryContainer} />
+              <Ionicons name="arrow-back" size={22} color={colors.primary} />
             </TouchableOpacity>
           ) : (
             <View style={styles.actionPlaceholder} />
@@ -91,13 +91,13 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   glassContainer: {
-    backgroundColor: 'rgba(18, 19, 23, 0.92)',
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderBottomColor: 'rgba(10, 25, 47, 0.08)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
   transparentContainer: {
     backgroundColor: 'transparent',
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     ...typography.displayLg,
-    color: colors.primaryContainer,
+    color: colors.primary,
     fontSize: moderateScale(19),
     letterSpacing: -0.6,
     textTransform: 'uppercase',
@@ -146,26 +146,27 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   badgeWrap: {
-    backgroundColor: 'rgba(255, 214, 0, 0.15)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   badgeText: {
     ...typography.labelTechnical,
     fontSize: moderateScale(9),
-    color: colors.primaryContainer,
+    color: '#B45309',
     letterSpacing: 0.5,
+    fontWeight: '700',
   },
   actionBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(10, 25, 47, 0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(10, 25, 47, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },

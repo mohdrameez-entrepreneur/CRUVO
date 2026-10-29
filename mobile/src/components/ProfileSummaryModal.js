@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, scale, moderateScale } from '../theme';
+import { showError } from '../utils/alert';
 import UserAvatar from './UserAvatar';
 import GlassModal from './GlassModal';
 
@@ -41,7 +41,7 @@ export default function ProfileSummaryModal({
   const handleCall = () => {
     if (p.phone) {
       Linking.openURL(`tel:${p.phone}`).catch(() => {
-        Alert.alert('Error', 'Unable to initiate phone call');
+        showError('Unable to initiate phone call');
       });
     }
   };
@@ -49,7 +49,7 @@ export default function ProfileSummaryModal({
   const handleEmail = () => {
     if (p.email) {
       Linking.openURL(`mailto:${p.email}`).catch(() => {
-        Alert.alert('Error', 'Unable to open mail client');
+        showError('Unable to open mail client');
       });
     }
   };
@@ -359,20 +359,25 @@ export default function ProfileSummaryModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(10, 25, 47, 0.55)',
     justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   modalCard: {
-    backgroundColor: 'rgba(20, 22, 27, 0.98)',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: borderRadius.xl + 6,
     borderTopRightRadius: borderRadius.xl + 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(10, 25, 47, 0.08)',
     maxHeight: '88%',
     paddingBottom: spacing.stackLg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 16,
   },
   headerBar: {
     flexDirection: 'row',
@@ -387,16 +392,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badge: {
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: borderRadius.sm,
   },
   badgeText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(10),
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -405,7 +410,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(10, 25, 47, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -436,7 +441,7 @@ const styles = StyleSheet.create({
   },
   username: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(12),
     marginBottom: 4,
   },
@@ -451,9 +456,9 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
   },
   infoCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: colors.surfaceDim,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
     padding: spacing.stackMd,
     gap: spacing.stackSm,
@@ -466,7 +471,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: colors.primary,
     fontSize: moderateScale(11),
     letterSpacing: 0.8,
     fontWeight: '800',
@@ -501,22 +506,22 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 214, 0, 0.08)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.2)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
   },
   chipLabel: {
     ...typography.labelTechnical,
-    color: colors.outline,
+    color: colors.onSurfaceVariant,
     fontSize: moderateScale(9),
     fontWeight: '700',
   },
   chipValue: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(10),
     fontWeight: '800',
   },
@@ -524,9 +529,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.stackSm + 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: colors.surfaceDim,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.outlineVariant,
     padding: spacing.stackSm + 2,
     borderRadius: borderRadius.md,
   },
@@ -569,8 +574,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(76, 175, 80, 0.35)',
   },
   pillPrivate: {
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   miniPrivacyText: {
     ...typography.labelTechnical,
@@ -578,10 +583,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   pillTextPublic: {
-    color: '#4CAF50',
+    color: '#059669',
   },
   pillTextPrivate: {
-    color: colors.primaryContainer,
+    color: '#B45309',
   },
   ownerPrivacyHint: {
     flexDirection: 'row',
@@ -611,7 +616,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.marginMobile,
     paddingTop: spacing.stackSm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: colors.outlineVariant,
+    backgroundColor: '#FFFFFF',
   },
   primaryActionBtn: {
     flexDirection: 'row',
@@ -621,10 +627,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryContainer,
     height: 48,
     borderRadius: borderRadius.lg,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 4,
   },
   primaryActionText: {
@@ -645,15 +651,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.35)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
     height: 48,
     borderRadius: borderRadius.lg,
   },
   connectedText: {
     ...typography.labelTechnical,
-    color: '#4CAF50',
+    color: '#059669',
     fontSize: moderateScale(11),
     fontWeight: '800',
   },
@@ -662,16 +668,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.35)',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
     paddingHorizontal: spacing.stackMd,
     height: 48,
     borderRadius: borderRadius.lg,
   },
   removeFriendText: {
     ...typography.labelTechnical,
-    color: '#ff5252',
+    color: '#DC2626',
     fontSize: moderateScale(11),
     fontWeight: '800',
   },
@@ -685,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#10B981',
     height: 48,
     borderRadius: borderRadius.lg,
   },
@@ -701,15 +707,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.surfaceDim,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.35)',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
     height: 48,
     borderRadius: borderRadius.lg,
   },
   declineBtnText: {
     ...typography.labelTechnical,
-    color: '#ff5252',
+    color: '#DC2626',
     fontSize: moderateScale(12),
     fontWeight: '800',
   },
@@ -718,15 +724,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.35)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
     height: 48,
     borderRadius: borderRadius.lg,
   },
   pendingActionText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(11),
     fontWeight: '800',
   },

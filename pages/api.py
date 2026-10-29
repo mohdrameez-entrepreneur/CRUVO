@@ -423,10 +423,21 @@ def purge_location_history_view(request):
 @api_view(['GET', 'POST'])
 def rides_view(request):
     if request.method == 'GET':
-        rides = Ride.objects.filter(
+        status_param = request.GET.get('status')
+        exclude_status = request.GET.get('exclude_status')
+        qs = Ride.objects.filter(
             participants__user=request.user,
-            participants__status='ACCEPTED',
-        ).order_by('-date', '-time')[:50]
+            participants__status__in=['ACCEPTED', 'COMPLETED'],
+        )
+        if status_param:
+            statuses = [s.strip() for s in status_param.split(',') if s.strip()]
+            if statuses:
+                qs = qs.filter(status__in=statuses)
+        if exclude_status:
+            ex_statuses = [s.strip() for s in exclude_status.split(',') if s.strip()]
+            if ex_statuses:
+                qs = qs.exclude(status__in=ex_statuses)
+        rides = qs.order_by('-date', '-time')[:50]
         return Response(RideSerializer(rides, many=True, context={'request': request}).data)
 
     serializer = RideCreateSerializer(data=request.data)
@@ -455,16 +466,50 @@ def ride_detail_view(request, ride_id):
         return Response(RideSerializer(ride, context={'request': request}).data)
 
     if request.method == 'PATCH':
-        if ride.creator != request.user:
-            return Response({'error': 'Only the ride creator can edit this ride'}, status=status.HTTP_403_FORBIDDEN)
         new_status = request.data.get('status')
         old_status = ride.status
+        is_creator = (ride.creator == request.user)
+        is_participant = ride.participants.filter(user=request.user, status__in=['ACCEPTED', 'COMPLETED']).exists()
+
+        if not is_creator and not is_participant:
+            return Response({'error': 'You do not have permission to edit this ride'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not is_creator and new_status not in ['COMPLETED', 'CANCELLED']:
+            return Response({'error': 'Only the ride creator can edit ride metadata'}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = RideCreateSerializer(ride, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            saved_ride = serializer.save()
+            if new_status and new_status != old_status:
+                saved_ride.status = new_status
+                saved_ride.save(update_fields=['status'])
+
             if new_status in ['COMPLETED', 'CANCELLED'] and old_status not in ['COMPLETED', 'CANCELLED']:
                 # Technical Data Minimization: Auto-delete raw location pings when ride ends
-                ride.positions.all().delete()
+                saved_ride.positions.all().delete()
+
+                # Mark all accepted participants as completed
+                from django.utils import timezone
+                saved_ride.participants.filter(status='ACCEPTED').update(
+                    status='COMPLETED',
+                    completed_at=timezone.now()
+                )
+
+                actual_duration = request.data.get('actual_duration_s') or request.data.get('route_duration_s')
+                if actual_duration is not None:
+                    try:
+                        saved_ride.route_duration_s = int(actual_duration)
+                        saved_ride.save(update_fields=['route_duration_s'])
+                    except (ValueError, TypeError):
+                        pass
+
+                actual_distance = request.data.get('actual_distance_km') or request.data.get('distance_km')
+                if actual_distance is not None:
+                    try:
+                        saved_ride.distance_km = round(float(actual_distance), 2)
+                        saved_ride.save(update_fields=['distance_km'])
+                    except (ValueError, TypeError):
+                        pass
 
                 from channels.layers import get_channel_layer
                 from asgiref.sync import async_to_sync
@@ -475,10 +520,13 @@ def ride_detail_view(request, ride_id):
                         'type': 'ride_ended',
                         'ride_id': ride_id,
                         'ended_by': request.user.id,
-                        'ended_by_name': request.user.profile.display_name,
+                        'ended_by_name': getattr(getattr(request.user, 'profile', None), 'display_name', request.user.username),
+                        'actual_duration_s': saved_ride.route_duration_s,
+                        'actual_distance_km': saved_ride.distance_km,
                     }
                 )
-            return Response(RideSerializer(ride, context={'request': request}).data)
+            return Response(RideSerializer(saved_ride, context={'request': request}).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     if ride.creator != request.user:
@@ -698,7 +746,7 @@ def ride_summary_view(request, ride_id):
         'participants': RideParticipantSerializer(participants, many=True, context={'request': request}).data,
         'flag_stops': FlagStopSerializer(flag_stops, many=True).data,
         'stats': {
-            'duration': None,
+            'duration': ride.route_duration_s,
             'distance_km': ride.distance_km,
             'rider_count': ride.participant_count(),
             'stop_count': flag_stops.count(),
@@ -1014,44 +1062,44 @@ def list_friend_requests_view(request):
 @permission_classes([permissions.AllowAny])
 def app_version_view(request):
     return Response({
-        'latest_version': '3.1.2',
+        'latest_version': '3.2',
         'min_required_version': '3.0.0',
         'play_store_url': 'market://details?id=com.cruvo.app',
         'web_store_url': 'https://play.google.com/store/apps/details?id=com.cruvo.app',
         'download_url': 'https://play.google.com/store/apps/details?id=com.cruvo.app',
         'website_url': 'https://cruvo-web.onrender.com',
-        'release_date': '2026-10-03',
+        'release_date': '2026-10-29',
         'whats_new': [
             {
-                'title': 'Smart Debounced Destination Autocomplete',
-                'description': 'Multi-provider real-time search suggestions with rapid debounced geocoding for effortless route creation.',
-                'icon': 'search-outline'
+                'title': 'Rider Distance in Ride Summary',
+                'description': 'Real-time telemetry calculates and displays actual distance covered by riders upon ride completion.',
+                'icon': 'speedometer-outline'
             },
             {
-                'title': 'Universal Location Consent Modal',
-                'description': 'Redesigned scrollable location disclosure with pinned action buttons and persistent permission state.',
-                'icon': 'shield-checkmark-outline'
+                'title': 'Streamlined Ride Completion',
+                'description': 'Immediate status transition to ended with automatic routing to summary upon confirming ride end.',
+                'icon': 'flag-outline'
             },
             {
-                'title': 'Optimized Squad Telemetry Engine',
-                'description': 'Enhanced background GPS broadcast and battery conservation during extended group rides.',
+                'title': 'Motorcycle Dark Alert Design',
+                'description': 'Universal high-contrast, themed alert and error dialogs across all rider workflows.',
+                'icon': 'notifications-outline'
+            },
+            {
+                'title': 'Minimal Server Warmup Screen',
+                'description': 'Engaging perceived-progress telemetry loader during server spin-up and connection handshake.',
                 'icon': 'flash-outline'
             },
             {
-                'title': 'High-Precision 40m Arrival Geofence',
-                'description': 'Accurate arrival detection and waypoint prompts for lead and squad riders.',
+                'title': 'High-Precision Route & Geofence Sync',
+                'description': 'Refined TomTom routing engine with intelligent waypoint handling and 40m arrival detection.',
                 'icon': 'navigate-circle-outline'
-            },
-            {
-                'title': 'DPDP Act 2023 & GDPR Privacy Suite',
-                'description': 'Full rider controls to purge ride history, manage telemetry consent, or export profile summaries.',
-                'icon': 'lock-closed-outline'
             }
         ],
         'update_steps': [
             'Tap "UPDATE ON GOOGLE PLAY" below to open the official Google Play Store page.',
-            'Tap "Update" on Google Play to install CRUVO v3.1.2.',
-            'Open CRUVO v3.1.2 to enjoy our latest stable squad navigation and real-time telemetry!'
+            'Tap "Update" on Google Play to install CRUVO v3.2.',
+            'Open CRUVO v3.2 to enjoy our latest stable squad navigation and real-time telemetry!'
         ]
     })
 

@@ -134,7 +134,7 @@ export default function PrivacyPolicyScreen({ navigation, route, onAgree }) {
         {/* Header Hero */}
         <View style={styles.heroCard}>
           <View style={styles.shieldIconWrap}>
-            <Ionicons name="shield" size={32} color={colors.primaryContainer} />
+            <Ionicons name="shield" size={32} color="#B45309" />
           </View>
           <Text style={styles.heroTitle}>Your Privacy Matters</Text>
           <Text style={styles.heroSubtitle}>
@@ -149,7 +149,7 @@ export default function PrivacyPolicyScreen({ navigation, route, onAgree }) {
           {HIGHLIGHTS.map((item, idx) => (
             <View key={idx} style={styles.highlightCard}>
               <View style={styles.highlightIcon}>
-                <Ionicons name={item.icon} size={22} color={colors.primaryContainer} />
+                <Ionicons name={item.icon} size={22} color="#B45309" />
               </View>
               <View style={styles.highlightTextWrap}>
                 <Text style={styles.highlightTitle}>{item.title}</Text>
@@ -171,7 +171,7 @@ export default function PrivacyPolicyScreen({ navigation, route, onAgree }) {
               activeOpacity={0.7}
             >
               <View style={styles.accordionHeader}>
-                <Ionicons name={sec.icon} size={20} color={isExpanded ? colors.primaryContainer : colors.onSurfaceVariant} />
+                <Ionicons name={sec.icon} size={20} color={isExpanded ? '#B45309' : colors.onSurfaceVariant} />
                 <Text style={[styles.accordionTitle, isExpanded && styles.accordionTitleActive]}>
                   {sec.title}
                 </Text>
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.stackSm + 4,
     borderBottomWidth: 1,
     borderBottomColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.surface,
   },
   iconButton: {
     width: 40,
@@ -259,22 +259,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   badgeText: {
     ...typography.labelTechnical,
     fontSize: moderateScale(10),
-    color: colors.primaryContainer,
+    color: '#B45309',
     letterSpacing: 0.5,
   },
   topBarTitle: {
     ...typography.displayLg,
-    color: colors.primaryContainer,
+    color: colors.primary,
     fontSize: moderateScale(18),
     letterSpacing: -0.5,
     textTransform: 'uppercase',
@@ -286,20 +286,25 @@ const styles = StyleSheet.create({
     padding: spacing.marginMobile,
   },
   heroCard: {
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     padding: spacing.stackMd + 4,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     marginBottom: spacing.stackLg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
   shieldIconWrap: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.stackMd,
@@ -318,7 +323,7 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     ...typography.labelSm,
-    color: colors.primaryContainer,
+    color: '#B45309',
     opacity: 0.9,
     marginTop: 4,
   },
@@ -337,12 +342,17 @@ const styles = StyleSheet.create({
   highlightCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     borderRadius: borderRadius.lg,
     padding: spacing.stackMd,
     gap: spacing.stackSm + 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   highlightIcon: {
     marginTop: 2,
@@ -364,7 +374,7 @@ const styles = StyleSheet.create({
     lineHeight: moderateScale(18),
   },
   accordionCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
@@ -372,8 +382,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.stackSm + 2,
   },
   accordionCardActive: {
-    borderColor: colors.primaryContainer,
-    backgroundColor: colors.surfaceContainerLow,
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+    backgroundColor: colors.surfaceDim,
   },
   accordionHeader: {
     flexDirection: 'row',
@@ -388,7 +398,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
   },
   accordionTitleActive: {
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontWeight: '700',
   },
   accordionBody: {
@@ -407,7 +417,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.primaryContainer,
+    backgroundColor: '#B45309',
     marginTop: 6,
   },
   bulletText: {
@@ -422,15 +432,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderTopWidth: 1,
-    borderTopColor: colors.outlineVariant,
+    borderTopColor: colors.glassBorder,
     paddingHorizontal: spacing.marginMobile,
     paddingTop: spacing.stackMd,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 8,
   },
   checkboxRow: {
@@ -445,7 +455,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: colors.outline,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surfaceDim,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -460,7 +470,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13),
   },
   checkboxLabelHighlight: {
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontWeight: '700',
   },
   agreeButton: {
@@ -471,6 +481,11 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: borderRadius.lg,
     gap: spacing.stackSm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   agreeButtonDisabled: {
     backgroundColor: colors.surfaceContainerHigh,

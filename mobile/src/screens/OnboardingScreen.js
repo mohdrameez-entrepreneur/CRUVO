@@ -17,7 +17,7 @@ export default function OnboardingScreen({ navigation }) {
         resizeMode="cover"
       >
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+          colors={['transparent', 'transparent', 'rgba(10, 25, 47, 0.45)', 'rgba(10, 25, 47, 0.9)']}
           locations={[0, 0.4, 0.7, 1]}
           style={StyleSheet.absoluteFillObject}
         />
@@ -83,22 +83,35 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     ...typography.displayLg,
-    color: colors.primaryContainer,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: -1.6,
+    textShadowColor: 'rgba(10, 25, 47, 0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   heroSubtitle: {
     ...typography.bodyLg,
-    color: colors.onSurfaceVariant,
+    color: '#F8F9FA',
     marginTop: spacing.stackSm,
+    textShadowColor: 'rgba(10, 25, 47, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   bottomSheet: {
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
     paddingHorizontal: spacing.marginMobile,
     paddingTop: spacing.stackMd,
     paddingBottom: spacing.stackLg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   handle: {
     width: moderateScale(40),
@@ -135,16 +148,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.stackMd,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 0,
-    elevation: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   primaryButtonText: {
     ...typography.titleMd,
     color: colors.onPrimaryContainer,
     textTransform: 'uppercase',
+    fontWeight: '700',
   },
   linkText: {
     ...typography.labelTechnical,
@@ -153,7 +167,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.stackMd,
   },
   linkBold: {
-    color: colors.primaryContainer,
+    color: '#B45309',
+    fontWeight: '700',
   },
   skipText: {
     ...typography.bodyMd,

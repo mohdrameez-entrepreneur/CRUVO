@@ -1,7 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 
-<html class="dark" lang="en"><head>
+<html class="light" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <meta name="description" content="CRUVO Active Ride - Real-time group ride map with live rider positions, speed, and route tracking."/>
@@ -92,20 +92,22 @@
             </div>
 </div>
 <!-- Floating Top Overlay Header -->
-<header class="absolute top-margin-mobile left-margin-mobile right-margin-mobile z-40 bg-surface-container/90 backdrop-blur-md border border-outline-variant rounded-xl p-4 shadow-[0px_4px_0px_rgba(0,0,0,0.5)] flex justify-between items-center">
-<div class="flex flex-col">
-<h1 class="font-title-md text-title-md text-on-surface tracking-tight">Sunday Morning Ride</h1>
-<div class="flex items-center gap-2 mt-1">
-<span class="w-2 h-2 rounded-full bg-primary-container"></span>
-<span class="font-label-technical text-label-technical text-on-surface-variant">3 RIDERS ACTIVE</span>
+<header id="activeRideHeader" class="absolute top-margin-mobile left-margin-mobile right-margin-mobile z-40 bg-surface/90 backdrop-blur-md border border-outline-variant rounded-xl p-3 shadow-md flex justify-between items-center transition-all duration-300">
+<div class="flex flex-col cursor-pointer" onclick="toggleHeaderMinimize()">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<h1 class="font-title-md text-base text-on-surface tracking-tight" id="headerTitle">Sunday Morning Ride</h1>
+</div>
+<div id="headerSubtitle" class="flex items-center gap-2 mt-1">
+<span class="font-label-technical text-xs text-on-surface-variant">3 RIDERS ACTIVE · 00:14</span>
 </div>
 </div>
-<div class="flex gap-2">
-<button onclick="location.href="{% url 'pages:ride-summary' %}"" class="w-touch-target-min h-touch-target-min flex items-center justify-center bg-surface-container-high border border-outline-variant rounded-lg active:scale-95 transition-transform" title="End Ride">
-<span class="material-symbols-outlined text-on-surface" style="font-variation-settings: 'FILL' 0;">flag</span>
+<div class="flex items-center gap-2">
+<button onclick="location.href='{% url 'pages:ride-summary' %}'" class="h-8 px-2.5 flex items-center justify-center bg-red-500/10 border border-red-500/30 text-red-600 rounded-lg active:scale-95 transition-transform text-xs font-bold" title="End Ride">
+END
 </button>
-<button class="w-touch-target-min h-touch-target-min flex items-center justify-center bg-surface-container-high border border-outline-variant rounded-lg active:scale-95 transition-transform">
-<span class="material-symbols-outlined text-on-surface" style="font-variation-settings: 'FILL' 0;">tune</span>
+<button onclick="toggleHeaderMinimize()" class="w-8 h-8 flex items-center justify-center bg-surface-container border border-outline-variant rounded-lg active:scale-95 transition-transform text-on-surface-variant" title="Minimize / Expand">
+<span id="headerToggleIcon" class="material-symbols-outlined text-base">expand_less</span>
 </button>
 </div>
 </header>
@@ -178,6 +180,25 @@
 </div>
 </div>
 <script>
+        let headerMinimized = false;
+        function toggleHeaderMinimize() {
+            const sub = document.getElementById('headerSubtitle');
+            const icon = document.getElementById('headerToggleIcon');
+            const header = document.getElementById('activeRideHeader');
+            headerMinimized = !headerMinimized;
+            if (headerMinimized) {
+                sub.style.display = 'none';
+                icon.textContent = 'expand_more';
+                header.classList.remove('p-3');
+                header.classList.add('py-1.5', 'px-3');
+            } else {
+                sub.style.display = 'flex';
+                icon.textContent = 'expand_less';
+                header.classList.remove('py-1.5', 'px-3');
+                header.classList.add('p-3');
+            }
+        }
+
         let panelExpanded = false;
         function togglePanel() {
             const panel = document.getElementById('riderPanel');

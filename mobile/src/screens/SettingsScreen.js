@@ -5,10 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, moderateScale } from '../theme';
+import { showAlert, showError, showSuccess, showInfo } from '../utils/alert';
 import { useAuth } from '../context/AuthContext';
 import NavBar from '../components/NavBar';
 import GlassModal from '../components/GlassModal';
@@ -31,7 +31,7 @@ function SettingsSection({ title, children }) {
   );
 }
 
-function SettingRow({ icon, label, value, onPress, isLast = false, rightElement, iconColor = colors.primaryContainer }) {
+function SettingRow({ icon, label, value, onPress, isLast = false, rightElement, iconColor = '#B45309' }) {
   const content = (
     <View style={[styles.settingRow, isLast && styles.settingRowLast]}>
       <View style={[styles.iconWrap, { backgroundColor: `${iconColor}15` }]}>
@@ -72,41 +72,39 @@ export default function SettingsScreen({ navigation }) {
 
   const handleWithdrawConsent = async () => {
     await AsyncStorage.removeItem('@cruvo_bg_disclosure_seen').catch(() => {});
-    Alert.alert(
-      'Consent Withdrawn',
+    showInfo(
       'You have withdrawn your consent for live telemetry and location tracking. Background and foreground GPS broadcasts will remain disabled until you explicitly re-enable them before starting a ride.',
-      [{ text: 'OK' }]
+      'Consent Withdrawn'
     );
   };
 
   const handlePurgeLocationHistory = () => {
-    Alert.alert(
-      'Purge Location History?',
-      'This will permanently delete all raw GPS coordinates, active telemetry pings, and location cache from CRUVO servers.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Purge Location Data',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await profileAPI.purgeLocationHistory();
-              Alert.alert('Purged Successfully', res.data.message || 'All raw location pings have been erased.');
-            } catch {
-              Alert.alert('Notice', 'Location telemetry cache cleared.');
-            }
-          },
-        },
-      ]
-    );
+    showAlert({
+      title: 'Purge Location History?',
+      message: 'This will permanently delete all raw GPS coordinates, active telemetry pings, and location cache from CRUVO servers.',
+      type: 'danger',
+      showCancel: true,
+      cancelText: 'Cancel',
+      confirmText: 'Purge Location Data',
+      onConfirm: async () => {
+        try {
+          const res = await profileAPI.purgeLocationHistory();
+          showSuccess(res.data.message || 'All raw location pings have been erased.', 'Purged Successfully');
+        } catch {
+          showInfo('Location telemetry cache cleared.', 'Notice');
+        }
+      },
+    });
   };
 
   const handleRequestDataSummary = () => {
-    Alert.alert(
-      'Personal Data Summary',
-      `Data Principal Summary (DPDP Act & GDPR):\n\n• Username: @${user?.username || ''}\n• Email: ${user?.email || ''}\n• Rider ID: #${user?.id || '0'}\n• Garage: ${bikeDisplay}\n• Stored Rides: Linked to your account\n\nTo request a portable machine-readable export of your data, email our Grievance Officer at cruvobs@gmail.com.`,
-      [{ text: 'Close' }]
-    );
+    showAlert({
+      title: 'Personal Data Summary',
+      message: `Data Principal Summary (DPDP Act & GDPR):\n\n• Username: @${user?.username || ''}\n• Email: ${user?.email || ''}\n• Rider ID: #${user?.id || '0'}\n• Garage: ${bikeDisplay}\n• Stored Rides: Linked to your account\n\nTo request a portable machine-readable export of your data, email our Grievance Officer at cruvobs@gmail.com.`,
+      type: 'info',
+      confirmText: 'Close',
+      showCancel: false,
+    });
   };
 
   const handleConfirmDeleteAccount = async () => {
@@ -114,9 +112,9 @@ export default function SettingsScreen({ navigation }) {
     try {
       await profileAPI.deleteAccount();
       await logout();
-      Alert.alert('Account Deleted', 'Your account and all associated personal data have been permanently erased from CRUVO servers.');
+      showSuccess('Your account and all associated personal data have been permanently erased from CRUVO servers.', 'Account Deleted');
     } catch (e) {
-      Alert.alert('Notice', 'Account deletion request queued. If an error persists, contact cruvobs@gmail.com directly.');
+      showInfo('Account deletion request queued. If an error persists, contact cruvobs@gmail.com directly.', 'Notice');
       await logout();
     } finally {
       setDeletingAccount(false);
@@ -140,20 +138,27 @@ export default function SettingsScreen({ navigation }) {
       const res = await versionAPI.getAppVersion();
       const data = res.data;
       const latest = data.latest_version;
-      if (latest === CURRENT_APP_VERSION) {
-        Alert.alert(
-          'Up to Date',
-          `CRUVO v${CURRENT_APP_VERSION} is the latest version on Google Play. You are all set!`,
-          [
-            { text: "View What's New", onPress: () => setShowWhatsNew(true) },
-            { text: 'OK' },
-          ]
-        );
+      const normalizeV = (v) => {
+        if (!v) return '0.0.0';
+        const p = v.toString().split('.').map(n => parseInt(n, 10) || 0);
+        while (p.length < 3) p.push(0);
+        return p.join('.');
+      };
+      if (normalizeV(latest) === normalizeV(CURRENT_APP_VERSION)) {
+        showAlert({
+          title: 'Up to Date',
+          message: `CRUVO v${CURRENT_APP_VERSION} is the latest version on Google Play. You are all set!`,
+          type: 'success',
+          showCancel: true,
+          cancelText: 'OK',
+          confirmText: "View What's New",
+          onConfirm: () => setShowWhatsNew(true),
+        });
       } else {
         setUpdateModalData(data);
       }
     } catch {
-      Alert.alert('Status', `CRUVO v${CURRENT_APP_VERSION} installed.`);
+      showInfo(`CRUVO v${CURRENT_APP_VERSION} installed.`, 'Status');
     } finally {
       setCheckingUpdates(false);
     }
@@ -244,7 +249,7 @@ export default function SettingsScreen({ navigation }) {
             icon="mail-outline"
             label="Email Privacy"
             value={profile?.is_email_public ? '👥 Visible to friends only' : '🔒 Kept private'}
-            iconColor={profile?.is_email_public ? '#4CAF50' : colors.primaryContainer}
+            iconColor={profile?.is_email_public ? '#059669' : '#B45309'}
             onPress={() => navigation.navigate('ProfileEdit')}
             rightElement={
               <View style={[styles.privacyPill, profile?.is_email_public ? styles.pillPublic : styles.pillPrivate]}>
@@ -258,7 +263,7 @@ export default function SettingsScreen({ navigation }) {
             icon="call-outline"
             label="Phone Privacy"
             value={profile?.is_phone_public ? '👥 Visible to friends only' : '🔒 Kept private'}
-            iconColor={profile?.is_phone_public ? '#4CAF50' : colors.primaryContainer}
+            iconColor={profile?.is_phone_public ? '#059669' : '#B45309'}
             isLast
             onPress={() => navigation.navigate('ProfileEdit')}
             rightElement={
@@ -299,14 +304,14 @@ export default function SettingsScreen({ navigation }) {
             icon="trash-bin-outline"
             label="Purge Location History"
             value="Erase raw GPS pings & telemetry immediately"
-            iconColor="#FF9800"
+            iconColor="#B45309"
             onPress={handlePurgeLocationHistory}
           />
           <SettingRow
             icon="hand-left-outline"
             label="Withdraw Location Consent"
             value="Revoke active telemetry permissions"
-            iconColor="#FF9800"
+            iconColor="#B45309"
             onPress={handleWithdrawConsent}
           />
           <SettingRow
@@ -371,7 +376,7 @@ export default function SettingsScreen({ navigation }) {
           onPress={() => setShowLogoutModal(true)}
           activeOpacity={0.85}
         >
-          <Ionicons name="log-out-outline" size={18} color="#ff5252" />
+          <Ionicons name="log-out-outline" size={18} color="#DC2626" />
           <Text style={styles.logoutText}>LOG OUT</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -387,7 +392,7 @@ export default function SettingsScreen({ navigation }) {
       <UpdateRequiredModal
         visible={!!updateModalData}
         currentVersion={CURRENT_APP_VERSION}
-        latestVersion={updateModalData?.latest_version || '3.1.2'}
+        latestVersion={updateModalData?.latest_version || '3.2'}
         requiredVersion={updateModalData?.min_required_version || '3.0.0'}
         whatsNew={updateModalData?.whats_new}
         playStoreUrl={updateModalData?.play_store_url}
@@ -458,16 +463,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.stackSm,
   },
   heroCard: {
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.25)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     borderRadius: borderRadius.xl,
     padding: spacing.stackMd + 2,
     marginBottom: spacing.stackLg,
-    shadowColor: colors.black,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
     elevation: 3,
   },
   heroTop: {
@@ -498,22 +503,22 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   memberBadge: {
-    backgroundColor: 'rgba(255, 214, 0, 0.15)',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.35)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
   },
   memberBadgeText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(8),
     fontWeight: '800',
   },
   heroUsername: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(11),
   },
   heroJoined: {
@@ -530,6 +535,11 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: borderRadius.lg,
     marginTop: spacing.stackMd,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   editProfileBtnText: {
     ...typography.labelTechnical,
@@ -550,11 +560,16 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   card: {
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   settingRow: {
     flexDirection: 'row',
@@ -562,7 +577,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.stackMd,
     paddingVertical: spacing.stackMd - 2,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: colors.outlineVariant,
     gap: spacing.stackSm + 4,
   },
   settingRowLast: {
@@ -597,12 +612,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillPublic: {
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
-    borderColor: 'rgba(76, 175, 80, 0.35)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
   },
   pillPrivate: {
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   privacyPillText: {
     ...typography.labelTechnical,
@@ -610,10 +625,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   pillTextPublic: {
-    color: '#4CAF50',
+    color: '#059669',
   },
   pillTextPrivate: {
-    color: colors.primaryContainer,
+    color: '#B45309',
   },
   versionWrap: {
     alignItems: 'center',
@@ -637,9 +652,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255, 82, 82, 0.08)',
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.35)',
+    borderColor: 'rgba(220, 38, 38, 0.35)',
     height: 48,
     borderRadius: borderRadius.xl,
     marginTop: spacing.stackSm,
@@ -647,7 +662,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     ...typography.titleMd,
-    color: '#ff5252',
+    color: '#DC2626',
     fontSize: moderateScale(13),
     fontWeight: '800',
     letterSpacing: 0.8,

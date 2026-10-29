@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { colors, typography } from '../theme';
 
 const AVATAR_COLORS = [
-  '#ffd600', '#4CAF50', '#FF9800', '#2196F3', '#E91E63',
-  '#9C27B0', '#00BCD4', '#FF5722', '#607D8B', '#795548',
+  '#38BDF8', '#34D399', '#F472B6', '#818CF8', '#A78BFA',
+  '#FB923C', '#2DD4BF', '#F87171', '#94A3B8', '#64748B',
 ];
 
 function getColorFromId(id) {
@@ -63,5 +63,5 @@ const styles = StyleSheet.create({
   container: { overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
   image: { resizeMode: 'cover' },
   fallback: {},
-  initials: { ...typography.labelTechnical, color: colors.onSurface },
+  initials: { ...typography.labelTechnical, color: '#FFFFFF', fontWeight: '700' },
 });

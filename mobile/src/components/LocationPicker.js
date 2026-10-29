@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../theme';
+import { showError, showWarning } from '../utils/alert';
 import * as Location from 'expo-location';
 import { searchPlaces, reverseGeocode } from '../services/locationService';
 
@@ -86,7 +87,7 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to use current location');
+        showWarning('Location permission is required to use current location', 'Permission Denied');
         setUsingCurrentLocation(false);
         setLoading(false);
         return;
@@ -105,7 +106,7 @@ export default function LocationPicker({ label, icon, placeholder, value, onSele
       setShowResults(false);
       onSelect({ name: addressName, lat: latitude, lng: longitude });
     } catch {
-      Alert.alert('Error', 'Failed to get current location');
+      showError('Failed to get current location');
       setUsingCurrentLocation(false);
     } finally {
       setLoading(false);
@@ -215,14 +216,15 @@ const styles = StyleSheet.create({
   },
   currentLocationText: {
     ...typography.labelMd,
-    color: colors.primaryContainer,
+    color: '#B45309',
+    fontWeight: '700',
   },
   currentLocationTextActive: {
     color: colors.onPrimaryContainer,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   dropdown: {
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg,
@@ -230,10 +232,10 @@ const styles = StyleSheet.create({
     maxHeight: 220,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   resultItem: {
     flexDirection: 'row',

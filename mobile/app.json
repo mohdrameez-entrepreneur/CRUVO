@@ -6,19 +6,14 @@
       "cruvo",
       "com.googleusercontent.apps.226381555368-2r2sje22mjfp1i3i147fnglap7vf02kj"
     ],
-    "version": "3.1.2",
-    "orientation": "portrait",
-    "icon": "./assets/CRUVO LOGO.jpg",
-    "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/CRUVO LOGO.jpg",
-      "resizeMode": "contain",
-      "backgroundColor": "#121317"
-    },
+    "version": "3.2.0",
+    "orientation": "default",
+    "icon": "./assets/cruvo_logo.png",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cruvo.app",
-      "buildNumber": "3.1.2",
+      "buildNumber": "3.2.0",
       "config": {
         "googleMapsApiKey": ""
       },
@@ -30,11 +25,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/CRUVO LOGO.jpg",
-        "backgroundColor": "#121317"
+        "foregroundImage": "./assets/cruvo_logo.png",
+        "backgroundColor": "#F8F9FA"
       },
       "package": "com.cruvo.app",
-      "versionCode": 7,
+      "versionCode": 8,
       "config": {
         "googleMaps": {
           "apiKey": ""
@@ -66,12 +61,33 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/CRUVO LOGO.jpg",
-          "color": "#ffd600"
+          "icon": "./assets/cruvo_logo.png",
+          "color": "#F59E0B"
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod\n-keepclasseswithmembers class * { native <methods>; }\n-keep interface com.facebook.react.turbomodule.core.interfaces.TurboModule { *; }\n-keep class * extends com.facebook.react.bridge.NativeModule { *; }\n-keep class * extends com.facebook.react.bridge.JavaScriptModule { *; }\n-keepclassmembers class * extends com.facebook.react.bridge.ReactContextBaseJavaModule { @com.facebook.react.bridge.ReactMethod *; }\n-dontwarn okhttp3.**\n-dontwarn okio.**\n-dontwarn javax.annotation.**"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-secure-store",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/cruvo_logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F8F9FA"
+        }
+      ]
     ],
     "extra": {
       "eas": {

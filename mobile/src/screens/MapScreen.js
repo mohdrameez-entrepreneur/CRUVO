@@ -51,7 +51,7 @@ export default function MapScreen({ navigation }) {
       <NavBar title="LIVE RADAR" subtitle="ACTIVE RIDE TRACKING" />
       <View style={[styles.centerContent, { paddingBottom: Math.max(insets.bottom, 16) + 90 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name="map-outline" size={56} color={colors.primaryContainer} />
+          <Ionicons name="map-outline" size={56} color="#B45309" />
         </View>
         <Text style={styles.title}>No Active Ride</Text>
         <Text style={styles.subtitle}>Start a ride to see live tracking on the map</Text>
@@ -76,9 +76,9 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     width: 110, height: 110, borderRadius: 55,
-    backgroundColor: 'rgba(255, 214, 0, 0.1)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.25)',
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     justifyContent: 'center', alignItems: 'center',
     marginBottom: spacing.stackSm,
   },
@@ -89,6 +89,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.stackSm,
     backgroundColor: colors.primaryContainer, paddingHorizontal: spacing.stackLg,
     paddingVertical: spacing.stackMd, borderRadius: borderRadius.lg, marginTop: spacing.stackMd,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   createButtonText: { ...typography.titleMd, color: colors.onPrimaryContainer, textTransform: 'uppercase' },
 });

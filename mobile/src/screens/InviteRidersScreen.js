@@ -6,6 +6,7 @@ import { discoveryAPI, ridesAPI } from '../api';
 import UserAvatar from '../components/UserAvatar';
 import NavBar from '../components/NavBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showError } from '../utils/alert';
 
 function RiderCard({ rider, onToggle, isInvited }) {
   const p = rider.profile;
@@ -118,7 +119,7 @@ export default function InviteRidersScreen({ navigation, route }) {
       }
     } catch (err) {
       console.log('INVITE ERROR:', err.message, err.response?.data);
-      Alert.alert('Error', err.response?.data?.error || 'Failed to update invitation');
+      showError(err.response?.data?.error || 'Failed to update invitation');
     }
   };
 
@@ -149,7 +150,7 @@ export default function InviteRidersScreen({ navigation, route }) {
       {isPublicRide ? (
         <View style={styles.publicInfoContainer}>
           <View style={styles.publicBanner}>
-            <Ionicons name="globe-outline" size={24} color={colors.primaryContainer} />
+            <Ionicons name="globe-outline" size={24} color="#B45309" />
             <View style={styles.publicTextWrap}>
               <Text style={styles.publicTitle}>PUBLIC RIDE</Text>
               <Text style={styles.publicSubtext}>
@@ -164,7 +165,7 @@ export default function InviteRidersScreen({ navigation, route }) {
       ) : (
         <>
           <View style={styles.privateHeaderBanner}>
-            <Ionicons name="lock-closed" size={14} color={colors.primaryContainer} />
+            <Ionicons name="lock-closed" size={14} color="#B45309" />
             <Text style={styles.privateBannerText}>
               PRIVATE RIDE • Only your accepted friends can be invited
             </Text>
@@ -226,6 +227,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.stackMd,
     paddingVertical: 6,
     borderRadius: borderRadius.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   doneBtnText: {
     ...typography.labelTechnical,
@@ -235,35 +241,46 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center', margin: spacing.marginMobile,
-    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outlineVariant,
     borderRadius: borderRadius.lg, paddingHorizontal: spacing.stackMd, height: spacing.touchTargetMin,
     gap: spacing.stackSm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   searchInput: { flex: 1, ...typography.bodyMd, color: colors.onSurface },
   list: { padding: spacing.marginMobile, paddingTop: 0, paddingBottom: 100 },
   riderCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerLowest, borderWidth: 1, borderColor: colors.outlineVariant,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder,
     borderRadius: borderRadius.lg, padding: spacing.stackMd, marginBottom: spacing.stackSm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   riderAvatar: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceContainerHigh,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceDim,
     justifyContent: 'center', alignItems: 'center',
   },
-  riderInitials: { ...typography.labelTechnical, color: colors.primaryContainer },
+  riderInitials: { ...typography.labelTechnical, color: '#B45309' },
   riderInfo: { flex: 1, gap: 2 },
   riderName: { ...typography.titleMd, color: colors.onSurface, fontSize: 16 },
-  riderUsername: { ...typography.labelSm, color: colors.primaryContainer },
+  riderUsername: { ...typography.labelSm, color: '#B45309' },
   riderBike: { ...typography.bodyMd, color: colors.onSurfaceVariant, fontSize: 13 },
-  riderStyle: { ...typography.labelSm, color: colors.primaryContainer },
+  riderStyle: { ...typography.labelSm, color: '#B45309' },
   inviteButton: {
     paddingHorizontal: spacing.stackMd, paddingVertical: spacing.stackSm,
-    borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.primaryContainer,
+    borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#B45309',
+    backgroundColor: colors.surfaceDim,
   },
   invitedButton: {
     backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer,
   },
-  inviteButtonText: { ...typography.labelTechnical, color: colors.primaryContainer, fontSize: 12 },
+  inviteButtonText: { ...typography.labelTechnical, color: '#B45309', fontSize: 12 },
   invitedButtonText: { color: colors.onPrimaryContainer },
   emptyState: {
     flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.stackSm,
@@ -275,9 +292,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
     marginHorizontal: spacing.marginMobile,
     marginTop: spacing.stackSm,
     paddingHorizontal: spacing.stackMd,
@@ -286,7 +303,7 @@ const styles = StyleSheet.create({
   },
   privateBannerText: {
     ...typography.labelTechnical,
-    color: colors.primaryContainer,
+    color: '#B45309',
     fontSize: moderateScale(11),
     fontWeight: '700',
   },
@@ -300,11 +317,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.stackMd,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: colors.glassBorder,
     borderRadius: borderRadius.xl,
     padding: spacing.stackLg,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
   publicTextWrap: {
     flex: 1,
@@ -312,7 +334,7 @@ const styles = StyleSheet.create({
   },
   publicTitle: {
     ...typography.titleMd,
-    color: colors.primaryContainer,
+    color: colors.primary,
     fontSize: moderateScale(16),
     fontWeight: '800',
   },
@@ -327,6 +349,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   doneFullText: {
     ...typography.titleMd,

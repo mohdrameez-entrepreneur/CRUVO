@@ -25,16 +25,16 @@ function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRider
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body, #map { width:100%; height:100%; background:#121317; overflow:hidden; }
+  html, body, #map { width:100%; height:100%; background:#F8F9FA; overflow:hidden; }
   .maplibregl-ctrl-attrib { display:none !important; }
   .maplibregl-ctrl-group { box-shadow: none !important; }
-  .maplibregl-ctrl button { background: rgba(30,31,35,0.9) !important; border: 1px solid #4d4632 !important; }
-  .maplibregl-ctrl button span { filter: invert(1); }
+  .maplibregl-ctrl button { background: rgba(255,255,255,0.92) !important; border: 1px solid rgba(10,25,47,0.12) !important; }
+  .maplibregl-ctrl button span { filter: none; }
   
   @keyframes me-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.75), 0 3px 12px rgba(0,0,0,0.8); }
-    70% { box-shadow: 0 0 0 16px rgba(255, 214, 0, 0), 0 3px 12px rgba(0,0,0,0.8); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0), 0 3px 12px rgba(0,0,0,0.8); }
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75), 0 3px 12px rgba(10,25,47,0.3); }
+    70% { box-shadow: 0 0 0 16px rgba(245, 158, 11, 0), 0 3px 12px rgba(10,25,47,0.3); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 3px 12px rgba(10,25,47,0.3); }
   }
   .me-marker-pulse {
     animation: me-pulse 2s infinite;
@@ -48,7 +48,7 @@ function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRider
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.8);
+    box-shadow: 0 4px 16px rgba(10, 25, 47, 0.25);
     overflow: visible;
   }
   .cruvo-avatar-inner {
@@ -75,7 +75,7 @@ function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRider
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     font-weight: 800;
-    color: #121317;
+    color: #0A192F;
   }
   .cruvo-flag-badge {
     position: absolute;
@@ -90,7 +90,7 @@ function buildHtml({ initialCenter, initialZoom, markers, polyline, initialRider
     align-items: center;
     justify-content: center;
     font-size: 11px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 4px rgba(10, 25, 47, 0.2);
     z-index: 2;
   }
   .cruvo-direction-arrow {
@@ -120,12 +120,14 @@ try {
     layers: [{ id: 'osm', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }]
   };
 
+  var DEFAULT_PITCH = 35; // Subtle 35° tilt for a modern 3D perspective
+
   var map = new maplibregl.Map({
     container: 'map',
     style: style,
     center: [${centerLng}, ${centerLat}],
     zoom: ${zoomLevel},
-    pitch: 0,
+    pitch: DEFAULT_PITCH,
     bearing: 0,
     attributionControl: false
   });
@@ -139,6 +141,33 @@ try {
   var rawPolyline = ${polylineJson} || [];
   // The current device’s own user ID — camera ONLY follows this user’s GPS
   var MY_USER_ID = ${myUserIdJson};
+
+  // --- Chaikin's corner-cutting algorithm: rounds turns into silky-smooth curves ---
+  function smoothCoordinates(coords, iterations) {
+    if (!coords || !Array.isArray(coords) || coords.length < 3) return coords;
+    var iters = Number.isInteger(iterations) ? iterations : 2;
+    var current = coords;
+    for (var iter = 0; iter < iters; iter++) {
+      var smoothed = [current[0]];
+      for (var i = 0; i < current.length - 1; i++) {
+        var p0 = current[i];
+        var p1 = current[i + 1];
+        if (!p0 || !p1) continue;
+        var q = [
+          0.75 * p0[0] + 0.25 * p1[0],
+          0.75 * p0[1] + 0.25 * p1[1]
+        ];
+        var r = [
+          0.25 * p0[0] + 0.75 * p1[0],
+          0.25 * p0[1] + 0.75 * p1[1]
+        ];
+        smoothed.push(q, r);
+      }
+      smoothed.push(current[current.length - 1]);
+      current = smoothed;
+    }
+    return current;
+  }
 
   // --- Stable camera state (prevents jitter / teleporting) ---
   var smoothedHeading = 0;         // EMA-smoothed compass bearing
@@ -178,6 +207,7 @@ try {
     if (minDistanceSq < 0.0003) {
       var remaining = [userLngLat].concat(rawPolyline.slice(closestIdx + 1));
       if (remaining.length >= 2) {
+        var smoothedRemaining = smoothCoordinates(remaining, 2);
         var src = map.getSource('route');
         if (src) {
           src.setData({
@@ -185,7 +215,7 @@ try {
             properties: {},
             geometry: {
               type: 'LineString',
-              coordinates: remaining
+              coordinates: smoothedRemaining
             }
           });
         }
@@ -501,12 +531,12 @@ try {
         // Camera follow logic — only when followUser is true
         if (msg.followUser) {
           if (firstUserPos) {
-            // First fix: jump immediately to current position, no bearing
+            // First fix: jump immediately to current position, 3D tilt perspective
             firstUserPos = false;
             lastCamLat = msg.lat;
             lastCamLng = msg.lng;
             smoothedHeading = 0;
-            map.jumpTo({ center: lngLat, zoom: 17, pitch: 0, bearing: 0 });
+            map.jumpTo({ center: lngLat, zoom: 17, pitch: DEFAULT_PITCH, bearing: 0 });
           } else {
             // Only move camera if moved more than MIN_MOVE_DEG (eliminates GPS jitter teleport)
             var moveLat = Math.abs(msg.lat - lastCamLat);
@@ -529,7 +559,7 @@ try {
               map.easeTo({
                 center: lngLat,
                 zoom: Math.max(map.getZoom(), 15),
-                pitch: 0,           // Flat top-down: no 3D tilt jitter
+                pitch: DEFAULT_PITCH, // Subtle 35° tilt for modern 3D navigation perspective
                 bearing: targetBearing,
                 duration: 1200,     // Slower ease = much smoother
               });
@@ -555,7 +585,7 @@ try {
           map.easeTo({
             center: [targetLng, targetLat],
             zoom: 17,
-            pitch: 0,
+            pitch: DEFAULT_PITCH,
             bearing: 0,
             duration: 800,
           });
@@ -572,7 +602,7 @@ try {
 
   map.on('load', function() {
     try {
-      var coords = rawPolyline;
+      var coords = smoothCoordinates(rawPolyline, 2);
       if (Array.isArray(coords) && coords.length > 0) {
         map.addSource('route', {
           type: 'geojson',
@@ -582,19 +612,39 @@ try {
           }
         });
         map.addLayer({
+          id: 'route-glow',
+          type: 'line',
+          source: 'route',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#F59E0B',
+            'line-width': 12,
+            'line-opacity': 0.22,
+            'line-blur': 4
+          }
+        });
+        map.addLayer({
+          id: 'route-casing',
+          type: 'line',
+          source: 'route',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#0A192F',
+            'line-width': 8,
+            'line-opacity': 0.35
+          }
+        });
+        map.addLayer({
           id: 'route-line',
           type: 'line',
           source: 'route',
           layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': '#ffd600', 'line-width': 4, 'line-opacity': 0.9 }
+          paint: {
+            'line-color': '#F59E0B',
+            'line-width': 5,
+            'line-opacity': 0.98
+          }
         });
-        map.addLayer({
-          id: 'route-outline',
-          type: 'line',
-          source: 'route',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': '#705d00', 'line-width': 8, 'line-opacity': 0.4 }
-        }, 'route-line');
 
         var bounds = new maplibregl.LngLatBounds();
         coords.forEach(function(c) {
@@ -603,7 +653,7 @@ try {
           }
         });
         if (!bounds.isEmpty()) {
-          map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 }, maxZoom: 16 });
+          map.fitBounds(bounds, { padding: { top: 70, bottom: 70, left: 60, right: 60 }, maxZoom: 16, pitch: DEFAULT_PITCH });
         }
       }
 
@@ -611,9 +661,9 @@ try {
       if (Array.isArray(markers)) {
         markers.forEach(function(m) {
           if (!m || !Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
-          var color = m.type === 'origin' ? '#4CAF50' : '#e53935';
+          var color = m.type === 'origin' ? '#059669' : '#DC2626';
           var el = document.createElement('div');
-          el.style.cssText = 'width:28px;height:28px;border-radius:14px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#fff;font-size:12px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.5);';
+          el.style.cssText = 'width:28px;height:28px;border-radius:14px;background:' + color + ';display:flex;align-items:center;justify-content:center;border:3px solid #fff;color:#fff;font-size:12px;font-weight:bold;box-shadow:0 2px 6px rgba(10,25,47,0.25);';
           el.innerHTML = m.type === 'origin' ? '&#9654;' : '&#9873;';
           new maplibregl.Marker({ element: el }).setLngLat([m.lng, m.lat]).addTo(map);
         });
@@ -883,6 +933,6 @@ export default function FreeMap({ ride, positions = [], myUserId, userLocation, 
 }
 
 const styles = StyleSheet.create({
-  container: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, backgroundColor: '#121317', overflow: 'hidden' },
-  webview: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, backgroundColor: '#121317' },
+  container: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, backgroundColor: '#F8F9FA', overflow: 'hidden' },
+  webview: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, backgroundColor: '#F8F9FA' },
 });

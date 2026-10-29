@@ -159,6 +159,8 @@ class RideConsumer(AsyncWebsocketConsumer):
             'ride_id': event['ride_id'],
             'ended_by': event['ended_by'],
             'ended_by_name': event['ended_by_name'],
+            'actual_duration_s': event.get('actual_duration_s'),
+            'actual_distance_km': event.get('actual_distance_km'),
         }))
 
     async def position_update(self, event):
